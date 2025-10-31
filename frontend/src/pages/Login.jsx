@@ -1,10 +1,8 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom"; // optional if you’re using React Router
-//import { FcGoogle } from "react-icons/fc";
-//import { FaGithub } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 export default function Login() {
-  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [formData, setFormData] = useState({ email: "", password: "", role: "" });
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -12,26 +10,52 @@ export default function Login() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
+    if (!formData.role.trim()) {
+      alert("Please select your role");
+      return;
+    }
+
     console.log("Login Data:", formData);
+    alert("Login Successful! (Check console for details)");
+
+    setFormData({
+      email: "",
+      password: "",
+      role: "",
+    });
     // 🔐 Add your API or Firebase login logic here
   };
 
-  const handleGoogleLogin = () => {
-    console.log("Google Login Clicked");
-  };
-
-  const handleGithubLogin = () => {
-    console.log("GitHub Login Clicked");
-  };
-
   return (
-    <div className="flex min-h-screen items-center justify-center  p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl border border-gray-200">
-        <h2 className="mb-6 text-center text-3xl font-bold text-gray-800">
+    <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-100 via-white to-indigo-50">
+      {/* 🧊 Glassy Login Card */}
+      <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white/80 p-5 sm:p-6 md:p-7 lg:p-8 py-5  shadow-2xl border border-gray-200">
+        <h2 className="mb-4 text-center text-3xl font-bold text-gray-800">
           Login
         </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-2">
+          {/* Role Dropdown */}
+          <div>
+            <label className="block text-gray-700 mb-1 font-medium">
+              Login as
+            </label>
+            <select
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              className="w-full rounded-md text-sm border cursor-pointer border-gray-300 p-2 text-gray-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-400 outline-none transition"
+              required
+            >
+              <option value="">Select Role</option>
+              <option value="user">Student</option>
+              <option value="recruiter">Recruiter</option>
+              <option value="company">Company</option>
+            </select>
+          </div>
+
+          {/* Email */}
           <div>
             <label className="block text-gray-700 mb-1 font-medium">Email</label>
             <input
@@ -45,8 +69,11 @@ export default function Login() {
             />
           </div>
 
+          {/* Password */}
           <div>
-            <label className="block text-gray-700 mb-1 font-medium">Password</label>
+            <label className="block text-gray-700 mb-1 font-medium">
+              Password
+            </label>
             <input
               type="password"
               name="password"
@@ -58,7 +85,7 @@ export default function Login() {
             />
           </div>
 
-          <div className="flex items-center  justify-end">
+          <div className="flex items-center justify-end">
             <Link
               to="/forgot-password"
               className="text-sm text-blue-600 font-medium hover:underline transition hover:text-blue-700"
@@ -75,10 +102,8 @@ export default function Login() {
           </button>
         </form>
 
-    {/* Social Login Buttons */}
-
-    
-       <div className="relative mt-3 ">
+        {/* Divider */}
+        <div className="relative mt-4">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300"></div>
           </div>
@@ -88,12 +113,17 @@ export default function Login() {
         </div>
 
         {/* Social Buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-3">
           <button
             type="button"
             className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-2 sm:py-1 hover:bg-gray-100 transition text-sm sm:text-base"
           >
-            <img width="34" height="34" src="https://img.icons8.com/sf-black-filled/64/github.png" alt="github"/>
+            <img
+              width="30"
+              height="30"
+              src="https://img.icons8.com/sf-black-filled/64/github.png"
+              alt="github"
+            />
             GitHub
           </button>
 
@@ -101,21 +131,26 @@ export default function Login() {
             type="button"
             className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-2 sm:py-1 hover:bg-gray-100 transition text-sm sm:text-base"
           >
-            <img width="26" height="26" src="https://img.icons8.com/fluency/50/google-logo.png" alt="google-logo"/>
+            <img
+              width="24"
+              height="24"
+              src="https://img.icons8.com/fluency/50/google-logo.png"
+              alt="google-logo"
+            />
             Google
           </button>
         </div>
-  
-     <p className="text-center text-gray-700 mt-4 text-sm sm:text-base">
- Not have an account?{" "}
-  <a
-    href="/register"
-    className="text-indigo-600 font-medium hover:underline transition"
-  >
-    Register
-  </a>
-</p>  
- </div> 
-</div>
+
+        <p className="text-center text-gray-700 mt-4 text-sm sm:text-base">
+          Not have an account?{" "}
+          <a
+            href="/register"
+            className="text-indigo-600 font-medium hover:underline transition"
+          >
+            Register
+          </a>
+        </p>
+      </div>
+    </div>
   );
 }
