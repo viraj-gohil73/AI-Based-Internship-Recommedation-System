@@ -32,22 +32,45 @@ export default function OtpVerify() {
     }
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
-    const otpValue = otp.join("");
-    if (otpValue.length < 6) {
-      setMsg("Please enter complete 6-digit OTP");
-      return;
-    }
-    setLoading(true);
+    const enteredOtp = otp.join("");
+
     try {
-      const res = await verifyOtp({ name, email, password, role, otp: otpValue });
-      setMsg(res.data.message);
-      setTimeout(() => navigate("/login"), 2000);
+      // ✅ OTP verify call
+      const res = await fetch("http://localhost:5000/api/auth/verify-otp", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email, otp: enteredOtp }),
+});
+
+console.log(res.status, res.ok);
+const data = await res.json();
+console.log(data);
+
+      if (data.success) {
+        alert("✅ OTP Verified Successfully!");
+
+        // 🔹 Now create user in DB
+        const registerRes = await fetch("http://localhost:5000/api/student/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, role }),
+        });
+
+        if (registerRes.ok) {
+          alert("🎉 Account Created Successfully!");
+          navigate("/login");
+        } else {
+          alert("⚠️ Failed to create account.");
+        }
+      } else {
+        alert("❌ Invalid or expired OTP!");
+      }
     } catch (err) {
-      setMsg(err.response?.data?.message || "Invalid OTP");
+      console.error("Error verifying OTP:", err);
+      alert("Something went wrong.");
     }
-    setLoading(false);
   };
 
   return (

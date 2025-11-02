@@ -8,17 +8,52 @@ const studentSchema = new mongoose.Schema({
     },
     password:{
         type: String,
-        required: true,
+    },
+    googleId:{
+        type: String,
+    },
+    linkedInId:{
+        type: String,
+    },
+    loginType: {
+        type: String,
+        enum: ["email", "google", "linkedin"],
+        default: "email" 
     },
     fname:{
         type: String,
-        required: true,
     },
     lname:{
         type: String,
-        required: true,
     },
-
+    profilePic:{
+        type: String,
+    },
+    dob:{
+        type: Date,
+    },
+    gender:{
+        type: String,
+        enum: ['Male', 'Female', 'Other'],
+    },
+    phone_no:{
+        type: String,
+    },
+    skills:{
+        type: [String],
+    },
+    resume:{
+        type: String,
+    },
+    address:{
+        type: String,
+    },
+    preferredLocation:{
+        type: String,
+    },
+    hobbies:{
+        type: [String],
+    },
 },{timestamps: true});
 
 export default mongoose.model("Student", studentSchema);

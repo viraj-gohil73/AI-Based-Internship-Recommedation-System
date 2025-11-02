@@ -17,7 +17,7 @@ export default function RegisterForm() {
     
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.password.trim()) {
@@ -28,14 +28,37 @@ export default function RegisterForm() {
     setError("");
     console.log("Form Data:", formData);
     alert("Account created successfully! (Check console for data)");
-    navigate("/otp", { state: formData }); // pass data to OTP page
+
+    const res = await fetch("http://localhost:5000/api/auth/send-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: formData.email }),
+  });
+
+  if (res.ok) {
+    navigate("/otp", { state: formData }); // pass email to OTP page
+  }
+  else {
+    const data = await res.json();
+    setError(data.message || "Failed to send OTP");
+  }
     setFormData({
       email: "",
       password: "",
       role: "",
     });
     // 🔐 Add your backend API call here
+       
   };
+
+  const googleLogin = () => {
+    window.location.href = "http://localhost:5000/api/auth/google";
+  };
+
+  const linkedinLogin = () => {
+    window.location.href = "http://localhost:5000/api/auth/linkedin";
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-100 via-white to-indigo-50">
@@ -124,6 +147,7 @@ export default function RegisterForm() {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-3">
           <button
             type="button"
+            onClick={linkedinLogin}
             className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-1 hover:bg-gray-100 transition text-sm sm:text-base"
           >
             <img width="30" height="30" src="https://img.icons8.com/fluency/96/linkedin.png" alt="linkedin"/>
@@ -132,6 +156,7 @@ export default function RegisterForm() {
 
           <button
             type="button"
+            onClick={googleLogin}
             className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-2 sm:py-1 hover:bg-gray-100 transition text-sm sm:text-base"
           >
             <img width="28" height="28" src="https://img.icons8.com/fluency/96/google-logo.png" alt="google-logo"/>
