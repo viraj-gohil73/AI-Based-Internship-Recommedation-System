@@ -108,35 +108,25 @@ export default function Login() {
             <div className="w-full border-t border-gray-300"></div>
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-gray-500">or continue with</span>
+            <span className="bg-white px-2 text-gray-500">or Login with</span>
           </div>
         </div>
 
         {/* Social Buttons */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-3">
+         <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-3">
           <button
             type="button"
-            className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-2 sm:py-1 hover:bg-gray-100 transition text-sm sm:text-base"
+            className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-1 hover:bg-gray-100 transition text-sm sm:text-base"
           >
-            <img
-              width="30"
-              height="30"
-              src="https://img.icons8.com/sf-black-filled/64/github.png"
-              alt="github"
-            />
-            GitHub
+            <img width="30" height="30" src="https://img.icons8.com/fluency/96/linkedin.png" alt="linkedin"/>
+            LinkedIn
           </button>
 
           <button
             type="button"
             className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-2 sm:py-1 hover:bg-gray-100 transition text-sm sm:text-base"
           >
-            <img
-              width="24"
-              height="24"
-              src="https://img.icons8.com/fluency/50/google-logo.png"
-              alt="google-logo"
-            />
+            <img width="28" height="28" src="https://img.icons8.com/fluency/96/google-logo.png" alt="google-logo"/>
             Google
           </button>
         </div>

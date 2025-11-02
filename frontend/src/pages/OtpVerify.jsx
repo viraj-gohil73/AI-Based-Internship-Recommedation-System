@@ -1,0 +1,110 @@
+import React, { useState, useRef } from "react";
+//import { verifyOtp } from "../api/auth";
+import { useLocation, useNavigate } from "react-router-dom";
+
+export default function OtpVerify() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { name, email, password, role } = location.state || {};
+
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const inputsRef = useRef([]);
+  const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e, index) => {
+    const value = e.target.value.replace(/\D/g, ""); // only digits
+    if (value.length > 1) return;
+
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    // Auto move next input
+    if (value && index < 5) {
+      inputsRef.current[index + 1].focus();
+    }
+  };
+
+  const handleKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      inputsRef.current[index - 1].focus();
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const otpValue = otp.join("");
+    if (otpValue.length < 6) {
+      setMsg("Please enter complete 6-digit OTP");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await verifyOtp({ name, email, password, role, otp: otpValue });
+      setMsg(res.data.message);
+      setTimeout(() => navigate("/login"), 2000);
+    } catch (err) {
+      setMsg(err.response?.data?.message || "Invalid OTP");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-100 via-white to-indigo-50 px-4 ">
+      <div className="bg-white shadow-lg rounded-2xl p-8 sm:p-10 w-full max-w-sm">
+        <h2 className="text-2xl  font-bold text-center text-gray-800 mb-2">
+          OTP Verification
+        </h2>
+        <p className="text-center text-sm text-gray-600 mb-4">
+         Send verification code to 
+          <span className="text-sm text-blue-700"> {email}</span>
+        </p>
+
+        <form onSubmit={handleSubmit} className="flex flex-col items-center">
+          <div className="flex justify-between w-full max-w-sm mb-6">
+            {otp.map((digit, index) => (
+              <input
+                key={index}
+                ref={(el) => (inputsRef.current[index] = el)}
+                type="text"
+                maxLength="1"
+                value={digit}
+                onChange={(e) => handleChange(e, index)}
+                onKeyDown={(e) => handleKeyDown(e, index)}
+                className="w-8 sm:w-10 h-10  caret-black text-center border-2 rounded-md focus:border-blue-500 focus:outline-none text-md font-semibold text-gray-700"
+              />
+            ))}
+          </div>
+          {msg && (
+            <p className="text-center mb-2 text-sm text-red-500 font-medium">
+              {msg}
+            </p>
+          )}
+          
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 cursor-pointer hover:bg-blue-700 text-white py-2 rounded-lg text-md font-medium transition-all duration-200"
+          >
+            {loading ? "Verifying..." : "Verify OTP"}
+          </button>
+
+          
+        </form>
+
+        <div className="text-center mt-6 text-sm text-gray-500">
+          Didn’t receive the code?{" "}
+          <button
+            type="button"
+            className="text-blue-600 cursor-pointer hover:underline font-medium"
+            onClick={() => window.location.reload()}
+          >
+            Resend
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
