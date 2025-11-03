@@ -4,8 +4,9 @@ import { sendOtp } from "../api/auth/sendotp.js";
 import { verifyOtp } from "../api/auth/verify-otp.js";
 const router = express.Router();
 
-router.post("/register", registerStudent);
+//router.post("/register", registerStudent);
 //router.post("/login", loginUser);
 router.post("/send-otp", sendOtp);
 router.post("/verify-otp", verifyOtp);
+router.post("/student/register", registerStudent);
 export default router;

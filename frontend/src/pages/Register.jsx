@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast  from 'react-hot-toast';
 
 export default function RegisterForm() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    confirmPassword: "",
     role: "",
   });
 
@@ -14,7 +14,6 @@ export default function RegisterForm() {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    
   };
 
   const handleSubmit = async (e) => {
@@ -24,32 +23,29 @@ export default function RegisterForm() {
       setError("Enter Passwords ");
       return;
     }
-
     setError("");
-    console.log("Form Data:", formData);
-    alert("Account created successfully! (Check console for data)");
 
     const res = await fetch("http://localhost:5000/api/auth/send-otp", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: formData.email }),
-  });
-
-  if (res.ok) {
-    navigate("/otp", { state: formData }); // pass email to OTP page
-  }
-  else {
-    const data = await res.json();
-    setError(data.message || "Failed to send OTP");
-  }
-    setFormData({
-      email: "",
-      password: "",
-      role: "",
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email : formData.email }),
     });
-    // 🔐 Add your backend API call here
-       
-  };
+
+    const data = await res.json();
+
+    if (data.success) {
+      toast.success(data.message);
+      navigate("/otp", {
+  state: {
+    email: formData.email,
+    password: formData.password,
+    role: formData.role,
+  },
+});
+    } else {
+      toast.error(data.message);
+    }
+};
 
   const googleLogin = () => {
     window.location.href = "http://localhost:5000/api/auth/google";
@@ -81,7 +77,7 @@ export default function RegisterForm() {
               required
             >
               <option value="">Select Role</option>
-              <option value="user">Student</option>
+              <option value="student">Student</option>
               <option value="company">Company</option>
             </select>
           </div>

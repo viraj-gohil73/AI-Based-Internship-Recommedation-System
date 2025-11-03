@@ -8,6 +8,9 @@ export const sendEmail = async (to, subject, text) => {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+      pool: true,
+      maxConnections: 5,
+      maxMessages: 10,
     });
 
     const mailOptions = {

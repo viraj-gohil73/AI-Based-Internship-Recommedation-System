@@ -1,11 +1,11 @@
-import React, { useState, useRef } from "react";
-//import { verifyOtp } from "../api/auth";
+import React, { useState, useRef, useEffect } from "react";
+import toast  from 'react-hot-toast';
 import { useLocation, useNavigate } from "react-router-dom";
 
 export default function OtpVerify() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { name, email, password, role } = location.state || {};
+  const { email, password, role } = location.state || {};
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputsRef = useRef([]);
@@ -37,39 +37,61 @@ const handleSubmit = async (e) => {
     const enteredOtp = otp.join("");
 
     try {
-      // ✅ OTP verify call
+      //sendotp();
+      setLoading(true);
       const res = await fetch("http://localhost:5000/api/auth/verify-otp", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email, otp: enteredOtp }),
-});
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp: enteredOtp }),
+      });
 
-console.log(res.status, res.ok);
-const data = await res.json();
-console.log(data);
-
+      const data = await res.json();
       if (data.success) {
-        alert("✅ OTP Verified Successfully!");
+        toast.success(" OTP Verified Successfully!");
 
         // 🔹 Now create user in DB
-        const registerRes = await fetch("http://localhost:5000/api/student/register", {
+        const registerRes = await fetch("http://localhost:5000/api/auth/student/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password, role }),
         });
 
-        if (registerRes.ok) {
-          alert("🎉 Account Created Successfully!");
+        const data = await registerRes.json(); // ✅ must parse JSON first
+
+        if (data.success) {
+          toast.success("Account Created Successfully!");
           navigate("/login");
         } else {
-          alert("⚠️ Failed to create account.");
+          toast.error(data.message || "Failed to create account.");
         }
-      } else {
-        alert("❌ Invalid or expired OTP!");
+      } else if(enteredOtp < 6){
+        toast.error(" Invalid OTP!");
+      }
+      else{
+        toast.error("expired OTP!");
       }
     } catch (err) {
-      console.error("Error verifying OTP:", err);
-      alert("Something went wrong.");
+      toast.error("Something went wrong.");
+    }
+    setLoading(false);
+  };
+
+const handleResendOtp = async () => {
+    setLoading(false);
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }), // 👈 same email bhejna zaruri hai
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("New OTP sent successfully ✅");
+      } else {
+        toast.error(data.message || "Failed to resend OTP ");
+      }
+    } catch (err) {
+      toast.error("Server error ");
     }
   };
 
@@ -109,7 +131,7 @@ console.log(data);
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 cursor-pointer hover:bg-blue-700 text-white py-2 rounded-lg text-md font-medium transition-all duration-200"
+            className={`w-full bg-blue-600 ${loading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'} text-white py-2 rounded-lg text-md font-medium transition-all duration-200`}
           >
             {loading ? "Verifying..." : "Verify OTP"}
           </button>
@@ -122,7 +144,7 @@ console.log(data);
           <button
             type="button"
             className="text-blue-600 cursor-pointer hover:underline font-medium"
-            onClick={() => window.location.reload()}
+            onClick={handleResendOtp}
           >
             Resend
           </button>

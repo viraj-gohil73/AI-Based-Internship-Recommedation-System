@@ -6,10 +6,10 @@ export const verifyOtp = async (req, res) => {
     if (!email || !otp) return res.status(400).json({ message: "Email and OTP required" });
 
     if (!global.tempOtps || !global.tempOtps[email])
-      return res.status(400).json({ message: "No OTP found or expired" });
+      return res.status(400).json({ message: "No OTP found" });
 
     if (parseInt(global.tempOtps[email]) === parseInt(otp)) {
-     // delete global.tempOtps[email];
+      delete global.tempOtps[email];
       return res.status(200).json({success: true, message: "OTP verified successfully" });
     } else {
       return res.status(400).json({ success: false, message: "Invalid OTP" });
