@@ -24,13 +24,13 @@ export default function RegisterForm() {
       return;
     }
     setError("");
-
+    try{
     const res = await fetch("http://localhost:5000/api/auth/send-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email : formData.email }),
+      body: JSON.stringify({ email : formData.email, role: formData.role  }),
     });
-
+  
     const data = await res.json();
 
     if (data.success) {
@@ -45,6 +45,11 @@ export default function RegisterForm() {
     } else {
       toast.error(data.message);
     }
+    }
+  catch(error)
+  {
+    toast.error("Server not responding");
+  }
 };
 
   const googleLogin = () => {

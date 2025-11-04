@@ -45,18 +45,31 @@ const handleSubmit = async (e) => {
         body: JSON.stringify({ email, otp: enteredOtp }),
       });
 
-      const data = await res.json();
+      let data = await res.json();
       if (data.success) {
         toast.success(" OTP Verified Successfully!");
 
-        // 🔹 Now create user in DB
-        const registerRes = await fetch("http://localhost:5000/api/auth/student/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, role }),
-        });
-
-        const data = await registerRes.json(); // ✅ must parse JSON first
+        if(role == "student")
+        {
+          // 🔹 Now create user in DB
+          const registerRes = await fetch("http://localhost:5000/api/auth/student/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password, role }),
+          });
+          data = await registerRes.json();
+        }
+        if(role == "company")
+        {
+            const registerRes = await fetch("http://localhost:5000/api/auth/company/register", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, password, role }),
+            });
+            data = await registerRes.json();
+        }
+        
+        //const data = await registerRes.json(); // ✅ must parse JSON first
 
         if (data.success) {
           toast.success("Account Created Successfully!");
@@ -82,7 +95,7 @@ const handleResendOtp = async () => {
       const res = await fetch("http://localhost:5000/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }), // 👈 same email bhejna zaruri hai
+        body: JSON.stringify({ email,role }), // 👈 same email bhejna zaruri hai
       });
       const data = await res.json();
       if (data.success) {
