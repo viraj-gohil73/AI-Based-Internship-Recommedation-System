@@ -9,11 +9,10 @@ export const sendOtp = async (req, res) => {
     if (!email) return res.status(400).json({  success: false,message: "Email is required" });
     if(!role) return res.status(400).json({  success: false,message: "Role is required" });
     
-    let existingUser;
-    if (role === "student") existingUser = await Student.findOne({ email });
-    else if (role === "company") existingUser = await Company.findOne({ email });
+    const existingStudent = await Student.findOne({ email });
+    const existingCompany = await Company.findOne({ email });
 
-    if (existingUser)
+    if (existingStudent || existingCompany)
       return res.status(400).json({
         success: false,
         message: "User already exists. Please login.",
