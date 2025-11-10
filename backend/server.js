@@ -3,7 +3,9 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes.js";
-
+import session from "express-session";
+import { configurePassport } from "./config/passport.js";
+import { googleCallbackHandler } from "./controllers/authGoogle.js";
 dotenv.config();
 const app = express();
 
@@ -14,6 +16,8 @@ app.use(
     credentials: true,
   })
 );
+
+configurePassport(app);
 
 mongoose
   .connect(process.env.MONGO_URI)

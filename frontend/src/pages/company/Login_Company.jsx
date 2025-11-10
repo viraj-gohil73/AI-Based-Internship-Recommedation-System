@@ -160,7 +160,9 @@ export default function Login() {
             Register
           </a>
         </p>
+        
       </div>
+     
     </div>
   );
 }

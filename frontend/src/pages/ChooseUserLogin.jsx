@@ -78,11 +78,11 @@ export default function ChooseUserLogin() {
               <div>
                 <h3 className="font-semibold text-md">Login as Company</h3>
                 <p className="text-sm text-gray-500">
-                  Apply For Internships
+                  Post Internship Opportunities
                 </p>
               </div>
               {selectedRole === "Company" && (
-                <span className="text-yellow-500 text-2xl"><img width="36" height="36" src="https://img.icons8.com/fluency/48/student-male.png" alt="student-male"/></span>
+                <span className="text-yellow-500 text-2xl"><img width="36" height="36" src="https://img.icons8.com/3d-fluency/50/company.png" alt="company-male"/></span>
               )}
             </div>
 
@@ -95,13 +95,13 @@ export default function ChooseUserLogin() {
               }`}
             >
               <div>
-                <h3 className="font-semibold text-md">Login as recruiter</h3>
+                <h3 className="font-semibold text-md">Login as Recruiter</h3>
                 <p className="text-sm text-gray-500">
-                  Apply For Internships
+                  Manage Job Postings
                 </p>
               </div>
               {selectedRole === "recruiter" && (
-                <span className="text-yellow-500 text-2xl"><img width="36" height="36" src="https://img.icons8.com/fluency/48/student-male.png" alt="student-male"/></span>
+                <span className="text-yellow-500 text-2xl"><img width="36" height="36" src="https://img.icons8.com/external-flaticons-lineal-color-flat-icons/50/external-recruiter-recruitment-agency-flaticons-lineal-color-flat-icons-2.png" alt="external-recruiter-recruitment-agency-flaticons-lineal-color-flat-icons-2"/></span>
               )}
             </div>
 
@@ -115,13 +115,13 @@ export default function ChooseUserLogin() {
               }`}
             >
               <div>
-                <h3 className="font-semibold text-md">Login as admin</h3>
+                <h3 className="font-semibold text-md">Login as Admin</h3>
                 <p className="text-sm text-gray-500">
-                  Hire Talented Candidates
+                 Manage Platform Operations
                 </p>
               </div>
               {selectedRole === "admin" && (
-                <span className="text-blue-500 text-2xl"><img width="36" height="36" src="https://img.icons8.com/color/48/permanent-job.png" alt="permanent-job"/></span>
+                <span className="text-blue-500 text-2xl"><img width="36" height="36" src="https://img.icons8.com/doodle/50/settings--v2.png" alt="settings--v2"/></span>
               )}
             </div>
           </div>

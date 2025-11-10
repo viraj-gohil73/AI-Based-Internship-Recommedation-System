@@ -5,9 +5,10 @@ import toast  from 'react-hot-toast';
 export default function RegisterCompany() {
     const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
+    fname :"",
+    lname :"",
     email: "",
     password: "",
-    role: "",
   });
 
   const [error, setError] = useState("");
@@ -29,7 +30,7 @@ export default function RegisterCompany() {
     const res = await fetch("http://localhost:5000/api/auth/send-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email : formData.email, role: formData.role  }),
+      body: JSON.stringify({ email : formData.email  }),
     });
   
     const data = await res.json();
@@ -53,9 +54,9 @@ export default function RegisterCompany() {
   }
 };
 
-  const googleLogin = () => {
-    window.location.href = "http://localhost:5000/api/auth/google";
-  };
+ const handleGoogleLogin = async () => {
+ window.location.href = "http://localhost:5000/api/auth/google";
+};
 
   const linkedinLogin = () => {
     window.location.href = "http://localhost:5000/api/auth/linkedin";
@@ -78,10 +79,10 @@ export default function RegisterCompany() {
                 </label>
                 <input
                 type="text"
-                name="firstName"
+                name="fname"
                 maxLength={15}
                 placeholder="Enter First Name"
-                value={formData.firstName}
+                value={formData.fname}
                 onChange={handleChange}
                 className="w-full rounded-md border border-gray-300 text-gray-900 px-2 py-2 sm:py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                 required
@@ -94,10 +95,10 @@ export default function RegisterCompany() {
                 </label>
                 <input
                 type="text"
-                name="lastName"
+                name="lname"
                     maxLength={15}
                 placeholder="Enter Last Name"
-                value={formData.lastName}
+                value={formData.lname}
                 onChange={handleChange}
                 className="w-full rounded-md border border-gray-300 text-gray-900 px-3 py-2 sm:py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
                 required
@@ -210,7 +211,7 @@ export default function RegisterCompany() {
 
           <button
             type="button"
-            onClick={googleLogin}
+            onClick={handleGoogleLogin}
             className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-2 sm:py-1 hover:bg-gray-100 transition text-sm sm:text-base"
           >
             <img width="28" height="28" src="https://img.icons8.com/fluency/96/google-logo.png" alt="google-logo"/>

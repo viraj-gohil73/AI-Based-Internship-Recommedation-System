@@ -5,9 +5,9 @@ import toast  from 'react-hot-toast';
 export default function RegisterCompany() {
     const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
+    companyName :"",
     email: "",
     password: "",
-    role: "",
   });
 
   const [error, setError] = useState("");
@@ -160,10 +160,6 @@ export default function RegisterCompany() {
     )}
   </button>
 </div>
-
-
-          {/* Role Dropdown */}
-          
 
           {/* Error Message */}
           {error && <p className="text-red-600 text-sm mt-1">{error}</p>}

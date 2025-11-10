@@ -3,9 +3,10 @@ import toast  from 'react-hot-toast';
 import { useLocation, useNavigate } from "react-router-dom";
 
 export default function OtpVerify() {
+  
   const location = useLocation();
   const navigate = useNavigate();
-  const { email, password, role } = location.state || {};
+  const { email, password, fname, lname } = location.state || {};
 
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const inputsRef = useRef([]);
@@ -49,31 +50,18 @@ const handleSubmit = async (e) => {
       if (data.success) {
         toast.success(" OTP Verified Successfully!");
 
-        if(role == "student")
-        {
           // 🔹 Now create user in DB
           const registerRes = await fetch("http://localhost:5000/api/auth/student/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password, role }),
+            body: JSON.stringify({ email, password, fname, lname }),
           });
           data = await registerRes.json();
-        }
-        if(role == "company")
-        {
-            const registerRes = await fetch("http://localhost:5000/api/auth/company/register", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email, password, role }),
-            });
-            data = await registerRes.json();
-        }
         
-        //const data = await registerRes.json(); // ✅ must parse JSON first
 
         if (data.success) {
           toast.success("Account Created Successfully!");
-          navigate("/login");
+          navigate("/login");   
         } else {
           toast.error(data.message || "Failed to create account.");
         }
@@ -90,14 +78,17 @@ const handleSubmit = async (e) => {
   };
 
 const handleResendOtp = async () => {
+    const toastId = toast.loading("Sending OTP...");
     setLoading(false);
     try {
       const res = await fetch("http://localhost:5000/api/auth/send-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email,role }), // 👈 same email bhejna zaruri hai
+        body: JSON.stringify({ email }), // 👈 same email bhejna zaruri hai
       });
+
       const data = await res.json();
+      toast.dismiss(toastId);
       if (data.success) {
         toast.success("New OTP sent successfully ✅");
       } else {

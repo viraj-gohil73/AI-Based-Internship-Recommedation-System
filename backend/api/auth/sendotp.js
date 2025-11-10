@@ -1,18 +1,17 @@
 import { sendEmail } from "../../utils/sendEmail.js";
 import Student from "../../models/Student.js";
-import Company from "../../models/Company.js";
 
 export const sendOtp = async (req, res) => {
   try {
-    const { email , role } = req.body;
-    console.log(email,role);
+    const { fname, lname, email } = req.body;
+    console.log(email);
     if (!email) return res.status(400).json({  success: false,message: "Email is required" });
-    if(!role) return res.status(400).json({  success: false,message: "Role is required" });
-    
+    /*if(!fname) return res.status(400).json({  success: false,message: "fname is required" });
+    if(!lname) return res.status(400).json({  success: false,message: "lname is required" });
+*/
     const existingStudent = await Student.findOne({ email });
-    const existingCompany = await Company.findOne({ email });
-
-    if (existingStudent || existingCompany)
+  
+    if (existingStudent)
       return res.status(400).json({
         success: false,
         message: "User already exists. Please login.",
@@ -21,7 +20,29 @@ export const sendOtp = async (req, res) => {
     const otp = Math.floor(100000 + Math.random() * 900000);
       console.log("otp ",otp)
     // Send mail
-    const sent = await sendEmail(email, "Your OTP Code", `Your OTP is ${otp}`);
+    const emailContent = `
+Hi ${email.split('@')[0]}, 👋
+
+Thank you for using our platform!
+
+Your One-Time Password (OTP) for email verification is:
+
+🔐 OTP: ${otp}
+
+Please enter this code within 10 minutes to complete your verification.
+
+⚠️ Do not share this code with anyone for your account's security.
+
+If you didn’t request this, you can safely ignore this message.
+
+Best regards,  
+Internship Finder Team  
+📧 support@internshipfinder.com  
+© ${new Date().getFullYear()} Internship Finder | All rights reserved.
+`;
+
+const sent = await sendEmail(email, "Your OTP Code", emailContent);
+
     if (!sent) return res.status(500).json({ success: false, exist: false, message: "Cannot send email" });
 
     // You can store OTP in DB or memory (for demo)

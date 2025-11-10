@@ -94,8 +94,8 @@ export default function ChooseUserType() {
                 <img
                   width="36"
                   height="36"
-                  src="https://img.icons8.com/color/48/permanent-job.png"
-                  alt="recruiter"
+                  src="https://img.icons8.com/3d-fluency/50/company.png"
+                   alt="company-male"
                   className="w-8 sm:w-9"
                 />
               )}
