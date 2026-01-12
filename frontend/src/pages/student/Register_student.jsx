@@ -68,7 +68,7 @@ export default function RegisterCompany() {
       
       <div className="w-full max-w-sm  bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 md:p-7 lg:p-6 shadow-xl">
         <h3 className="mb-6 text-center text-3xl font-bold text-gray-800">
-          Create Account
+          Create an Account
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-4 ">
@@ -184,7 +184,7 @@ export default function RegisterCompany() {
             type="submit"
             className="w-full cursor-pointer rounded-md bg-blue-600 py-2 text-white hover:bg-blue-700 transition-colors"
           >
-            Register as Student
+            Create Account
           </button>
         </form>
 

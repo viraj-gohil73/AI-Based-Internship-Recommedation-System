@@ -11,10 +11,6 @@ export default function Login() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    if (!formData.role.trim()) {
-      alert("Please select your role");
-      return;
-    }
 
     console.log("Login Data:", formData);
     alert("Login Successful! (Check console for details)");
@@ -117,7 +113,7 @@ export default function Login() {
             type="submit"
             className="w-full cursor-pointer rounded-md bg-blue-600 py-2 text-white hover:bg-blue-700 transition-colors"
           >
-            Login as Student
+            Login
           </button>
         </form>
 
@@ -151,7 +147,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-gray-700 mt-4 text-sm sm:text-base">
-          Not have an account?{" "}
+          Don’t have an account?{" "}
           <a
             href="/register-student"
             className="text-indigo-600 font-medium hover:underline transition"

@@ -8,8 +8,7 @@ import { googleCallback } from "../controllers/authGoogleController.js";
 const router = express.Router();
 import "../api/auth/googleLogin.js";
 
-//router.post("/register", registerStudent);
-//router.post("/login", loginUser);
+
 router.post("/send-otp", sendOtp);
 router.post("/verify-otp", verifyOtp);
 router.post("/student/register", registerStudent);
