@@ -10,6 +10,11 @@ export default function Header({ title, onMenuClick }) {
 
   const ref = useRef(null);
 
+const [company, setCompany] = useState({
+    logo: "",
+    companyName: "",
+    email: "",
+  });
   // ✅ CLOSE POPUP WHEN CLICKING OUTSIDE
   useEffect(() => {
     const handler = (e) => {
@@ -83,10 +88,25 @@ export default function Header({ title, onMenuClick }) {
 
 
           {/* PROFILE */}
-          <div className="w-9 h-9 rounded-full bg-blue-100
+          <div className="lg:hidden w-9 h-9 rounded-full bg-blue-100
             flex items-center justify-center
             font-semibold text-blue-600">
-            V
+            <div className=" w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold text-sm overflow-hidden">
+  {company.logo ? (
+    <img
+      src={company.logo}
+      alt={company.companyName}
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <span>
+      {company.companyName
+        ? company.companyName.charAt(0).toUpperCase()
+        : "C"}
+    </span>
+  )}
+</div>
+
           </div>
 
         </div>

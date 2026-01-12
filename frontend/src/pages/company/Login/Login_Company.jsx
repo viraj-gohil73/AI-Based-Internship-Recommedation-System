@@ -1,36 +1,95 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+
+
+
 
 export default function Login() {
-  const [formData, setFormData] = useState({ email: "", password: "", role: "" });
+  const [formData, setFormData] = useState({ email: "", password: "" });
     const [showPassword, setShowPassword] = useState(false);
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+
+const navigate = useNavigate();
+
+// useEffect(() => {
+//   const token = localStorage.getItem("token");
+
+//   let user = null;
+//   try {
+//     user = JSON.parse(localStorage.getItem("user"));
+//   } catch {
+//     user = null;
+//   }
+
+//   if (token && user?.role === "company") {
+//     navigate("/company/dashboard/overview");
+//   }
+// }, [navigate]);
+
+
+   const googleLogin = () => {
+    window.location.href = "http://localhost:5000/api/company/google/company";
+  };
+
+const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.role.trim()) {
-      alert("Please select your role");
+    const email = formData.email.trim();
+    const password = formData.password.trim();
+
+    if (!email || !password) {
+      toast.error("Email and password are required");
       return;
     }
 
-    console.log("Login Data:", formData);
-    alert("Login Successful! (Check console for details)");
+    const toastId = toast.loading("Logging in...");
 
-    setFormData({
-      email: "",
-      password: "",
-      role: "",
-    });
-    // 🔐 Add your API or Firebase login logic here
+    try {
+      const res = await fetch(
+        "http://localhost:5000/api/auth/company/login",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
+
+      const data = await res.json();
+      toast.dismiss(toastId);
+
+      if (!res.ok || !data?.token || !data?.user) {
+        toast.error(data?.message || "Login failed");
+        return;
+      }
+
+      // ✅ save auth
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      toast.success("Login successful");
+
+      // ✅ redirect ONLY ONCE
+      navigate("/company/dashboard/overview", { replace: true });
+
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error("Server not responding");
+    }
   };
+
+
+
+
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-100 via-white to-indigo-50">
       <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white/80 p-5 sm:p-6 md:p-7 lg:p-8 py-5  shadow-2xl border border-gray-200">
-        <h2 className="mb-4 text-center text-3xl font-bold text-gray-800">
+        <h2 className="mb-4 text-center text-3xl font-semibold tracking-tight  text-gray-800">
           Login
         </h2>
 
@@ -40,14 +99,22 @@ export default function Login() {
           <div>
             <label className="block text-gray-700 mb-2 text-sm font-medium">Official Email</label>
             <input
-              type="email"
-              name="email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full rounded-md border border-gray-300 p-2 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
-              required
-            />
+  type="email"
+  name="email"
+  placeholder="Enter your email"
+  value={formData.email}
+  maxLength={40}
+  onChange={(e) => {
+    const value = e.target.value.replace(/\s/g, "").toLowerCase();
+    setFormData({ ...formData, email: value });
+  }}
+  onKeyDown={(e) => {
+    if (e.key === " ") e.preventDefault();
+  }}
+  className="w-full rounded-md border border-gray-300 p-2 text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-transparent outline-none"
+  required
+/>
+
           </div>
 
           {/* Password */}
@@ -55,16 +122,23 @@ export default function Login() {
   <label className="text-gray-700 text-sm  font-medium mb-1 block">
     Password
   </label>
-  <input
-    type={showPassword ? "text" : "password"}
-    name="password"
-    maxLength={30}
-    placeholder="Enter your password"
-    value={formData.password}
-    onChange={handleChange}
-    className="w-full rounded-md border border-gray-300 text-gray-900 px-3 py-2 sm:py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none pr-10"
-    required
-  />
+ <input
+  type={showPassword ? "text" : "password"}
+  name="password"
+  maxLength={30}
+  placeholder="Enter your password"
+  value={formData.password}
+  onChange={(e) => {
+    const value = e.target.value.replace(/\s/g, "");
+    setFormData({ ...formData, password: value });
+  }}
+  onKeyDown={(e) => {
+    if (e.key === " ") e.preventDefault();
+  }}
+  className="w-full rounded-md border border-gray-300 text-gray-900 px-3 py-2 sm:py-2 focus:ring-1 focus:ring-indigo-500 focus:border-transparent outline-none pr-10"
+  required
+/>
+
   <button
     type="button"
     onClick={() => setShowPassword(!showPassword)}
@@ -133,28 +207,21 @@ export default function Login() {
         </div>
 
         {/* Social Buttons */}
-         <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-3">
+         <div className="grid grid-cols-1 gap-3 sm:gap-4 mt-4 sm:mt-3">
           <button
             type="button"
-            className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-1 hover:bg-gray-100 transition text-sm sm:text-base"
-          >
-            <img width="30" height="30" src="https://img.icons8.com/fluency/96/linkedin.png" alt="linkedin"/>
-            LinkedIn
-          </button>
-
-          <button
-            type="button"
+            onClick={googleLogin}
             className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-2 sm:py-1 hover:bg-gray-100 transition text-sm sm:text-base"
           >
             <img width="28" height="28" src="https://img.icons8.com/fluency/96/google-logo.png" alt="google-logo"/>
-            Google
+            Continue with Google
           </button>
         </div>
 
         <p className="text-center text-gray-700 mt-4 text-sm sm:text-base">
           Not have an account?{" "}
           <a
-            href="/register-company"
+            href="/auth/company/register"
             className="text-indigo-600 font-medium hover:underline transition"
           >
             Register

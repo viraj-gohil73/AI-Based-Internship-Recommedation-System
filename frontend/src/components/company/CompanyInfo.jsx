@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Save, Camera } from "lucide-react";
 import Input from "../profile/shared/Input";
+import { useNavigate } from "react-router-dom";
 
 export default function CompanyInfoTab({ data, setFormData, disabled }) {
   const [errors, setErrors] = useState({});
-
+  const navigate = useNavigate();
   const [company, setCompany] = useState({
     logo: "",
     companyName: "",
@@ -66,11 +67,35 @@ export default function CompanyInfoTab({ data, setFormData, disabled }) {
 
   /* ---------------- FETCH COMPANY PROFILE ---------------- */
   useEffect(() => {
-    fetch("/api/company/profile")
-      .then((res) => res.json())
-      .then((data) => {
-        setCompany({
-          logo: data.logo || "",
+  const fetchCompany = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        navigate("auth/company/login");
+        return;
+      }
+
+      const res = await fetch("http://localhost:5000/api/company/me", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        console.error("Non-JSON response:", text);
+        return;
+      }
+
+      const data = await res.json();
+      console.log("COMPANY DATA 👉", data);
+
+      setCompany((prev) => ({
+          ...prev,
+          logo: data.data.logo || "",
           companyName: data.companyName || "",
           tagline: data.tagline || "",
           industry: data.industry || "",
@@ -83,9 +108,15 @@ export default function CompanyInfoTab({ data, setFormData, disabled }) {
           city: data.city || "",
           state: data.state || "",
           pincode: data.pincode || "",
-        });
-      });
-  }, []);
+        }));
+      
+    } catch (err) {
+      navigate("/company/dashboard/profile");
+    }
+  };
+
+  fetchCompany();
+}, []);
 
   return (
     <>
