@@ -1,7 +1,9 @@
 import { Users, Briefcase, CheckCircle, Layers } from "lucide-react";
-import CompanyLayout from "../../../layout/CompnayLayout";
+import { useCompany } from "../../../context/CompanyContext"; // later use
+
 export default function Overview() {
-  // Dummy data (later API se aayega)
+   const { company, loading } = useCompany(); // future API
+
   const stats = [
     {
       title: "Total Recruiters",
@@ -30,7 +32,6 @@ export default function Overview() {
   ];
 
   return (
-    <CompanyLayout title="Company Overview">
     <div className="p-6">
       {/* Page Title */}
       <h1 className="text-2xl font-semibold text-gray-800 mb-6">
@@ -85,6 +86,5 @@ export default function Overview() {
         </div>
       </div>
     </div>
-    </CompanyLayout>
   );
 }

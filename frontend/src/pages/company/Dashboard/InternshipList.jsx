@@ -1,6 +1,5 @@
 import { Eye, Pencil, Trash2, MapPin, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import CompanyLayout from "../../../layout/CompnayLayout";
 
 export default function InternshipList() {
   const navigate = useNavigate();
@@ -25,7 +24,6 @@ export default function InternshipList() {
   ];
 
   return (
-    <CompanyLayout title="Company Internships">
       <div className="p-6">
 
         {/* ================= DESKTOP TABLE ================= */}
@@ -167,6 +165,5 @@ export default function InternshipList() {
         </div>
 
       </div>
-    </CompanyLayout>
   );
 }

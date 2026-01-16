@@ -29,13 +29,13 @@ const Company = new mongoose.Schema({
     tagline:{
         type: String,
     },
-    industry_type:{
+    industry:{
         type:String
     },
-    company_size:{
+    companySize:{
         type:Number
     },
-    founded_year:{
+    foundedYear:{
         type:Number
     },
     website:{
@@ -44,10 +44,10 @@ const Company = new mongoose.Schema({
     about:{
         type:String
     },
-    address_line1:{
+    address1:{
         type:String
     },
-    address_line2:{
+    address2:{
         type:String
     },
     city:{
@@ -62,10 +62,10 @@ const Company = new mongoose.Schema({
     gst_no:{
         type:String
     },
-    secondary_email:{
+    secondaryEmail:{
         type:String
     },
-    mobile_no:{
+    mobile:{
         type:String,
     },
     reg_doc:{

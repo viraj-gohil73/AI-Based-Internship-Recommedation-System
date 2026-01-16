@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Plus, Pencil, Trash2, Save, Eye } from "lucide-react";
 import Input from "../../../components/profile/shared/Input";
 import Select from "../../../components/profile/shared/Select";
-import CompanyLayout from "../../../layout/CompnayLayout";
 import { useNavigate } from "react-router-dom";
 
 /* ================= CONSTANT ================= */
@@ -595,7 +594,7 @@ export default function Internship() {
 
   /* ================= UI ================= */
   return (
-    <CompanyLayout title="Internships">
+
       <div className="space-y-4">
 
 
@@ -886,6 +885,5 @@ export default function Internship() {
           </div>
         )}
       </div>
-    </CompanyLayout>
   );
 }

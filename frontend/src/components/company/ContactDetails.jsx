@@ -1,22 +1,32 @@
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import Input from "../profile/shared/Input";
-
+import { useCompany } from "../../context/CompanyContext";
+import toast from "react-hot-toast";
 export default function CompanyContactTab({ data, setFormData, disabled }) {
   const [errors, setErrors] = useState({});
 
+  const { company: contextCompany, updateCompany } = useCompany();
+
   const [contact, setContact] = useState({
-    officialEmail: "",
     secondaryEmail: "",
     mobile: "",
   });
+
+  /* ---------------- LOAD DATA FROM CONTEXT ---------------- */
+  useEffect(() => {
+    if (contextCompany) {
+      setContact({
+        secondaryEmail: contextCompany?.secondaryEmail || "",
+        mobile: contextCompany?.mobile || "",
+      });
+    }
+  }, [contextCompany]);
 
   /* ---------------- VALIDATION ---------------- */
   const validate = () => {
     const newErrors = {};
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.officialEmail))
-      newErrors.officialEmail = "Enter valid official email address";
 
     if (
       contact.secondaryEmail &&
@@ -24,8 +34,9 @@ export default function CompanyContactTab({ data, setFormData, disabled }) {
     )
       newErrors.secondaryEmail = "Enter valid secondary email address";
 
-    if (!/^[6-9]\d{9}$/.test(contact.mobile))
+    if (contact.mobile && !/^[6-9]\d{9}$/.test(contact.mobile))
       newErrors.mobile = "Enter valid 10-digit Indian mobile number";
+
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -33,22 +44,31 @@ export default function CompanyContactTab({ data, setFormData, disabled }) {
 
   /* ---------------- CHANGE HANDLER ---------------- */
   const handleChange = (field, value) => {
-    setContact({ ...contact, [field]: value });
-    setErrors({ ...errors, [field]: "" });
+    setContact((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    setFormData((prev) => ({
+      ...prev,
+      contactInfo: { ...prev.contactInfo, [field]: value },
+    }));
+
+    setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
-  /* ---------------- FETCH CONTACT DETAILS ---------------- */
-  useEffect(() => {
-    fetch("/api/company/contact")
-      .then((res) => res.json())
-      .then((data) => {
-        setContact({
-          officialEmail: data.officialEmail || "",
-          secondaryEmail: data.secondaryEmail || "",
-          mobile: data.mobile || "",
-        });
-      });
-  }, []);
+  /* ---------------- SAVE TO DB ---------------- */
+  const handleSave = async () => {
+    if (!validate()) return;
+
+    try {
+      await updateCompany(contact);
+      toast.success("Contact details saved successfully");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to save contact details");
+    }
+  };
 
   return (
     <>
@@ -59,19 +79,15 @@ export default function CompanyContactTab({ data, setFormData, disabled }) {
           <Input
             label="Official Email"
             placeholder="hr@company.com"
-            disabled={disabled}
-            value={contact.officialEmail}
-            error={errors.officialEmail}
-            onChange={(e) =>
-              handleChange("officialEmail", e.target.value)
-            }
+            disabled
+            value={contextCompany?.email}
           />
 
           <Input
             label="Secondary Email"
             placeholder="support@company.com"
             disabled={disabled}
-            value={contact.secondaryEmail}
+            value={contact?.secondaryEmail}
             error={errors.secondaryEmail}
             onChange={(e) =>
               handleChange("secondaryEmail", e.target.value)
@@ -101,10 +117,10 @@ export default function CompanyContactTab({ data, setFormData, disabled }) {
       {/* ACTION */}
       <div className="flex justify-center sm:justify-end mt-6 sm:mt-8">
         <button
-          onClick={validate}
-          className="flex gap-2 px-7 py-3 rounded-lg text-sm cursor-pointer font-medium bg-blue-500 text-white w-full sm:w-auto hover:bg-blue-600"
+          onClick={handleSave}
+          className="flex gap-2 px-10 py-3 rounded-lg text-sm font-medium bg-blue-500 text-white w-full sm:w-auto hover:bg-blue-600"
         >
-          <Save size={18} /> Save Contact Details
+          <Save size={18} /> Save
         </button>
       </div>
     </>

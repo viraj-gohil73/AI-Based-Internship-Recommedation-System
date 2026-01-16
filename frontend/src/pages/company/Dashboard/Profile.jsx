@@ -5,7 +5,6 @@ import ContactDetails from "../../../components/company/ContactDetails";
 import Documents from "../../../components/company/Documents";
 import useAutoSave from "../../../hooks/useAutoSave";
 import { validateAllTabs } from "../../../utils/validations";
-import CompanyLayout from "../../../layout/CompnayLayout";
 import { useNavigate } from "react-router-dom";
 
 const tabs = ["Company Info", "Contact", "Documents"];
@@ -25,33 +24,6 @@ export default function CompanyProfile() {
     contact: {},
     documents: {},
   });
-
-  const [company, setCompany] = useState({
-    logo: "",
-    companyName: "",
-    email: "",
-  });
-
-  useEffect(() => {
-    const fetchCompany = async () => {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch("http://localhost:5000/api/company/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await res.json();
-      console.log("COMPANY DATA IN LAYOUT 👉", data);
-      setCompany({
-      logo: data.data.logo || "",
-      companyName: data.data.companyName || "",
-      email: data.data.email || "",
-    });
-    };
-
-    fetchCompany();
-  }, []);
 
 
 
@@ -76,7 +48,6 @@ export default function CompanyProfile() {
   };
 
   return (
-    <CompanyLayout title="Profile" company={company}>
       <div className="max-w-7xl mx-auto rounded-xl">
 
         {/* STATUS BANNER */}
@@ -137,6 +108,5 @@ export default function CompanyProfile() {
           </div>
         )}
       </div>
-    </CompanyLayout>
   );
 }

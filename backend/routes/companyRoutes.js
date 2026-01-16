@@ -3,6 +3,7 @@ import passport from "passport";
 import { companyAuth } from "../middlewares/companyAuth.js";
 import { getMyCompany } from "../controllers/company.js";
 import { sendOtp } from "../api/auth/sendotpCompany.js";
+import { updateCompany, updateCompanyLogo } from "../controllers/companyController.js";
 const router = express.Router();
 
 /* ================= OTP ================= */
@@ -17,6 +18,9 @@ router.get(
     session: false,
   })
 );
+
+router.put("/update",companyAuth, updateCompany);
+router.put("/update-logo", companyAuth, updateCompanyLogo);
 
 router.get(
   "/google/company/callback",

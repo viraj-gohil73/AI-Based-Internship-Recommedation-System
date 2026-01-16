@@ -1,30 +1,19 @@
 import { Bell, Search, Menu } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import NotificationPopup from "./NotificationPopup";
-
+import { useCompany } from "../context/CompanyContext";
 export default function Header({ title, onMenuClick }) {
 
   // ✅ STATES (ONLY ONCE, INSIDE COMPONENT)
   const [open, setOpen] = useState(false);
   const [count, setCount] = useState(4);
-
+  const { company, loading } = useCompany();
   const ref = useRef(null);
+  if (loading) return null;
 
-const [company, setCompany] = useState({
-    logo: "",
-    companyName: "",
-    email: "",
-  });
-  // ✅ CLOSE POPUP WHEN CLICKING OUTSIDE
-  useEffect(() => {
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+
+  
+
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b-2 border-slate-300 px-4 sm:px-6 py-3">
@@ -92,15 +81,15 @@ const [company, setCompany] = useState({
             flex items-center justify-center
             font-semibold text-blue-600">
             <div className=" w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold text-sm overflow-hidden">
-  {company.logo ? (
+  {company?.logo ? (
     <img
-      src={company.logo}
-      alt={company.companyName}
+      src={company?.logo}
+      alt={company?.companyName}
       className="w-full h-full object-cover"
     />
   ) : (
     <span>
-      {company.companyName
+      {company?.companyName
         ? company.companyName.charAt(0).toUpperCase()
         : "C"}
     </span>

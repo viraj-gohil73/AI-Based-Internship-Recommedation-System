@@ -1,5 +1,4 @@
 import { useState } from "react";
-import CompanyLayout from "../../../layout/CompnayLayout";
 import {
   Plus,
   Eye,
@@ -100,7 +99,6 @@ export default function CompanyRecruiterManagement() {
   };
 
   return (
-    <CompanyLayout title="Recruiters">
       <div className="bg-gray-50 min-h-screen p-2 sm:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
@@ -287,7 +285,6 @@ export default function CompanyRecruiterManagement() {
           />
         )}
       </div>
-    </CompanyLayout>
   );
 }
 
