@@ -27,12 +27,13 @@ import InternshipList from "./pages/company/Dashboard/Internship";
 import CompanyInternshipView from "./pages/company/Dashboard/CompanyInternshipView";
 import Recruiter from "./pages/company/Dashboard/Recruiters";
 import CompanyLayoutWrapper from "./layout/CompanyLayoutWrapper";
-
+import Approvals from "./pages/admin/Approvals";
 /* ================= OTHER ================= */
 import LoginRecruiter from "./pages/recruiter/Recruiter_login";
 import LoginAdmin from "./pages/admin/Login_Admin";
 import GoogleSuccess from "./pages/GoogleSuccess";
-
+import AdminLayout from "./layout/AdminLayout"
+import Dashboard from "./pages/admin/Dashboard";
 function App() {
   return (
     <VerificationProvider>
@@ -72,7 +73,20 @@ function App() {
 
           {/* ========== OTHER ========== */}
           <Route path="/login-recruiter" element={<LoginRecruiter />} />
+
+
           <Route path="/login-admin" element={<LoginAdmin />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="approvals" element={<Approvals />} />
+            {/* <Route path="companies" element={<Companies />} />
+            <Route path="students" element={<Students />} />
+            <Route path="recruiters" element={<Recruiters />} />
+             />
+            <Route path="settings" element={<Settings />} /> */}
+          </Route>
+
+
           <Route path="/company/google-success" element={<GoogleSuccess />} />
 
         </Routes>
