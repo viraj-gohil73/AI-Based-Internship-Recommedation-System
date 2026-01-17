@@ -1,7 +1,7 @@
 import express from "express";
 import passport from "passport";
 import { companyAuth } from "../middlewares/companyAuth.js";
-import { getMyCompany } from "../controllers/company.js";
+import { getMyCompany, submitVerification } from "../controllers/company.js";
 import { sendOtp } from "../api/auth/sendotpCompany.js";
 import { updateCompany, updateCompanyLogo } from "../controllers/companyController.js";
 const router = express.Router();
@@ -21,6 +21,12 @@ router.get(
 
 router.put("/update",companyAuth, updateCompany);
 router.put("/update-logo", companyAuth, updateCompanyLogo);
+router.post(
+  "/submit-verification",
+  companyAuth,
+  submitVerification
+);
+
 
 router.get(
   "/google/company/callback",

@@ -159,6 +159,7 @@ const uploadRef = useRef(null);
     
   </div>
   {/* Uploadcare hidden input */}
+  
   <input
     type="hidden"
     ref={uploadRef}
@@ -167,6 +168,7 @@ const uploadRef = useRef(null);
     data-crop="1:1,4:3,16:9"
     data-image-shrink="512x512"
     disabled={disabled}
+    data-disabled={company.logo || disabled ? "true" : "false"}
   />
 
 
@@ -181,10 +183,15 @@ const uploadRef = useRef(null);
   </button> */}
 
   {/* Remove Logo */}
-  {company.logo && !disabled && (
+  {company.logo && disabled && (
     <button
       type="button"
-      className="bg-white text-blue-600 px-4 py-1 rounded-md border w-full sm:w-auto"
+      disabled={disabled}
+      className={`flex gap-2 px-10 py-3 rounded-lg text-sm tracking-tight font-semibold text-white cursor-pointer ${
+                  !disabled
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-gray-300 cursor-not-allowed"
+                }`}
       onClick={() => handleChange("logo", "")}
     >
       Remove Logo
@@ -262,10 +269,10 @@ const uploadRef = useRef(null);
           disabled={disabled}
           placeholder="Describe your company"
           value={company.about}
-          className={`w-full p-4 rounded-lg ${
+          className={`w-full h-[120px] p-4 rounded-lg resize-none ${
             disabled
               ? "bg-gray-50 text-gray-700 cursor-not-allowed"
-              : "border border-slate-300"
+              : "border-2 border-slate-400"
           }`}
           onChange={(e) => handleChange("about", e.target.value)}
         />
@@ -331,8 +338,13 @@ const uploadRef = useRef(null);
       {/* ACTION */}
       <div className="flex justify-center sm:justify-end mt-6 sm:mt-8">
         <button
+        disabled={disabled}
           onClick={handleSave}
-          className="flex gap-2 px-10 py-3 rounded-lg text-sm tracking-tight font-semibold bg-blue-500 text-white hover:bg-blue-600 cursor-pointer"
+          className={`flex gap-2 px-10 py-3 rounded-lg text-sm tracking-tight font-semibold text-white cursor-pointer ${
+                  !disabled
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-gray-300 cursor-not-allowed"
+                }`}
         >
           <Save size={18} className="mt-0.5" /> Save
         </button>

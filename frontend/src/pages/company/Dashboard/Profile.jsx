@@ -6,14 +6,16 @@ import Documents from "../../../components/company/Documents";
 import useAutoSave from "../../../hooks/useAutoSave";
 import { validateAllTabs } from "../../../utils/validations";
 import { useNavigate } from "react-router-dom";
+import { useCompany } from "../../../context/CompanyContext";
 
 const tabs = ["Company Info", "Contact", "Documents"];
 
 export default function CompanyProfile() {
+  const { company } = useCompany();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(tabs[0]);
 
-  const [verificationStatus, setVerificationStatus] = useState(
+   const [verificationStatus, setVerificationStatus] = useState(
     localStorage.getItem("companyVerificationStatus") || "DRAFT"
   );
 
@@ -22,37 +24,67 @@ export default function CompanyProfile() {
   const [formData, setFormData] = useState({
     companyInfo: {},
     contact: {},
-    documents: {},
+    reg_doc: null,
   });
 
 
 
   /* ================= AUTO SAVE ================= */
-  useAutoSave(formData);
+  //useAutoSave(formData);
+
+useEffect(() => {
+    if (company) {
+      setFormData((prev) => ({
+        ...prev,
+        reg_doc: typeof company.reg_doc === "string" ? company.reg_doc : null,
+      }));
+    }
+  }, [company]);
+
 
   const isValid = validateAllTabs(formData);
 
-  /* ================= SUBMIT ================= */
-  const handleSubmit = async () => {
-    if (!isValid) return;
+const handleSubmit = async () => {
+    if (!isValid) {
+      alert("Please complete all required fields");
+      return;
+    }
 
-    await fetch("http://localhost:5000/api/company/submit-verification", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(formData),
-    });
+    try {
+      const res = await fetch(
+        "http://localhost:5000/api/company/submit-verification",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
 
-    setVerificationStatus("SUBMITTED");
-    localStorage.setItem("companyVerificationStatus", "SUBMITTED");
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message);
+      }
+
+      // 🔹 CHANGE: lock profile after submit
+      setVerificationStatus("SUBMITTED");
+      localStorage.setItem("companyVerificationStatus", "SUBMITTED");
+
+      alert("Profile submitted for verification");
+    } catch (err) {
+      alert(err.message || "Submission failed");
+    }
   };
+
 
   return (
       <div className="max-w-7xl mx-auto rounded-xl">
 
         {/* STATUS BANNER */}
         {verificationStatus === "SUBMITTED" && (
-          <div className="mb-3 px-4 py-2 rounded-md bg-yellow-100 text-yellow-800 text-sm">
+          <div className="mb-3 px-4 py-2 rounded-md bg-blue-100 text-black-800 text-sm">
             🔒 Profile submitted. Editing disabled until admin approval.
           </div>
         )}
@@ -84,7 +116,7 @@ export default function CompanyProfile() {
 
           {activeTab === "Documents" && (
             <Documents
-              data={formData.documents}
+              data={formData}
               setFormData={setFormData}
               disabled={isLocked}
             />

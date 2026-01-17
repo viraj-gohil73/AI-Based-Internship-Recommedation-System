@@ -42,8 +42,9 @@ export function CompanyProvider({ children }) {
           state: data.data.state || "",
           pincode: data.data.pincode || "",
           gstNumber: data.data.gstNumber || "",
-          secondaryEmail: data.data.secondaryEmail,
-        mobile: data.data.mobile,
+          secondaryEmail: data.data.secondaryEmail || "",
+        mobile: data.data.mobile || "",
+        reg_doc: data.data.reg_doc || {}
         });
       } catch (err) {
         console.error("Company fetch error", err);

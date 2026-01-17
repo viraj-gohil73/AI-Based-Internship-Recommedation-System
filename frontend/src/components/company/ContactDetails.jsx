@@ -118,7 +118,11 @@ export default function CompanyContactTab({ data, setFormData, disabled }) {
       <div className="flex justify-center sm:justify-end mt-6 sm:mt-8">
         <button
           onClick={handleSave}
-          className="flex gap-2 px-10 py-3 rounded-lg text-sm font-medium bg-blue-500 text-white w-full sm:w-auto hover:bg-blue-600"
+         className={`flex gap-2 px-10 py-3 rounded-lg text-sm tracking-tight font-semibold text-white cursor-pointer ${
+                  !disabled
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-gray-300 cursor-not-allowed"
+                }`}
         >
           <Save size={18} /> Save
         </button>

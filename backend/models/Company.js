@@ -71,10 +71,12 @@ const Company = new mongoose.Schema({
     reg_doc:{
         type:String
     }, 
-    isVerified:{
-        type: Boolean,
-        default: false,
-    }
+    verificationStatus: {
+  type: String,
+  enum: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
+  default: "DRAFT",
+}
+
 
 },{timestamps: true});
 export default mongoose.model("Company", Company);
