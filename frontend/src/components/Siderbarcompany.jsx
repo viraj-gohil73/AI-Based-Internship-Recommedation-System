@@ -87,15 +87,15 @@ export default function Sidebar_company({ open, onClose }) {
         </nav>
 
         {/* Footer */}
-        <div className="border-t">
+        <div className="border-t border-slate-300">
           {/* Profile */}
-          <div className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-semibold text-sm overflow-hidden">
+          <div className="p-2 pt-3 pb-0 flex items-center gap-3 ">
+            <div className="w-11 h-11 ml-3 rounded-full border border-slate-400 bg-indigo-600 text-white flex items-center justify-center font-semibold text-sm overflow-hidden ">
               {company?.logo ? (
                 <img
                   src={company.logo}
                   alt={company.companyName}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover "
                 />
               ) : (
                 <span>
