@@ -6,11 +6,11 @@ import { useCompany} from "../../context/CompanyContext"
 
 export default function Documents({ data, setFormData, disabled }) {
   const fileRef = useRef(null);
-  const { updateCompany} = useCompany();
+  const { updateCompany, company} = useCompany();
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  const hasDocument = typeof data?.reg_doc === "string";
+  const hasDocument = company.reg_doc//typeof data?.reg_doc === "string";
 
   /* ---------------- FILE NAME (UI ONLY) ---------------- */
   const getDisplayFileName = () => {

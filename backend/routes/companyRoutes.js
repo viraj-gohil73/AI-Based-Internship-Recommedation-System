@@ -19,7 +19,7 @@ router.get(
   })
 );
 
-router.put("/update",companyAuth, updateCompany);
+router.patch("/update",companyAuth, updateCompany);
 router.put("/update-logo", companyAuth, updateCompanyLogo);
 router.post(
   "/submit-verification",

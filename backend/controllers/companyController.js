@@ -46,30 +46,33 @@ export const registerCompany = async (req, res) => {
  */
 export const updateCompany = async (req, res) => {
   try {
-    const companyId = req.companyId;
-    console.log(companyId)
-    const updatedCompany = await Company.findByIdAndUpdate(
-      companyId,
+    const companyId = req.companyId; // string id from token
+
+    const company = await Company.findByIdAndUpdate(
+      companyId,              // ✅ string id allowed
+      { $set: req.body },
       {
-        $set: req.body, // frontend se jo aayega wahi update
-      },
-      { new: true }
+        new: true,
+        runValidators: true,
+      }
     );
 
-    if (!updatedCompany) {
+    if (!company) {
       return res.status(404).json({ message: "Company not found" });
     }
 
     res.status(200).json({
       success: true,
-      message: "Company information updated successfully",
-      data: updatedCompany,
+      company,
     });
   } catch (error) {
     console.error("Update company error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+
 
 const getUUID = (url) => {
   if (!url) return null;

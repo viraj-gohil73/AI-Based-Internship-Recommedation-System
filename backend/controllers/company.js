@@ -35,7 +35,8 @@ export const submitVerification = async (req, res) => {
     const companyId = req.companyId;
 
     const company = await Company.findById(companyId);
-
+  console.log("SUBMIT VERIFICATION API HIT");
+    console.log("companyId from token:", req.companyId);
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
     }
@@ -44,25 +45,40 @@ export const submitVerification = async (req, res) => {
     if (company.verificationStatus === "SUBMITTED") {
       return res
         .status(400)
-        .json({ message: "Already submitted for verification" });
+        .json({ message: "Profile already submitted for verification" });
     }
 
-    // ❌ Mandatory checks
-    if (!company.companyName || !company.website || !company.reg_doc) {
+    // ❌ Already approved (no re-submit)
+    if (company.verificationStatus === "APPROVED") {
+      return res
+        .status(400)
+        .json({ message: "Company already approved" });
+    }
+
+    // ❌ Mandatory profile validation
+    if (
+      !company.companyName ||
+      !company.email ||
+      !company.website ||
+      !company.reg_doc
+    ) {
       return res.status(400).json({
-        message: "Please complete profile and upload documents",
+        message: "Please complete all required profile fields",
       });
     }
 
+    // ✅ Submit for verification
     company.verificationStatus = "SUBMITTED";
     await company.save();
 
     res.status(200).json({
       success: true,
       message: "Profile submitted for verification",
+      company, // 🔥 send updated data
     });
   } catch (error) {
     console.error("Submit verification error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
+

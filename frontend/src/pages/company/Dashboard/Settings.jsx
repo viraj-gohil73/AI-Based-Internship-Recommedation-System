@@ -1,10 +1,9 @@
 import { useState } from "react";
-import CompanyLayout from "../../../layout/CompnayLayout";
 import { Eye, EyeOff } from "lucide-react";
 import Input from "../../../components/profile/shared/Input";
 import { useVerification } from "../../../context/VerificationContext";
 import UnderReviewAlert from "../../../components/UnderReviewAlert";
-
+import { useCompany } from "../../../context/CompanyContext"
 /* ---------------- TOGGLE SWITCH ---------------- */
 function Toggle({ enabled, onChange, disabled }) {
   return (
@@ -26,8 +25,9 @@ function Toggle({ enabled, onChange, disabled }) {
 
 /* ---------------- MAIN SETTINGS PAGE ---------------- */
 export default function CompanySettings() {
+  const { company } = useCompany();
   const { status } = useVerification();
-  const isLocked = status === "SUBMITTED";
+  const isLocked = company.verificationStatus !== "APPROVED";
 
   const [passwords, setPasswords] = useState({
     current: "",

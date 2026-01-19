@@ -34,6 +34,7 @@ import LoginAdmin from "./pages/admin/Login_Admin";
 import GoogleSuccess from "./pages/GoogleSuccess";
 import AdminLayout from "./layout/AdminLayout"
 import Dashboard from "./pages/admin/Dashboard";
+import Companies from "./pages/admin/Companies";
 function App() {
   return (
     <VerificationProvider>
@@ -79,7 +80,8 @@ function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="approvals" element={<Approvals />} />
-            {/* <Route path="companies" element={<Companies />} />
+            <Route path="companies" element={<Companies />} />
+            {/* 
             <Route path="students" element={<Students />} />
             <Route path="recruiters" element={<Recruiters />} />
              />

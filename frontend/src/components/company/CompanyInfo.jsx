@@ -25,7 +25,7 @@ export default function CompanyInfoTab({ data, setFormData, disabled }) {
     city: "",
     state: "",
     pincode: "",
-    gstNumber: "",
+    gst_no: "",
   });
 const uploadRef = useRef(null);
 
@@ -46,7 +46,7 @@ const uploadRef = useRef(null);
         city: contextCompany.city || "",
         state: contextCompany.state || "",
         pincode: contextCompany.pincode || "",
-        gstNumber: contextCompany.gstNumber || "",
+        gst_no: contextCompany.gst_no || "",
       });
     }
   }, [contextCompany]);
@@ -75,38 +75,40 @@ const uploadRef = useRef(null);
 
   /* ---------------- VALIDATION ---------------- */
   const validate = () => {
-    const newErrors = {};
+  const newErrors = {};
 
-    if (!company.companyName)
-      newErrors.companyName = "Company name is required";
+  if (!company.companyName.trim())
+    newErrors.companyName = "Company name is required";
 
-    if (!company.industry)
-      newErrors.industry = "Industry is required";
+  if (!company.industry.trim())
+    newErrors.industry = "Industry is required";
 
-    if (!company.companySize)
-      newErrors.companySize = "Company size is required";
+  if (!company.companySize)
+    newErrors.companySize = "Company size is required";
 
-    if (!company.foundedYear)
-      newErrors.foundedYear = "Founded year is required";
+  if (!company.foundedYear)
+    newErrors.foundedYear = "Founded year is required";
 
-    if (!company.website || !/^https?:\/\//.test(company.website))
-      newErrors.website = "Enter valid website URL";
+  if (!company.website || !/^https?:\/\//.test(company.website))
+    newErrors.website = "Enter a valid website URL";
 
-    if (!company.about || company.about.length < 100)
-      newErrors.about = "About company must be at least 100 characters";
+  if (!company.about || company.about.trim().length < 50)
+    newErrors.about = "About company must be at least 50 characters";
 
-    if (!company.city)
-      newErrors.city = "City is required";
+  if (!company.city.trim())
+    newErrors.city = "City is required";
 
-    if (!company.state)
-      newErrors.state = "State is required";
+  if (!company.state.trim())
+    newErrors.state = "State is required";
 
-    if (!/^\d{6}$/.test(company.pincode))
-      newErrors.pincode = "Pincode must be 6 digits";
+  if (!/^\d{6}$/.test(company.pincode))
+    newErrors.pincode = "Pincode must be exactly 6 digits";
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  setErrors(newErrors);
+  return Object.keys(newErrors).length === 0;
+};
+
+
 
   /* ---------------- CHANGE HANDLER ---------------- */
   const handleChange = (field, value) => {
@@ -123,17 +125,22 @@ const uploadRef = useRef(null);
 
   /* ---------------- SAVE TO DB ---------------- */
   const handleSave = async () => {
-    if (!validate()) return;
+  const isValid = validate();
 
-    try {
-      await updateCompany(company);
-      toast.success("Company Information Saved Successfully");
-      
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to save company information");
-    }
-  };
+  if (!isValid) {
+    toast.error("Please fix the highlighted errors");
+    return;
+  }
+
+  try {
+    await updateCompany(company);
+    toast.success("Company Information Saved Successfully");
+  } catch (error) {
+    toast.error("Failed to save company information");
+  }
+};
+
+
 
   return (
     <>
@@ -183,7 +190,7 @@ const uploadRef = useRef(null);
   </button> */}
 
   {/* Remove Logo */}
-  {company.logo && disabled && (
+  {company.logo && !disabled && (
     <button
       type="button"
       disabled={disabled}
@@ -276,6 +283,9 @@ const uploadRef = useRef(null);
           }`}
           onChange={(e) => handleChange("about", e.target.value)}
         />
+        {errors.about && (
+  <p className="text-sm text-red-500 mt-1">{errors.about}</p>
+)}
 
         {/* ADDRESS */}
         <Input
@@ -329,9 +339,9 @@ const uploadRef = useRef(null);
         <Input
           label="GST Number"
           disabled={disabled}
-          value={company.gstNumber}
+          value={company.gst_no}
           placeholder="GST Number"
-          onChange={(e) => handleChange("gstNumber", e.target.value)}
+          onChange={(e) => handleChange("gst_no", e.target.value)}
         />
       </div>
 

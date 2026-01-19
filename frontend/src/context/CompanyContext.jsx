@@ -1,7 +1,6 @@
-// context/CompanyContext.jsx
 import { createContext, useContext, useEffect, useState } from "react";
 
-const CompanyContext = createContext();
+const CompanyContext = createContext(null);
 
 export function CompanyProvider({ children }) {
   const [company, setCompany] = useState(null);
@@ -9,7 +8,10 @@ export function CompanyProvider({ children }) {
 
   /* ---------------- FETCH COMPANY ---------------- */
   useEffect(() => {
-    if (company) return; // 🔒 already fetched
+    if (company) {
+      setLoading(false);
+      return;
+    }
 
     const fetchCompany = async () => {
       try {
@@ -26,6 +28,10 @@ export function CompanyProvider({ children }) {
 
         const data = await res.json();
 
+        if (!res.ok || !data?.data) {
+          throw new Error(data.message || "Failed to fetch company");
+        }
+
         setCompany({
           logo: data.data.logo || "",
           companyName: data.data.companyName || "",
@@ -41,10 +47,11 @@ export function CompanyProvider({ children }) {
           city: data.data.city || "",
           state: data.data.state || "",
           pincode: data.data.pincode || "",
-          gstNumber: data.data.gstNumber || "",
+          gst_no: data.data.gst_no || "",
           secondaryEmail: data.data.secondaryEmail || "",
-        mobile: data.data.mobile || "",
-        reg_doc: data.data.reg_doc || {}
+          mobile: data.data.mobile || "",
+          reg_doc: data.data.reg_doc || "",
+          verificationStatus: data.data.verificationStatus || "DRAFT",
         });
       } catch (err) {
         console.error("Company fetch error", err);
@@ -54,17 +61,18 @@ export function CompanyProvider({ children }) {
     };
 
     fetchCompany();
-  }, []);
+  }, [company]);
 
   /* ---------------- UPDATE COMPANY ---------------- */
   const updateCompany = async (updatedData) => {
     try {
       const token = localStorage.getItem("token");
+      setLoading(true);
 
       const res = await fetch(
         "http://localhost:5000/api/company/update",
         {
-          method: "PUT",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -75,30 +83,37 @@ export function CompanyProvider({ children }) {
 
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || !data?.company) {
         throw new Error(data.message || "Update failed");
       }
 
-      // 🔄 Update context immediately
+      // ✅ merge instead of overwrite
       setCompany((prev) => ({
         ...prev,
-        ...updatedData,
+        ...data.company,
       }));
 
-      return data;
+      return data.company;
     } catch (error) {
       console.error("Company update error", error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <CompanyContext.Provider
-      value={{ company, loading, updateCompany }}
-    >
+    <CompanyContext.Provider value={{ company, loading, updateCompany, setCompany }}>
       {children}
     </CompanyContext.Provider>
   );
 }
 
-export const useCompany = () => useContext(CompanyContext);
+/* ---------------- SAFE HOOK ---------------- */
+export const useCompany = () => {
+  const ctx = useContext(CompanyContext);
+  if (!ctx) {
+    throw new Error("useCompany must be used inside CompanyProvider");
+  }
+  return ctx;
+};

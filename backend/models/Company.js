@@ -72,11 +72,9 @@ const Company = new mongoose.Schema({
         type:String
     }, 
     verificationStatus: {
-  type: String,
-  enum: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
-  default: "DRAFT",
-}
-
-
+        type: String,
+        enum: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
+        default: "DRAFT",
+    }
 },{timestamps: true});
 export default mongoose.model("Company", Company);
