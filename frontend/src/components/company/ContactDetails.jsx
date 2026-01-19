@@ -28,7 +28,7 @@ export default function CompanyContactTab({ data, setFormData, disabled }) {
    const validate = async () => {
     const newErrors = {};
 
-    if (contact.mobile && contact.mobile.length !== 10) {
+    if (contact.mobile == "" && contact.mobile.length !== 10) {
   newErrors.mobile = "Mobile number must be exactly 10 digits";
 } else if (
   contact.mobile &&

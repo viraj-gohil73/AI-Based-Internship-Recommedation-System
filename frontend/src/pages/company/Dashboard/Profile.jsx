@@ -3,7 +3,7 @@ import TabsHeader from "../../../components/company/TabsHeader";
 import CompanyInfo from "../../../components/company/CompanyInfo";
 import ContactDetails from "../../../components/company/ContactDetails";
 import Documents from "../../../components/company/Documents";
-import { validateAllTabs } from "../../../utils/validations";
+import { useCompanyValidation } from "../../../utils/validations";
 import { useCompany } from "../../../context/CompanyContext";
 import toast from "react-hot-toast";
 const tabs = ["Company Info", "Contact", "Documents"];
@@ -11,7 +11,7 @@ const tabs = ["Company Info", "Contact", "Documents"];
 export default function CompanyProfile() {
   const { company, setCompany } = useCompany();
   const [activeTab, setActiveTab] = useState(tabs[0]);
-
+  const { isValid } = useCompanyValidation();
   const isLocked = company?.verificationStatus === "SUBMITTED";
 
   const [formData, setFormData] = useState({
@@ -31,7 +31,7 @@ export default function CompanyProfile() {
     }
   }, [company]);
 
-  const isValid = validateAllTabs(formData);
+  //const isValid = useCompanyValidation();
 
   /* ================= SUBMIT ================= */
   const handleSubmit = async () => {

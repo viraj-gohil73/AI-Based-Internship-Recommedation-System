@@ -89,11 +89,14 @@ const uploadRef = useRef(null);
   if (!company.foundedYear)
     newErrors.foundedYear = "Founded year is required";
 
-  if (!company.website || !/^https?:\/\//.test(company.website))
-    newErrors.website = "Enter a valid website URL";
+  // if (!company.website || !/^https?:\/\//.test(company.website))
+  //   newErrors.website = "Enter a valid website URL";
 
   if (!company.about || company.about.trim().length < 50)
     newErrors.about = "About company must be at least 50 characters";
+
+  if(!company.address1)
+    newErrors.address1 = "Address required"
 
   if (!company.city.trim())
     newErrors.city = "City is required";
@@ -103,6 +106,12 @@ const uploadRef = useRef(null);
 
   if (!/^\d{6}$/.test(company.pincode))
     newErrors.pincode = "Pincode must be exactly 6 digits";
+
+  if(!company.gst_no)
+    newErrors.gst_no = "Enter GST Number"
+
+  if(company.gst_no.length != 15)
+    newErrors.gst_no = "Enter Valid GST Number"
 
   setErrors(newErrors);
   return Object.keys(newErrors).length === 0;
@@ -211,7 +220,7 @@ const uploadRef = useRef(null);
         {/* COMPANY NAME */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <Input
-            label="Company Name"
+            label={<>Company Name <span className="text-red-500">*</span></>}
             disabled={disabled}
             placeholder="Enter Company Name"
             value={company.companyName}
@@ -231,7 +240,7 @@ const uploadRef = useRef(null);
         {/* INDUSTRY */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
           <Input
-            label="Industry"
+            label={<>Industry<span className="text-red-500"> *</span></>}
             disabled={disabled}
             placeholder="IT, AI, Finance"
             value={company.industry}
@@ -240,7 +249,7 @@ const uploadRef = useRef(null);
           />
 
           <Input
-            label="Company Size"
+            label={<>Company Size<span className="text-red-500"> *</span></>}
             disabled={disabled}
             placeholder="1-10, 11-50"
             value={company.companySize}
@@ -249,7 +258,7 @@ const uploadRef = useRef(null);
           />
 
           <Input
-            label="Founded Year"
+            label={<>Founded Year<span className="text-red-500"> *</span></>}
             disabled={disabled}
             placeholder="2020"
             value={company.foundedYear}
@@ -271,12 +280,12 @@ const uploadRef = useRef(null);
         />
 
         {/* ABOUT */}
-        <label className="block text-sm font-medium mb-1">About Company</label>
+        <label className="block text-sm font-medium mb-1">About Company<span className="text-red-500"> *</span></label>
         <textarea
           disabled={disabled}
           placeholder="Describe your company"
           value={company.about}
-          className={`w-full h-[120px] p-4 rounded-lg resize-none ${
+          className={`w-full h-[150px] p-4 rounded-lg resize-none ${
             disabled
               ? "bg-gray-50 text-gray-700 cursor-not-allowed"
               : "border-2 border-slate-400"
@@ -284,15 +293,16 @@ const uploadRef = useRef(null);
           onChange={(e) => handleChange("about", e.target.value)}
         />
         {errors.about && (
-  <p className="text-sm text-red-500 mt-1">{errors.about}</p>
+  <p className="text-sm text-red-500 ">{errors.about}</p>
 )}
 
         {/* ADDRESS */}
         <Input
-          label="Address Line 1"
+          label={<>Address Line 1<span className="text-red-500"> *</span></>}
           placeholder="Address Line 1"
           disabled={disabled}
           value={company.address1}
+          error={errors.address1}
           onChange={(e) => handleChange("address1", e.target.value)}
         />
 
@@ -306,7 +316,7 @@ const uploadRef = useRef(null);
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
           <Input
-            label="City"
+            label={<>City <span className="text-red-500"> *</span></>}
             disabled={disabled}
             value={company.city}
             placeholder="City"
@@ -315,7 +325,7 @@ const uploadRef = useRef(null);
           />
 
           <Input
-            label="State"
+            label={<>State<span className="text-red-500"> *</span></>}
             disabled={disabled}
             value={company.state}
             placeholder="State"
@@ -324,7 +334,7 @@ const uploadRef = useRef(null);
           />
 
           <Input
-            label="Pincode"
+            label={<>Pincode<span className="text-red-500"> *</span></>}
             disabled={disabled}
             value={company.pincode}
             error={errors.pincode}
@@ -337,9 +347,10 @@ const uploadRef = useRef(null);
         </div>
 
         <Input
-          label="GST Number"
+          label={<>GST Number<span className="text-red-500"> *</span></>}
           disabled={disabled}
           value={company.gst_no}
+          error={errors.gst_no}
           placeholder="GST Number"
           onChange={(e) => handleChange("gst_no", e.target.value)}
         />

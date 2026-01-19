@@ -59,7 +59,6 @@ export const submitVerification = async (req, res) => {
     if (
       !company.companyName ||
       !company.email ||
-      !company.website ||
       !company.reg_doc
     ) {
       return res.status(400).json({
