@@ -6,6 +6,9 @@ import Documents from "../../../components/company/Documents";
 import { useCompanyValidation } from "../../../utils/validations";
 import { useCompany } from "../../../context/CompanyContext";
 import toast from "react-hot-toast";
+import UnderReviewAlert from "../../../components/UnderReviewAlert";
+
+
 const tabs = ["Company Info", "Contact", "Documents"];
 
 export default function CompanyProfile() {
@@ -68,14 +71,14 @@ export default function CompanyProfile() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto rounded-xl">
-      {/* STATUS BANNER */}
-      {company?.verificationStatus === "SUBMITTED" && (
-        <div className="mb-3 px-4 py-2 rounded-md bg-blue-100 text-slate-800 text-sm">
-          🔒 Profile submitted. Editing disabled until admin approval.
-        </div>
-      )}
-
+    <div className="max-w-7xl p-4 mx-auto rounded-xl">
+      {/* 🔒 STATUS MESSAGE */}
+              {isLocked && (
+                <UnderReviewAlert
+          message="Your company profile is under admin review."
+          subMessage="Settings will be enabled after approval."
+        />
+              )}
       {/* TABS */}
       <TabsHeader
         tabs={tabs}
@@ -84,7 +87,7 @@ export default function CompanyProfile() {
       />
 
       {/* CONTENT */}
-      <div className="p-4 sm:p-6 lg:p-8">
+      <div className="p-2 md:p-4 ">
         {activeTab === "Company Info" && (
           <CompanyInfo
             data={formData.companyInfo}

@@ -27,7 +27,7 @@ function Toggle({ enabled, onChange, disabled }) {
 export default function CompanySettings() {
   const { company } = useCompany();
   const { status } = useVerification();
-  const isLocked = company.verificationStatus !== "APPROVED";
+  const isLocked = company?.verificationStatus !== "APPROVED";
 
   const [passwords, setPasswords] = useState({
     current: "",
@@ -70,7 +70,7 @@ export default function CompanySettings() {
 
   return (
 
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      <div className="max-w-7xl p-4 mx-auto  space-y-6">
 
         {/* 🔒 STATUS MESSAGE */}
         {isLocked && (

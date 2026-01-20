@@ -12,13 +12,13 @@ export default function CompanyLayout() {
       <Sidebarcompany open={open} onClose={() => setOpen(false)} />
 
       {/* RIGHT SIDE */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col ">
         <div className="sticky top-0 z-30">
           <Headercompany onMenuClick={() => setOpen(true)} />
         </div>
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="bg-white shadow p-4 min-h-full">
+        <main className="flex-1 overflow-y-auto ">
+          <div className="bg-white shadow p-4 min-h-full ">
             <Outlet /> {/* 👈 yahin page render hoga */}
           </div>
         </main>
