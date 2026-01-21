@@ -11,7 +11,7 @@ import { googleCallbackHandler } from "./controllers/authGoogle.js";
 import companyroutes from "./routes/companyRoutes.js";
 import "./config/passportCompany.js";
 import cookieParser from "cookie-parser";
-
+import adminApprovalRoutes from './routes/admin.js'
 import authvg from "./routes/authvg.js";
 
 dotenv.config();
@@ -37,7 +37,7 @@ mongoose
 //app.use("/api/auth", authRoutes);
 app.use("/api/company", companyroutes);
 app.use("/api/auth", authvg);
-
+app.use("/api/admin", adminApprovalRoutes);
 app.listen(process.env.PORT, () =>
   console.log(`🚀 Server running on port ${process.env.PORT}`)
 );

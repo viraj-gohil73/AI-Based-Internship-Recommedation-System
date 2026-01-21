@@ -107,3 +107,20 @@ export const updateCompanyLogo = async (req, res) => {
     res.status(500).json({ message: "Logo update failed" });
   }
 };
+
+/* SUBMITTED + RESUBMISSION */
+
+export const getApprovalCompanies = async (req, res) => {
+  try {
+    const companies = await Company.find({
+      verificationStatus: {
+        $in: ["SUBMITTED", "RESUBMISSION"],
+      },
+    }).sort({ createdAt: -1 });
+    console.log("hit req")
+
+    res.json(companies);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
