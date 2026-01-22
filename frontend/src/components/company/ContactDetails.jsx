@@ -25,27 +25,22 @@ export default function CompanyContactTab({ data, setFormData, disabled }) {
   }, [contextCompany]);
 
   /* ---------------- VALIDATION ---------------- */
-   const validate = async () => {
+  const validate = () => {
+    if (disabled) return true;
+
     const newErrors = {};
 
-    if (contact.mobile == "" && contact.mobile.length !== 10) {
-  newErrors.mobile = "Mobile number must be exactly 10 digits";
-} else if (
-  contact.mobile &&
-  !/^[0-9]\d{9}$/.test(contact.mobile)
-) {
-  newErrors.mobile = "Enter a valid Indian mobile number";
-}
+    /* Mobile validation */
+    if (!/^[6-9]\d{9}$/.test(contact.mobile)) {
+      newErrors.mobile = "Enter valid 10-digit Indian mobile number";
+    }
 
-
-if (
-  contact.secondaryEmail == "" &&
-  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.secondaryEmail)
-) {
-  newErrors.secondaryEmail = "Enter a valid email address";
-}
-
-
+    /* Email validation */
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.secondaryEmail)
+    ) {
+      newErrors.secondaryEmail = "Enter valid email address";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -58,14 +53,16 @@ if (
       [field]: value,
     }));
 
+    /* sync for final submit */
     setFormData((prev) => ({
       ...prev,
       contact: { ...prev.contact, [field]: value },
     }));
 
+    /* clear error for edited field */
     setErrors((prev) => ({
       ...prev,
-      [field]: "",
+      [field]: null,
     }));
   };
 
@@ -73,7 +70,7 @@ if (
   const handleSave = async () => {
     if (disabled) return;
 
-    const isValid = await validate();
+    const isValid = validate();
     if (!isValid) {
       toast.error("Please fix the errors before saving");
       return;

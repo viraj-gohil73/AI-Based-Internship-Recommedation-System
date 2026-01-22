@@ -1,16 +1,17 @@
 import { Upload, FileText, Trash2 } from "lucide-react";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { useCompany} from "../../context/CompanyContext"
-
+import { useCompany } from "../../context/CompanyContext";
 
 export default function Documents({ data, setFormData, disabled }) {
   const fileRef = useRef(null);
-  const { updateCompany, company} = useCompany();
+  const { updateCompany } = useCompany();
+
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
-  const hasDocument = company.reg_doc//typeof data?.reg_doc === "string";
+  /* ✅ SINGLE SOURCE OF TRUTH */
+  const hasDocument = typeof data?.reg_doc === "string";
 
   /* ---------------- FILE NAME (UI ONLY) ---------------- */
   const getDisplayFileName = () => {
@@ -20,12 +21,42 @@ export default function Documents({ data, setFormData, disabled }) {
       .replace(/\s+/g, "_")}_registration.pdf`;
   };
 
+  /* ---------------- FILE VALIDATION ---------------- */
+  const validateFile = (file) => {
+    if (!file) return false;
+
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only PDF or DOC/DOCX files are allowed");
+      return false;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
+      return false;
+    }
+
+    return true;
+  };
+
   /* ---------------- UPLOAD ---------------- */
   const handleUpload = async () => {
     if (!file) {
       toast.error("Please choose a file first");
       return;
     }
+
+    if (!window.uploadcare) {
+      toast.error("Upload service not available");
+      return;
+    }
+
+    if (!validateFile(file)) return;
 
     setUploading(true);
 
@@ -71,8 +102,6 @@ export default function Documents({ data, setFormData, disabled }) {
     setFile(null);
     if (fileRef.current) fileRef.current.value = "";
   };
-
-  
 
   return (
     <div className="bg-white border border-slate-300 rounded-xl p-4 sm:p-6 space-y-6">
@@ -133,8 +162,8 @@ export default function Documents({ data, setFormData, disabled }) {
                        file:mr-4 file:py-2 file:px-4
                        file:rounded-md file:border-0
                        file:text-sm file:font-medium
-                       file:bg-blue-100 file:text-blue-600 cursor-pointer 
-                       hover:file:bg-blue-100"
+                       file:bg-blue-100 file:text-blue-600 cursor-pointer
+                       hover:file:bg-blue-200"
           />
 
           {/* UPLOAD BUTTON */}
@@ -145,9 +174,10 @@ export default function Documents({ data, setFormData, disabled }) {
               className="inline-flex items-center justify-center gap-2
                          w-full sm:w-auto
                          px-4 py-2 rounded-lg
-                         bg-blue-600 text-white cursor-pointer
+                         bg-blue-600 text-white
                          text-sm font-medium
-                         hover:bg-blue-700 disabled:opacity-60"
+                         hover:bg-blue-700
+                         disabled:opacity-60"
             >
               <Upload size={16} />
               {uploading ? "Uploading..." : "Upload Document"}
@@ -157,7 +187,7 @@ export default function Documents({ data, setFormData, disabled }) {
       )}
 
       <p className="text-xs text-gray-500">
-        Accepted formats: PDF, DOCX. Max size: 5MB.
+        Accepted formats: PDF, DOC, DOCX. Max size: 5MB.
       </p>
     </div>
   );

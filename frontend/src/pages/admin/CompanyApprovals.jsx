@@ -4,6 +4,7 @@ import {
   CheckCircle,
   XCircle,
   RotateCcw,
+  Building2, Clock
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -82,23 +83,35 @@ export default function CompanyApprovals() {
   return (
     <div className="space-y-6">
       {/* ================= HEADER ================= */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">
-          Company Approval Requests
-        </h1>
-        <span className="text-sm text-slate-500">
-          Pending: {companies.length}
-        </span>
-      </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+  {/* Title with Icon */}
+  <div className="flex items-center gap-3">
+    <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-indigo-100">
+      <Building2 className="h-5 w-5 text-indigo-600" />
+    </div>
+
+    <h1 className="text-lg sm:text-2xl font-semibold text-slate-800">
+      Company Approval Requests
+    </h1>
+  </div>
+
+  {/* Pending Count */}
+  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100">
+    <Clock className="h-4 w-4 text-amber-600" />
+    <span className="text-xs sm:text-sm font-medium text-amber-700">
+      Pending: {companies.length}
+    </span>
+  </div>
+</div>
 
       {/* ================= DESKTOP TABLE ================= */}
-      <div className="hidden md:block bg-white border rounded-2xl shadow-sm overflow-x-auto">
+      <div className="hidden md:block bg-white border-2 border-slate-300 rounded-2xl shadow-sm overflow-x-auto">
         <table className="min-w-[900px] w-full text-sm">
           <thead className="bg-slate-100 text-slate-600">
             <tr>
               <th className="p-4 text-left">Company</th>
-              <th>Email</th>
-              <th>Status</th>
+              <th className="p-4 text-left">Email</th>
+              <th className="p-4 text-left">Status</th>
               <th className="p-4 text-right">Actions</th>
             </tr>
           </thead>
@@ -107,7 +120,7 @@ export default function CompanyApprovals() {
             {companies.map((c) => (
               <tr
                 key={c._id}
-                className="border-t hover:bg-slate-50"
+                className="border-t-2 border-slate-300 hover:bg-slate-50"
               >
                 <td className="p-4 flex items-center gap-3">
                   <img
@@ -230,7 +243,7 @@ export default function CompanyApprovals() {
             {/* ACTION BUTTONS */}
             <div className="grid grid-cols-3 gap-2 pt-2">
               <MobileBtn
-                icon={<CheckCircle size={14} />}
+                // icon={<CheckCircle size={14} />}
                 label="Approve"
                 color="green"
                 onClick={() =>
@@ -238,15 +251,15 @@ export default function CompanyApprovals() {
                 }
               />
               <MobileBtn
-                icon={<RotateCcw size={14} />}
-                label="Re-submit"
+                // icon={<RotateCcw size={14} />}
+                label="Re-Submit"
                 color="blue"
                 onClick={() =>
                   updateStatus(c._id, "RESUBMISSION")
                 }
               />
               <MobileBtn
-                icon={<XCircle size={14} />}
+                // icon={<XCircle size={14} />}
                 label="Reject"
                 color="red"
                 onClick={() =>
@@ -279,7 +292,7 @@ function ActionBtn({ icon, label, onClick, color }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs ${
+      className={`inline-flex items-center gap-1 cursor-pointer px-3 py-2 rounded-lg text-xs ${
         color
           ? `text-white ${map[color]}`
           : "border text-slate-700 hover:bg-slate-100"

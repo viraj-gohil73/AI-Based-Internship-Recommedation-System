@@ -9,7 +9,7 @@ import Company from "../models/Company.js";
 export const getSubmittedCompanies = async (req, res) => {
   try {
     const companies = await Company.find({
-      verificationStatus: { $in: ["SUBMITTED", "RESUBMISSION"] },
+      verificationStatus: { $in: ["SUBMITTED"] },
     }).sort({ createdAt: -1 });
 
     return res.status(200).json({

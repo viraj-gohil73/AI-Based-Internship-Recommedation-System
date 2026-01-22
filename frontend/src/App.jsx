@@ -36,6 +36,8 @@ import AdminLayout from "./layout/AdminLayout"
 import Dashboard from "./pages/admin/Dashboard";
 import Companies from "./pages/admin/Companies";
 import CompanyDetails from "./pages/admin/CompanyDetails";
+import AdminSettings from "./pages/admin/AdminSettings";
+
 function App() {
   return (
     <VerificationProvider>
@@ -87,6 +89,7 @@ function App() {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="approvals" element={<CompanyApprovals />} />
             <Route path="companies" element={<Companies />} />
+            <Route path="settings" element={<AdminSettings />} />
             {/* 
             <Route path="students" element={<Students />} />
             <Route path="recruiters" element={<Recruiters />} />

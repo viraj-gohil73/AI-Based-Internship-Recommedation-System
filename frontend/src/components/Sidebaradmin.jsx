@@ -5,7 +5,7 @@ import {
   Users,
   Briefcase,
   BarChart3,
-  Shield,
+  ShieldCheck ,
   UserCheck,
   Building2,
   Settings,
@@ -24,7 +24,7 @@ export default function Sidebar_company({ open, onClose }) {
   { name: "Companies", icon: Building2,path: "/admin/companies"  },
   { name: "Students", icon: Users, path: "/admin/students"  },
   { name: "Recruiters",icon: UserCheck , path: "/admin/recruiters",  },
-  { name: "Approvals", icon: Shield, path: "/admin/approvals" },
+  { name: "Approvals", icon: ShieldCheck , path: "/admin/approvals" },
   { name: "Settings", icon: Settings,path: "/admin/settings"  },
 ];
 
