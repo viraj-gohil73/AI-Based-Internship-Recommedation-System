@@ -29,9 +29,9 @@ export default function Sidebar_company({ open, onClose }) {
 ];
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
+    localStorage.removeItem("adminToken");
     localStorage.removeItem("user");
-    navigate("/auth/company/login", { replace: true });
+    navigate("/admin/login", { replace: true });
   };
 
   // 🔒 SAFE GUARD (VERY IMPORTANT)

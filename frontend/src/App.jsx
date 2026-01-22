@@ -30,14 +30,15 @@ import CompanyLayoutWrapper from "./layout/CompanyLayoutWrapper";
 import CompanyApprovals from "./pages/admin/CompanyApprovals";
 /* ================= OTHER ================= */
 import LoginRecruiter from "./pages/recruiter/Recruiter_login";
-import LoginAdmin from "./pages/admin/Login_Admin";
+import LoginAdmin from "./pages/admin/LoginAdmin";
 import GoogleSuccess from "./pages/GoogleSuccess";
 import AdminLayout from "./layout/AdminLayout"
 import Dashboard from "./pages/admin/Dashboard";
 import Companies from "./pages/admin/Companies";
 import CompanyDetails from "./pages/admin/CompanyDetails";
 import AdminSettings from "./pages/admin/AdminSettings";
-
+import AdminAuthRedirect from "./guards/AdminAuthRedirect";
+import AdminProtectedRoute from "./guards/AdminProtectedRoute";
 function App() {
   return (
     <VerificationProvider>
@@ -79,15 +80,24 @@ function App() {
           <Route path="/login-recruiter" element={<LoginRecruiter />} />
 
 
-          <Route path="/login-admin" element={<LoginAdmin />} />
+          <Route
+  path="/admin/login"
+  element={
+    <AdminAuthRedirect>
+      <LoginAdmin />
+    </AdminAuthRedirect>
+  }
+/>
           <Route path="/admin" element={<AdminLayout />}>
           <Route
   path="/admin/companies/:id"
   element={<CompanyDetails />}
 />
 
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="approvals" element={<CompanyApprovals />} />
+            <Route path="dashboard" element={<AdminProtectedRoute>
+      <Dashboard />
+    </AdminProtectedRoute>} />
+            <Route path="approvals" element={<AdminProtectedRoute><CompanyApprovals /></AdminProtectedRoute>} />
             <Route path="companies" element={<Companies />} />
             <Route path="settings" element={<AdminSettings />} />
             {/* 

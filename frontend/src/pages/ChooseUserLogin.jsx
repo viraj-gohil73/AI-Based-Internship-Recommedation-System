@@ -11,7 +11,7 @@ export default function ChooseUserLogin() {
 
     const routes = {
       student: "/login-student",
-      company: "/login-company",
+      company: "/auth/company/login",
       recruiter: "/login-recruiter",
       admin: "/login-admin",
     };

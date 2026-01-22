@@ -1,31 +1,56 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export default function LoginAdmin() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: "", password: "", role: "" });
-    const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!formData.role.trim()) {
-      alert("Please select your role");
+  if (!formData.email || !formData.password) {
+    toast.error("Email and password required");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await fetch("http://localhost:5000/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      toast.error(data.message || "Login failed");
       return;
     }
 
-    console.log("Login Data:", formData);
-    alert("Login Successful! (Check console for details)");
+    localStorage.setItem("adminToken", data.token);
+    toast.success("Admin login successful");
 
-    setFormData({
-      email: "",
-      password: "",
-      role: "",
-    });
-    // 🔐 Add your API or Firebase login logic here
-  };
+    setTimeout(() => {
+      navigate("/admin/dashboard");
+    }, 800);
+  } catch (err) {
+    toast.error("Server error");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-100 via-white to-indigo-50">
@@ -114,11 +139,13 @@ export default function LoginAdmin() {
           </div>
 
           <button
-            type="submit"
-            className="w-full cursor-pointer rounded-md bg-blue-600 py-2 text-white hover:bg-blue-700 transition-colors"
-          >
-            Login as Admin
-          </button>
+  type="submit"
+  disabled={loading}
+  className="w-full bg-blue-600 py-2 text-white disabled:opacity-50"
+>
+  {loading ? "Logging in..." : "Login as Admin"}
+</button>
+
         </form>
 
         {/* back to home */}

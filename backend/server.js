@@ -13,7 +13,7 @@ import "./config/passportCompany.js";
 import cookieParser from "cookie-parser";
 import adminApprovalRoutes from './routes/admin.js'
 import authvg from "./routes/authvg.js";
-
+import { seedAdmin } from "./controllers/seedAdmin.js";
 dotenv.config();
 const app = express();
 app.use(cookieParser());
@@ -31,7 +31,10 @@ app.use(passport.initialize());
 
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
+  .then(async () => {
+    console.log("MongoDB Connected");
+    await seedAdmin();
+  })
   .catch((err) => console.log(err));
 
 //app.use("/api/auth", authRoutes);

@@ -1,30 +1,27 @@
 import jwt from "jsonwebtoken";
+import Admin from "../models/Admin.js";
 
-export const adminAuth = (req, res, next) => {
+const adminAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    // 🔒 Token present & Bearer format check
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     const token = authHeader.split(" ")[1];
-
-    // 🔥 Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // ❌ Role check (VERY IMPORTANT)
-    if (decoded.role !== "ADMIN") {
-      return res.status(403).json({ message: "Admin access only" });
+    const admin = await Admin.findById(decoded.id).select("-password");
+    if (!admin || admin.role !== "ADMIN") {
+      return res.status(403).json({ message: "Access denied" });
     }
 
-    // ✅ Attach decoded data
-    req.admin = decoded;        // { id, role, iat, exp }
-    req.adminId = decoded.id;
-
+    req.admin = admin;
     next();
   } catch (error) {
-    return res.status(401).json({ message: "Invalid or expired token" });
+    res.status(401).json({ message: "Invalid token" });
   }
 };
+
+export default adminAuth;

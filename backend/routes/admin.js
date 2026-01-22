@@ -4,7 +4,7 @@ import {
   respondToCompany,
   getCompanyDetails,
 } from "../controllers/admincontrol.js";
-
+import {adminLogin} from  "../controllers/adminAuthController.js"
 
 const router = express.Router();
 
@@ -31,5 +31,7 @@ router.get(
   "/company/:id",
   getCompanyDetails
 );
+
+router.post("/login", adminLogin);
 
 export default router;
