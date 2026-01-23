@@ -163,3 +163,34 @@ export const updateRecruiter = async (req, res) => {
     });
   }
 };
+
+export const updateRecruiterstatus = async (req, res) => {
+  try {
+    const recruiterId = req.params.id;
+    if (!req.user || !req.companyId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const recruiter = await Recruiter.findOne({
+      _id: recruiterId,
+      companyId: req.companyId,
+    });
+    if (!recruiter) {
+      return res.status(404).json({ message: "Recruiter not found" });
+    }
+
+    const { isactive } = req.body;
+    recruiter.isactive = isactive ?? recruiter.isactive;
+    await recruiter.save();
+    return res.status(200).json({
+      success: true,
+      message: "Recruiter status updated successfully",
+      recruiter,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};

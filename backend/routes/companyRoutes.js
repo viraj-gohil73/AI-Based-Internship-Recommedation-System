@@ -6,7 +6,7 @@ import { sendOtp } from "../api/auth/sendotpCompany.js";
 import { updateCompany, updateCompanyLogo, getApprovalCompanies } from "../controllers/companyController.js";
 import { createRecruiter } from "../controllers/recruitercontroller.js";
 import { getRecruiters } from "../controllers/recruitercontroller.js";
-import { updateRecruiter, getRecruiterById } from "../controllers/recruitercontroller.js";
+import { updateRecruiter, getRecruiterById, updateRecruiterstatus } from "../controllers/recruitercontroller.js";
 const router = express.Router();
 
 /* ================= OTP ================= */
@@ -34,6 +34,7 @@ router.post(
 router.post("/recruiter/add", companyAuth, createRecruiter);
 router.get("/recruiters",companyAuth, getRecruiters);
 router.put("/recruiter/:id", companyAuth, updateRecruiter);
+router.patch("/recruiter/:id/status", companyAuth, updateRecruiterstatus);
 router.get("/recruiter/:id", companyAuth, getRecruiterById);
 
 router.get(

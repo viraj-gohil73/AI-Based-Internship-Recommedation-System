@@ -112,7 +112,7 @@ export default function EditRecruiter() {
         throw new Error(data.message || "Failed to update recruiter");
       }
 
-      toast.success("Recruiter updated successfully");
+      toast.success("Recruiter Details updated successfully");
       navigate("/company/dashboard/recruiters");
     } catch (err) {
       console.error(err);
@@ -126,8 +126,8 @@ export default function EditRecruiter() {
     "w-full border px-3 py-2 rounded-lg mt-1 focus:ring-1 focus:ring-blue-500";
 
   return (
-    <div className=" bg-gray-50 p-4 sm:p-6 flex justify-center">
-      <div className="bg-white w-full max-w-2xl rounded-xl shadow p-4 sm:p-6">
+    <div className="p-4 sm:p-6 flex justify-center">
+      <div className="bg-white w-full max-w-3xl border-2 border-slate-200 rounded-xl shadow p-4 sm:p-6">
 
         <h2 className="text-lg sm:text-xl font-semibold mb-6 text-center sm:text-left">
           Edit Recruiter
@@ -236,26 +236,20 @@ export default function EditRecruiter() {
             </select>
           </div>
 
-          <div className="flex items-center gap-2 mt-6">
-            <input
-              type="checkbox"
-              checked={form.isactive}
-              onChange={(e) =>
-                setForm({ ...form, isactive: e.target.checked })
-              }
-            />
-            <span className="text-sm">Active Account</span>
-          </div>
-
-          <div className="flex items-center gap-2 mt-6">
-            <input
-              type="checkbox"
-              checked={form.canpost}
-              onChange={(e) =>
-                setForm({ ...form, canpost: e.target.checked })
-              }
-            />
-            <span className="text-sm">Can Post Jobs</span>
+          <div className="flex items-center gap-2 ">
+            <Toggle
+  label="Active Account"
+  checked={form.isactive}
+  onChange={(val) =>
+    setForm({ ...form, isactive: val })
+  }
+/>
+            <Toggle
+  label="Can Post Jobs"
+  checked={form.canpost}
+  onChange={(val) =>
+    setForm({ ...form, canpost: val })
+  }/>
           </div>
         </div>
 
@@ -277,6 +271,31 @@ export default function EditRecruiter() {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+
+function Toggle({ checked, onChange, label }) {
+  return (
+    <div className="flex items-center justify-around gap-2 mt-6">
+      <span className="text-sm font-medium text-gray-700">
+        {label}
+      </span>
+
+      <button
+        type="button"
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer
+        transition-colors duration-300
+        ${checked ? "bg-blue-600" : "bg-gray-300"}`}
+      >
+        <span
+          className={`inline-block h-4 w-4 transform rounded-full bg-white
+          transition-transform duration-300
+          ${checked ? "translate-x-6" : "translate-x-1"}`}
+        />
+      </button>
     </div>
   );
 }

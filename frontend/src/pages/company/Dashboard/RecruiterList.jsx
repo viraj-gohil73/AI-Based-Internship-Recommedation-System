@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
 import { Eye, Pencil, Ban, CheckCircle, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import UnderReviewAlert from "../../../components/UnderReviewAlert";
+import { useCompany } from "../../../context/CompanyContext"
+
 
 export default function RecruiterList() {
   const navigate = useNavigate();
 
   const [recruiters, setRecruiters] = useState([]);
+  const [confirmRecruiter, setConfirmRecruiter] = useState(null);
+const [updating, setUpdating] = useState(false);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+  const { company } = useCompany();
+  const isLocked = company?.verificationStatus !== "APPROVED";
   /* ---------------- FETCH FROM BACKEND ---------------- */
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -47,6 +54,52 @@ export default function RecruiterList() {
     fetchRecruiters();
   }, []);
 
+  const updateStatus = async (recruiter) => {
+  try {
+    setUpdating(true);
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(
+      `http://localhost:5000/api/company/recruiter/${recruiter._id}/status`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          isactive: !recruiter.isactive,
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || "Failed to update recruiter status");
+    }
+
+    // ✅ UI update after backend success
+    setRecruiters((prev) =>
+      prev.map((r) =>
+        r._id === recruiter._id
+          ? { ...r, isactive: !r.isactive }
+          : r
+      )
+    );
+
+    // close popup
+    setConfirmRecruiter(null);
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Server error");
+  } finally {
+    setUpdating(false);
+  }
+};
+
+  
+
   /* ---------------- UI STATUS TOGGLE (TEMP) ---------------- */
   const toggleStatus = (id) => {
     setRecruiters((prev) =>
@@ -73,29 +126,71 @@ export default function RecruiterList() {
   }
 
   return (
-    <div className=" sm:p-4 ">
-
+    <div className=" sm:p-2 ">
+{/* 🔒 STATUS MESSAGE */}
+        {isLocked && (
+          <UnderReviewAlert
+    message="Your company profile is under admin review."
+    subMessage="Add Recruiters will be enabled after approval."
+  />
+        )}
       {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 my-2">
         <h1 className="text-xl font-semibold">Recruiters</h1>
 
         <button
           onClick={() => navigate("/company/dashboard/recruiters/add")}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg"
+          disabled={isLocked}
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           <Plus size={18} />
           Add Recruiter
         </button>
       </div>
+{confirmRecruiter && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white w-full max-w-sm rounded-xl p-6 shadow">
+
+      <h3 className="text-lg font-semibold mb-2">
+        Confirm Action
+      </h3>
+
+      <p className="text-sm text-gray-600 mb-6">
+        Are you sure you want to{" "}
+        <span className="font-medium">
+          {confirmRecruiter.isactive ? "block" : "unblock"}
+        </span>{" "}
+        <b>{confirmRecruiter.name}</b>?
+      </p>
+
+      <div className="flex gap-3">
+        <button
+          onClick={() => setConfirmRecruiter(null)}
+          className="w-full border py-2 rounded-lg"
+        >
+          Cancel
+        </button>
+
+        <button
+          disabled={updating}
+          onClick={() => updateStatus(confirmRecruiter)}
+          className="w-full bg-blue-600 text-white py-2 rounded-lg disabled:opacity-50"
+        >
+          {updating ? "Updating..." : "Confirm"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* ---------------- DESKTOP TABLE ---------------- */}
-      <div className="hidden md:block bg-white rounded-xl shadow overflow-x-auto">
-        <table className="w-full min-w-[900px]">
+      <div className="hidden md:block bg-white rounded-xl shadow overflow-x-auto mt-4">
+        <table className={`w-full min-w-[900px] border-collapse ${isLocked ? "opacity-60 pointer-events-none" : ""}`}>
   <thead className="bg-gray-100">
     <tr>
-      <th className="p-3 text-left">Recruiter</th>
-      <th className="p-3">Email</th>
-      <th className="p-3">Last Login</th>
+      <th className="p-3 text-left ">Recruiter</th>
+      <th className="p-3 text-left">Email</th>
+      <th className="p-3 text-left">Last Login</th>
       <th className="p-3">Can Post</th>
       <th className="p-3">Status</th>
       <th className="p-3 text-center">Actions</th>
@@ -104,7 +199,7 @@ export default function RecruiterList() {
 
   <tbody>
     {recruiters.map((r) => (
-      <tr key={r._id} className="border-t hover:bg-gray-50">
+      <tr key={r._id} className="border-t hover:bg-gray-50 border-slate-300">
 
         {/* Recruiter (DP + Name) */}
         <td className="p-3">
@@ -168,10 +263,10 @@ export default function RecruiterList() {
         <td className="p-3">
           <div className="flex justify-center gap-2">
             <ActionButtons
-              r={r}
-              navigate={navigate}
-              toggleStatus={toggleStatus}
-            />
+  r={r}
+  navigate={navigate}
+  onConfirm={() => setConfirmRecruiter(r)}
+/>
           </div>
         </td>
       </tr>
@@ -233,14 +328,14 @@ export default function RecruiterList() {
 
 /* ---------------- ACTION BUTTONS ---------------- */
 
-function ActionButtons({ r, navigate, toggleStatus }) {
+function ActionButtons({ r, navigate, onConfirm }){
   return (
     <div className="flex gap-2 flex-col sm:flex-row justify-center">
       <button
         onClick={() =>
           navigate(`/company/dashboard/recruiters/${r._id}`)
         }
-        className="p-2 sm:2 bg-blue-100 text-blue-600 rounded-lg"
+        className="p-2 sm:2 bg-blue-100 text-blue-600 rounded-lg cursor-pointer"
       >
         <Eye size={16} />
       </button>
@@ -249,21 +344,21 @@ function ActionButtons({ r, navigate, toggleStatus }) {
         onClick={() =>
           navigate(`/company/dashboard/recruiters/${r._id}/edit`)
         }
-        className="p-2 bg-amber-100 text-amber-600 rounded-lg"
+        className="p-2 bg-amber-100 text-amber-600 rounded-lg cursor-pointer"
       >
         <Pencil size={16} />
       </button>
 
       <button
-        onClick={() => toggleStatus(r._id)}
-        className={`p-2 rounded-lg ${
-          r.isactive
-            ? "bg-red-100 text-red-600"
-            : "bg-green-100 text-green-600"
-        }`}
-      >
-        {r.isactive ? <Ban size={16} /> : <CheckCircle size={16} />}
-      </button>
+  onClick={onConfirm}
+  className={`p-2 rounded-lg cursor-pointer ${
+    r.isactive
+      ? "bg-red-100 text-red-600"
+      : "bg-green-100 text-green-600"
+  }`}
+>
+  {r.isactive ? <Ban size={16} /> : <CheckCircle size={16} />}
+</button>
     </div>
   );
 }
