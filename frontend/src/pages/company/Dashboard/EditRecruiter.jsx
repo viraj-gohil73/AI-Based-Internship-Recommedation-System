@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-
+import toast from "react-hot-toast";
 export default function EditRecruiter() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -112,11 +112,11 @@ export default function EditRecruiter() {
         throw new Error(data.message || "Failed to update recruiter");
       }
 
-      alert("Recruiter updated successfully");
+      toast.success("Recruiter updated successfully");
       navigate("/company/dashboard/recruiters");
     } catch (err) {
       console.error(err);
-      alert(err.message || "Server error");
+      toast.error(err.message || "Server error");
     } finally {
       setLoading(false);
     }
