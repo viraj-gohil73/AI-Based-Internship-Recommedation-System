@@ -4,7 +4,7 @@ export const companyAuth = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader || !authHeader.startsWith("Bearer ") || authHeader.split(" ").length !== 2) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 

@@ -4,8 +4,9 @@ import { companyAuth } from "../middlewares/companyAuth.js";
 import { getMyCompany, submitVerification } from "../controllers/company.js";
 import { sendOtp } from "../api/auth/sendotpCompany.js";
 import { updateCompany, updateCompanyLogo, getApprovalCompanies } from "../controllers/companyController.js";
-
-
+import { createRecruiter } from "../controllers/recruitercontroller.js";
+import { getRecruiters } from "../controllers/recruitercontroller.js";
+import { updateRecruiter, getRecruiterById } from "../controllers/recruitercontroller.js";
 const router = express.Router();
 
 /* ================= OTP ================= */
@@ -30,6 +31,10 @@ router.post(
   submitVerification
 );
 
+router.post("/recruiter/add", companyAuth, createRecruiter);
+router.get("/recruiters",companyAuth, getRecruiters);
+router.put("/recruiter/:id", companyAuth, updateRecruiter);
+router.get("/recruiter/:id", companyAuth, getRecruiterById);
 
 router.get(
   "/google/company/callback",

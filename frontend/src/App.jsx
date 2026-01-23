@@ -25,9 +25,12 @@ import Settings from "./pages/company/Dashboard/Settings";
 import Subscription from "./pages/company/Dashboard/Subscription";
 import InternshipList from "./pages/company/Dashboard/Internship";
 import CompanyInternshipView from "./pages/company/Dashboard/CompanyInternshipView";
-import Recruiter from "./pages/company/Dashboard/Recruiters";
+import Recruiter from "./pages/company/Dashboard/RecruiterList";
 import CompanyLayoutWrapper from "./layout/CompanyLayoutWrapper";
 import CompanyApprovals from "./pages/admin/CompanyApprovals";
+import AddRecruiter from "./pages/company/Dashboard/AddRecruiter";
+import EditRecruiter from "./pages/company/Dashboard/EditRecruiter";  
+import Detail from "./pages/company/Dashboard/RecruiterProfile";
 /* ================= OTHER ================= */
 import LoginRecruiter from "./pages/recruiter/Recruiter_login";
 import LoginAdmin from "./pages/admin/LoginAdmin";
@@ -69,7 +72,11 @@ function App() {
             <Route path="/company/dashboard/settings" element={<Settings />} />
             <Route path="/company/dashboard/subscription" element={<Subscription />} />
             <Route path="/company/dashboard/internships" element={<InternshipList />} />
+            
             <Route path="/company/dashboard/recruiters" element={<Recruiter />} />
+            <Route path="/company/dashboard/recruiters/add" element={<AddRecruiter />} />
+            <Route path="/company/dashboard/recruiters/:id/edit" element={<EditRecruiter />} />
+            <Route path="/company/dashboard/recruiters/:id" element={<Detail />} />
             <Route
               path="/company/dashboard/internships/:id"
               element={<CompanyInternshipView />}
