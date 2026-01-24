@@ -3,6 +3,8 @@ import {
   getSubmittedCompanies,
   respondToCompany,
   getCompanyDetails,
+  getApprovedCompanies,
+  toggleCompanyActive
 } from "../controllers/admincontrol.js";
 import {adminLogin} from  "../controllers/adminAuthController.js"
 
@@ -23,7 +25,15 @@ router.patch(
   "/company/:id/respond",
   respondToCompany
 );
+router.get(
+  "/companies",
+  getApprovedCompanies
+);
 
+router.patch(
+  "/company/:id/block",
+  toggleCompanyActive
+);
 /* =========================================
    VIEW SINGLE COMPANY DETAILS
 ========================================= */

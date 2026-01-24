@@ -1,6 +1,5 @@
 import Company from "../models/Company.js";
 
-
 /* =====================================================
    GET कंपनियां जिनका approval pending है
    (SUBMITTED + RESUBMISSION)
@@ -113,5 +112,44 @@ export const getCompanyDetails = async (req, res) => {
       success: false,
       message: "Failed to fetch company details",
     });
+  }
+};
+
+
+export const getApprovedCompanies = async (req, res) => {
+  try {
+    const companies = await Company.find({
+      verificationStatus: "APPROVED",
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(companies);
+  } catch (err) {
+    res.status(500).json({
+      message: "Failed to fetch approved companies",
+    });
+  }
+};
+
+
+/* ================= BLOCK / UNBLOCK COMPANY ================= */
+export const toggleCompanyActive = async (req, res) => {
+  const { id } = req.params;
+  const { isActive } = req.body;
+
+  try {
+    const company = await Company.findById(id);
+
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    company.isactive = isActive;
+    await company.save();
+
+    res.status(200).json({
+      message: company.isactive ? "Company unblocked" : "Company blocked",
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Action failed" });
   }
 };

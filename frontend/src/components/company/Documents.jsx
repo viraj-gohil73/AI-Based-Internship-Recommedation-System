@@ -5,7 +5,7 @@ import { useCompany } from "../../context/CompanyContext";
 
 export default function Documents({ data, setFormData, disabled }) {
   const fileRef = useRef(null);
-  const { updateCompany } = useCompany();
+  const { updateCompany, company } = useCompany();
 
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -134,7 +134,7 @@ export default function Documents({ data, setFormData, disabled }) {
           </div>
 
           {/* REMOVE */}
-          {!disabled && (
+          {!disabled && company.verificationStatus !== "APPROVED" && (
             <button
               onClick={handleRemove}
               className="flex items-center justify-center gap-1

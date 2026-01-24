@@ -75,6 +75,10 @@ const Company = new mongoose.Schema({
         type: String,
         enum: ["RESUBMISSION", "SUBMITTED", "APPROVED", "REJECTED"],
         default: "RESUBMISSION",
+    },
+    isactive:{
+        type:Boolean,
+        default:true
     }
 },{timestamps: true});
 export default mongoose.model("Company", Company);
