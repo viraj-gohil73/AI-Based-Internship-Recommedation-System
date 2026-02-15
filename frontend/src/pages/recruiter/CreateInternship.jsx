@@ -1,0 +1,561 @@
+import { useState } from "react";
+import { X, Calendar, Check, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+export default function RecruiterInternshipForm() {
+  const [form, setForm] = useState({
+    title: "",
+    internship_type: "",
+    employment_type: "",
+    mode: "",
+    location: "",
+    duration_months: "",
+    openings: "",
+    start_date: "",
+    apply_by_date: "",
+    is_paid: true,
+    stipend_min: "",
+    stipend_max: "",
+    about_work: "",
+    who_can_apply: "",
+    other_requirements: "",
+    publish: true,
+  });
+
+  const [skillInput, setSkillInput] = useState("");
+  const [perkInput, setPerkInput] = useState("");
+  const [skills, setSkills] = useState([]);
+  const [perks, setPerks] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setForm({ ...form, [name]: type === "checkbox" ? checked : value });
+    setError(""); // Clear error on input change
+  };
+
+  const togglePaid = () => {
+    setForm({ ...form, is_paid: !form.is_paid });
+  };
+
+  const addSkill = () => {
+    if (skillInput.trim() && !skills.includes(skillInput.trim())) {
+      setSkills([...skills, skillInput.trim()]);
+      setSkillInput("");
+    }
+  };
+
+  const removeSkill = (skill) =>
+    setSkills(skills.filter((s) => s !== skill));
+
+  const addPerk = () => {
+    if (perkInput.trim() && !perks.includes(perkInput.trim())) {
+      setPerks([...perks, perkInput.trim()]);
+      setPerkInput("");
+    }
+  };
+
+  const removePerk = (perk) =>
+    setPerks(perks.filter((p) => p !== perk));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const payload = {
+      ...form,
+      skill_req: skills,
+      perks,
+      intern_status: form.publish ? "ACTIVE" : "DRAFT",
+      is_published: form.publish,
+    };
+
+    try {
+      const res = await fetch("/api/internships", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to post internship");
+      }
+
+      const data = await res.json();
+      setSuccess(true);
+      console.log("SUCCESS:", data);
+
+      setTimeout(() => {
+        setSuccess(false);
+        // Reset form or redirect
+        // navigate("/recruiter/internships");
+      }, 2000);
+    } catch (error) {
+      setError(error.message);
+      console.error("ERROR:", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  return (
+    <div className="min-h-screen  px-2">
+      <div className="max-w-7xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8"
+        >
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            Post Internship
+          </h1>
+          <p className="text-gray-600 mt-2">Create and publish a new internship opportunity</p>
+        </motion.div>
+
+        {/* Success Alert */}
+        <AnimatePresence>
+          {success && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3"
+            >
+              <Check className="text-green-600" size={20} />
+              <span className="text-green-700 font-medium">Internship posted successfully!</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Error Alert */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3"
+            >
+              <AlertCircle className="text-red-600" size={20} />
+              <span className="text-red-700 font-medium">{error}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <motion.form
+          onSubmit={handleSubmit}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="bg-white border border-gray-200 rounded-2xl shadow-lg p-8 space-y-8"
+        >
+          {/* BASIC INFO */}
+          <Section title="Basic Information" delay={0.2}>
+            <Grid>
+              <Input label="Internship Title" name="title" onChange={handleChange} required />
+              <Select label="Internship Type" name="internship_type" options={["Internship", "Internship + PPO"]} onChange={handleChange} />
+              <Select label="Employment Type" name="employment_type" options={["Full Time", "Part Time"]} onChange={handleChange} />
+              <Select label="Work Mode" name="mode" options={["Remote", "Onsite", "Hybrid"]} onChange={handleChange} />
+              <Input label="Location" name="location" onChange={handleChange} />
+              <Input label="Duration (months)" name="duration_months" type="number" onChange={handleChange} />
+              <Input label="Openings" name="openings" type="number" onChange={handleChange} />
+            </Grid>
+          </Section>
+
+          {/* TIMELINE */}
+          <Section title="Timeline" delay={0.3}>
+            <Grid>
+              <Input label="Start Date" name="start_date" type="date" icon={<Calendar size={16} />} onChange={handleChange} />
+              <Input label="Apply By Date" name="apply_by_date" type="date" icon={<Calendar size={16} />} onChange={handleChange} />
+            </Grid>
+          </Section>
+
+          {/* STIPEND */}
+          <Section title="Stipend" delay={0.4}>
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <motion.div
+                    animate={{
+                      rotate: form.is_paid ? 360 : 0,
+                    }}
+                    transition={{ duration: 0.6 }}
+                    className="p-2 bg-white rounded-full"
+                  >
+                    <span className={form.is_paid ? "text-indigo-600 text-lg" : "text-gray-400 text-lg"}>₹</span>
+                  </motion.div>
+
+                  <div>
+                    <h3 className="font-semibold text-sm text-gray-800">
+                      {form.is_paid ? "Paid Internship" : "Unpaid"}
+                    </h3>
+                    <p className="text-xs text-gray-600">
+                      {form.is_paid
+                        ? "Provide stipend details"
+                        : "No stipend offered"}
+                    </p>
+                  </div>
+                </div>
+
+                <motion.button
+                  type="button"
+                  onClick={togglePaid}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className={`relative h-7 w-12 rounded-full transition-colors duration-300 flex-shrink-0 ${
+                    form.is_paid
+                      ? "bg-gradient-to-r from-indigo-500 to-purple-500"
+                      : "bg-gray-300"
+                  }`}
+                >
+                  <motion.div
+                    layout
+                    transition={{
+                      type: "spring",
+                      stiffness: 700,
+                      damping: 30,
+                    }}
+                    className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-lg ${
+                      form.is_paid ? "right-1" : "left-1"
+                    }`}
+                  >
+                    <motion.div
+                      animate={{
+                        scale: form.is_paid ? 1 : 0,
+                      }}
+                      className="absolute inset-0 flex items-center justify-center"
+                    >
+                      <Check size={14} className="text-indigo-600" />
+                    </motion.div>
+                  </motion.div>
+                </motion.button>
+              </div>
+            </div>
+
+            <AnimatePresence>
+              {form.is_paid && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="mt-4"
+                >
+                  <Grid>
+                    <Input label="Stipend Min (₹)" name="stipend_min" type="number" onChange={handleChange} />
+                    <Input label="Stipend Max (₹)" name="stipend_max" type="number" onChange={handleChange} />
+                  </Grid>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </Section>
+
+          {/* SKILLS */}
+          <Section title="Required Skills" delay={0.5}>
+            <ChipInput
+              value={skillInput}
+              setValue={setSkillInput}
+              onAdd={addSkill}
+              chips={skills}
+              onRemove={removeSkill}
+              placeholder="e.g. React"
+            />
+          </Section>
+
+          {/* PERKS */}
+          <Section title="Perks" delay={0.6}>
+            <ChipInput
+              value={perkInput}
+              setValue={setPerkInput}
+              onAdd={addPerk}
+              chips={perks}
+              onRemove={removePerk}
+              placeholder="Certificate, PPO"
+            />
+          </Section>
+
+          {/* DETAILS */}
+          <Section title="Internship Details" delay={0.7}>
+            <Textarea label="About the Work" name="about_work" onChange={handleChange} />
+            <Textarea label="Who Can Apply" name="who_can_apply" onChange={handleChange} />
+            <Textarea label="Other Requirements" name="other_requirements" onChange={handleChange} />
+          </Section>
+
+          {/* PUBLISH */}
+          <Section title="Publication Status" delay={0.8}>
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <motion.div
+                    animate={{
+                      rotate: form.publish ? 360 : 0,
+                    }}
+                    transition={{ duration: 0.6 }}
+                    className="p-2 bg-white rounded-full"
+                  >
+                    {form.publish ? (
+                      <Eye className="text-indigo-600" size={18} />
+                    ) : (
+                      <EyeOff className="text-gray-400" size={18} />
+                    )}
+                  </motion.div>
+
+                  <div>
+                    <h3 className="font-semibold text-sm text-gray-800">
+                      {form.publish ? "Publish Immediately" : "Save as Draft"}
+                    </h3>
+                    <p className="text-xs text-gray-600">
+                      {form.publish
+                        ? "Visible to students"
+                        : "Not visible yet"}
+                    </p>
+                  </div>
+                </div>
+
+                <motion.button
+                  type="button"
+                  onClick={() =>
+                    setForm({ ...form, publish: !form.publish })
+                  }
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className={`relative h-7 w-12 rounded-full transition-colors duration-300 flex-shrink-0 ${
+                    form.publish
+                      ? "bg-gradient-to-r from-indigo-500 to-purple-500"
+                      : "bg-gray-300"
+                  }`}
+                >
+                  <motion.div
+                    layout
+                    transition={{
+                      type: "spring",
+                      stiffness: 700,
+                      damping: 30,
+                    }}
+                    className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-lg ${
+                      form.publish ? "right-1" : "left-1"
+                    }`}
+                  >
+                    <motion.div
+                      animate={{
+                        scale: form.publish ? 1 : 0,
+                      }}
+                      className="absolute inset-0 flex items-center justify-center"
+                    >
+                      <Check size={14} className="text-indigo-600" />
+                    </motion.div>
+                  </motion.div>
+                </motion.button>
+              </div>
+
+              <AnimatePresence>
+                {form.publish && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-2 pt-2 border-t border-indigo-200"
+                  >
+                    <div className="flex items-center gap-2 text-xs text-indigo-700 bg-indigo-50 rounded px-2 py-1.5">
+                      <Check size={12} />
+                      <span>Ready to accept applications</span>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </Section>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.9 }}
+            className="flex justify-end pt-6"
+          >
+            <motion.button
+              type="submit"
+              disabled={loading}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className={`relative px-10 py-3 rounded-xl font-bold text-md text-white transition overflow-hidden shadow-lg ${
+                loading
+                  ? "bg-indigo-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+              }`}
+            >
+              <motion.span
+                animate={{ opacity: loading ? 0 : 1 }}
+                transition={{ duration: 0.2 }}
+              >
+                {form.publish ? "Post Internship" : "Save Draft"}
+              </motion.span>
+              {loading && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="absolute inset-0 flex items-center justify-center"
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-6 h-6 border-3 border-white border-t-transparent rounded-full"
+                  />
+                </motion.span>
+              )}
+            </motion.button>
+          </motion.div>
+        </motion.form>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- UI COMPONENTS ---------- */
+
+function Section({ title, children, delay = 0 }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay }}
+    >
+      <h2 className="text-lg font-semibold mb-4 border-b-2 border-indigo-200 pb-3 text-gray-800">
+        {title}
+      </h2>
+      {children}
+    </motion.div>
+  );
+}
+
+function Grid({ children }) {
+  return <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>;
+}
+
+function Input({ label, name, type = "text", icon, onChange, required = false }) {
+  return (
+    <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <div className="relative">
+        {icon && (
+          <motion.span
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute left-3 top-2.5 text-indigo-400"
+          >
+            {icon}
+          </motion.span>
+        )}
+        <motion.input
+          name={name}
+          type={type}
+          required={required}
+          onChange={onChange}
+          whileFocus={{ scale: 1.01 }}
+          className={`w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 transition ${
+            icon ? "pl-10" : ""
+          } focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none`}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
+function Textarea({ label, name, onChange }) {
+  return (
+    <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <motion.textarea
+        name={name}
+        rows="3"
+        onChange={onChange}
+        whileFocus={{ scale: 1.01 }}
+        className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none resize-none"
+      />
+    </motion.div>
+  );
+}
+
+function Select({ label, name, options, onChange }) {
+  return (
+    <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <motion.select
+        name={name}
+        onChange={onChange}
+        whileFocus={{ scale: 1.01 }}
+        className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 cursor-pointer focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none bg-white"
+      >
+        <option value="">Select</option>
+        {options.map((o) => (
+          <option key={o}>{o}</option>
+        ))}
+      </motion.select>
+    </motion.div>
+  );
+}
+
+function ChipInput({ value, setValue, onAdd, chips, onRemove, placeholder }) {
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onAdd();
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <motion.input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder={placeholder}
+          whileFocus={{ scale: 1.01 }}
+          className="flex-1 border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+        />
+        <motion.button
+          type="button"
+          onClick={onAdd}
+          whileHover={{ scale: 1.05, backgroundColor: "#4f46e5" }}
+          whileTap={{ scale: 0.95 }}
+          className="px-6 bg-indigo-600 text-white rounded-lg font-medium transition"
+        >
+          Add
+        </motion.button>
+      </div>
+
+      <motion.div layout className="flex flex-wrap gap-2">
+        <AnimatePresence mode="popLayout">
+          {chips.map((chip) => (
+            <motion.span
+              key={chip}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              whileHover={{ scale: 1.05 }}
+              className="flex items-center gap-2 bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-full text-sm font-medium"
+            >
+              {chip}
+              <motion.button
+                type="button"
+                onClick={() => onRemove(chip)}
+                whileHover={{ rotate: 90, scale: 1.2 }}
+                whileTap={{ scale: 0.8 }}
+              >
+                <X size={14} className="cursor-pointer" />
+              </motion.button>
+            </motion.span>
+          ))}
+        </AnimatePresence>
+      </motion.div>
+    </div>
+  );
+}

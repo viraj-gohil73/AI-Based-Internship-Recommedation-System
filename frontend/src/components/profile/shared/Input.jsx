@@ -1,3 +1,5 @@
+import { AlertCircle } from "lucide-react";
+
 export default function Input({ label, error, disabled, ...props }) {
   return (
     <div className="space-y-1">
@@ -21,7 +23,12 @@ export default function Input({ label, error, disabled, ...props }) {
         `}
       />
 
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && (
+        <div className="flex items-center gap-2 text-xs text-red-600">
+          <AlertCircle size={14} className="flex-shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
     </div>
   );
 }

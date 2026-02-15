@@ -1,4 +1,4 @@
-import { Upload, FileText, Trash2 } from "lucide-react";
+import { Upload, Files, Trash2, CheckCircle2, ExternalLink, AlertCircle, ListChecks } from "lucide-react";
 import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useCompany } from "../../context/CompanyContext";
@@ -104,91 +104,135 @@ export default function Documents({ data, setFormData, disabled }) {
   };
 
   return (
-    <div className="bg-white border border-slate-300 rounded-xl p-4 sm:p-6 space-y-6">
-      <h3 className="text-sm sm:text-base font-semibold text-gray-800">
-        Company Registration Document
-      </h3>
+    <div className="bg-gradient-to-br from-white to-blue-50 border border-blue-200 rounded-xl p-4 sm:p-6 lg:p-8 space-y-6 shadow-md">
+      
+      {/* HEADER */}
+      <div className="flex items-center gap-3 pb-6 border-b border-blue-100">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2 rounded-lg">
+          <Files className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold text-gray-900">
+            Company Registration Document
+          </h3>
+          <p className="text-xs text-gray-500 mt-1">Upload your official company registration certificate</p>
+        </div>
+      </div>
 
       {/* ================= DOCUMENT EXISTS ================= */}
       {hasDocument ? (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 border border-blue-300 rounded-lg px-4 py-3 bg-slate-50">
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 border-2 border-green-300 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg px-4 py-4 hover:shadow-md transition-all duration-300">
+            
+            {/* ICON */}
+            <div className="p-3 bg-gradient-to-br from-green-500 to-green-600 rounded-lg shrink-0 shadow-md">
+              <CheckCircle2 size={24} className="text-white" />
+            </div>
+
+            {/* FILE INFO */}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-green-900 break-all sm:truncate">
+                {getDisplayFileName()}
+              </p>
+              <a
+                href={data.reg_doc}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-green-600 hover:text-green-700 font-semibold hover:underline inline-flex items-center gap-1 mt-1"
+              >
+                <ExternalLink size={12} />
+                View Document
+              </a>
+            </div>
+
+            {/* REMOVE */}
+            {!disabled && company.verificationStatus !== "APPROVED" && (
+              <button
+                onClick={handleRemove}
+                className="flex items-center justify-center gap-2 text-sm font-semibold text-red-600 bg-red-100 hover:bg-red-200 px-4 py-2 rounded-lg w-full sm:w-auto transition-all duration-300 hover:shadow-md"
+              >
+                <Trash2 size={16} />
+                Remove
+              </button>
+            )}
+          </div>
           
-          {/* ICON */}
-          <div className="p-2 hidden sm:block bg-blue-100 rounded-lg shrink-0">
-            <FileText size={20} className="text-blue-600" />
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800 flex items-start gap-3">
+            <CheckCircle2 size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold mb-1">Document Uploaded</p>
+              <p className="text-xs text-green-700">Your registration document has been successfully uploaded. Click "View Document" to verify.</p>
+            </div>
           </div>
-
-          {/* FILE INFO */}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium break-all sm:truncate">
-              {getDisplayFileName()}
-            </p>
-            <a
-              href={data.reg_doc}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-blue-600 hover:underline"
-            >
-              View document
-            </a>
-          </div>
-
-          {/* REMOVE */}
-          {!disabled && company.verificationStatus !== "APPROVED" && (
-            <button
-              onClick={handleRemove}
-              className="flex items-center justify-center gap-1
-                         text-sm text-red-600 bg-red-100
-                         hover:bg-red-200 px-3 py-1.5
-                         rounded-md w-full sm:w-auto"
-            >
-              <Trash2 size={16} />
-              Remove
-            </button>
-          )}
         </div>
       ) : (
         /* ================= NO DOCUMENT ================= */
-        <div className="space-y-4">
+        <div className="space-y-6">
           
           {/* FILE INPUT */}
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".pdf,.doc,.docx"
-            disabled={disabled}
-            onChange={(e) => setFile(e.target.files[0])}
-            className="block text-sm
-                       file:mr-4 file:py-2 file:px-4
-                       file:rounded-md file:border-0
-                       file:text-sm file:font-medium
-                       file:bg-blue-100 file:text-blue-600 cursor-pointer
-                       hover:file:bg-blue-200"
-          />
+          <div className="border-2 border-dashed border-blue-300 rounded-lg p-8 hover:border-blue-400 hover:bg-blue-50 transition-all duration-300 text-center">
+            <div className="flex items-center justify-center mb-4">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-full">
+                <Upload className="w-6 h-6 text-white" />
+              </div>
+            </div>
+            
+            <label className="cursor-pointer">
+              <input
+                accept=".pdf,.doc,.docx"
+                type="file"
+                disabled={disabled}
+                onChange={(e) => setFile(e.target.files[0])}
+                className="hidden"
+              />
+              <div className="text-center">
+                <p className="text-sm font-bold text-gray-800">Click to upload or drag and drop</p>
+                <p className="text-xs text-gray-500 mt-1">PDF, DOC or DOCX (max. 5MB)</p>
+              </div>
+            </label>
+          </div>
+
+          {/* FILE NAME INDICATOR */}
+          {file && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
+              <Files className="w-5 h-5 text-blue-600 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800 truncate">{file.name}</p>
+                <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+              </div>
+            </div>
+          )}
 
           {/* UPLOAD BUTTON */}
           {!disabled && (
             <button
               onClick={handleUpload}
-              disabled={uploading}
-              className="inline-flex items-center justify-center gap-2
-                         w-full sm:w-auto
-                         px-4 py-2 rounded-lg
-                         bg-blue-600 text-white
-                         text-sm font-medium
-                         hover:bg-blue-700
-                         disabled:opacity-60"
+              disabled={uploading || !file}
+              className={`w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg ${
+                uploading || !file
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-75"
+                  : "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+              }`}
             >
-              <Upload size={16} />
+              <Upload size={18} />
               {uploading ? "Uploading..." : "Upload Document"}
             </button>
           )}
         </div>
       )}
 
-      <p className="text-xs text-gray-500">
-        Accepted formats: PDF, DOC, DOCX. Max size: 5MB.
-      </p>
+      {/* REQUIREMENTS */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800 flex items-start gap-3">
+        <ListChecks size={18} className="text-yellow-600 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="font-semibold mb-2">File Requirements:</p>
+          <ul className="text-xs text-yellow-700 space-y-1 ml-4 list-disc">
+            <li>Accepted formats: PDF, DOC, DOCX</li>
+            <li>Maximum file size: 5MB</li>
+            <li>Must be a valid company registration certificate</li>
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }

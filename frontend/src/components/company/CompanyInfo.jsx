@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Save, Camera } from "lucide-react";
+import { Save, Image, Building, AlertCircle, Globe, Briefcase, MapPin, TrendingUp, ChevronDown, Check } from "lucide-react";
 import Input from "../profile/shared/Input";
 import { useCompany } from "../../context/CompanyContext";
 import toast from "react-hot-toast";
@@ -148,184 +148,260 @@ export default function CompanyInfoTab({ data, setFormData, disabled }) {
     }
   };
 
-  /* ======================= UI (UNCHANGED) ======================= */
+  /* ======================= UI (ENHANCED) ======================= */
   return (
     <>
-      <div className="bg-white rounded-xl border border-slate-200 shadow p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl border border-blue-200 shadow-md p-4 sm:p-6 lg:p-8 space-y-8">
 
-        {/* LOGO */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
-          <div className="w-22 h-22 mx-auto sm:mx-0 rounded-lg bg-white border border-slate-300 overflow-hidden">
-            {company.logo ? (
-              <img
-                src={company.logo}
-                className="w-full h-full object-cover"
-                alt="Company Logo"
-              />
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <Camera size={22} className="text-slate-600" />
-              </div>
+        {/* LOGO SECTION */}
+        <div className="pb-6 border-b border-blue-100">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2 rounded-lg">
+              <Image className="w-5 h-5 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">Company Logo</h3>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+            <div className="w-28 h-28 mx-auto sm:mx-0 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 border-2 border-dashed border-blue-300 overflow-hidden flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300">
+              {company.logo ? (
+                <img
+                  src={company.logo}
+                  className="w-full h-full object-cover"
+                  alt="Company Logo"
+                />
+              ) : (
+                <Image size={32} className="text-blue-400" />
+              )}
+            </div>
+
+            <input
+              type="hidden"
+              ref={uploadRef}
+              role="uploadcare-uploader"
+              data-images-only="true"
+              data-crop="1:1,4:3,16:9"
+              data-image-shrink="512x512"
+              disabled={disabled}
+              data-disabled={company.logo || disabled ? "true" : "false"}
+            />
+
+            {company.logo && !disabled && (
+              <button
+                type="button"
+                onClick={() => handleChange("logo", "")}
+                className="flex gap-2 px-8 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-md hover:shadow-lg transition-all duration-300"
+              >
+                ✕ Remove Logo
+              </button>
             )}
           </div>
-
-          <input
-            type="hidden"
-            ref={uploadRef}
-            role="uploadcare-uploader"
-            data-images-only="true"
-            data-crop="1:1,4:3,16:9"
-            data-image-shrink="512x512"
-            disabled={disabled}
-            data-disabled={company.logo || disabled ? "true" : "false"}
-          />
-
-          {company.logo && !disabled && (
-            <button
-              type="button"
-              onClick={() => handleChange("logo", "")}
-              className="flex gap-2 px-8 py-2.5 rounded-lg text-sm font-semibold text-white bg-blue-500 hover:bg-blue-700"
-            >
-              Remove Logo
-            </button>
-          )}
         </div>
 
-        {/* COMPANY NAME */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-          <Input
-            label={<>Company Name <span className="text-red-500">*</span></>}
-            disabled={disabled}
-            value={company.companyName}
-            error={errors.companyName}
-            onChange={(e) => handleChange("companyName", e.target.value)}
-          />
-          <Input
-            label="Tagline"
-            disabled={disabled}
-            value={company.tagline}
-            onChange={(e) => handleChange("tagline", e.target.value)}
-          />
+        {/* COMPANY NAME & TAGLINE */}
+        <div>
+          <h3 className="flex items-center gap-3 text-lg font-bold text-gray-900 mb-6">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2 rounded-lg">
+              <Building className="w-5 h-5 text-white" />
+            </div>
+            Basic Information
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <Input
+              label={<>Company Name <span className="text-red-500">*</span></>}
+              disabled={disabled}
+              value={company.companyName}
+              error={errors.companyName}
+              onChange={(e) => handleChange("companyName", e.target.value)}
+            />
+            <Input
+              label="Tagline"
+              disabled={disabled}
+              value={company.tagline}
+              placeholder="Your company tagline"
+              onChange={(e) => handleChange("tagline", e.target.value)}
+            />
+          </div>
         </div>
 
-        {/* INDUSTRY */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-          <Input
-            label={<>Industry<span className="text-red-500"> *</span></>}
-            disabled={disabled}
-            value={company.industry}
-            error={errors.industry}
-            onChange={(e) => handleChange("industry", e.target.value)}
-          />
-          <Input
-            label={<>Company Size<span className="text-red-500"> *</span></>}
-            disabled={disabled}
-            value={company.companySize}
-            error={errors.companySize}
-            onChange={(e) => handleChange("companySize", e.target.value)}
-          />
-          <Input
-            label={<>Founded Year<span className="text-red-500"> *</span></>}
-            disabled={disabled}
-            value={company.foundedYear}
-            error={errors.foundedYear}
-            onChange={(e) =>
-              handleChange("foundedYear", e.target.value.replace(/\D/g, ""))
-            }
-          />
+        {/* INDUSTRY & SIZE */}
+        <div>
+          <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-2 rounded-lg">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+            Industry & Scale
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+            <Input
+              label={<>Industry<span className="text-red-500"> *</span></>}
+              disabled={disabled}
+              value={company.industry}
+              placeholder="E.g., Technology, Finance"
+              error={errors.industry}
+              onChange={(e) => handleChange("industry", e.target.value)}
+            />
+            <Input
+              label={<>Company Size<span className="text-red-500"> *</span></>}
+              disabled={disabled}
+              value={company.companySize}
+              placeholder="E.g., 10-50, 100-500"
+              error={errors.companySize}
+              onChange={(e) => handleChange("companySize", e.target.value)}
+            />
+            <Input
+              label={<>Founded Year<span className="text-red-500"> *</span></>}
+              disabled={disabled}
+              value={company.foundedYear}
+              placeholder="YYYY"
+              error={errors.foundedYear}
+              onChange={(e) =>
+                handleChange("foundedYear", e.target.value.replace(/\D/g, ""))
+              }
+            />
+          </div>
         </div>
 
         {/* WEBSITE */}
-        <Input
-          label="Official Website"
-          disabled={disabled}
-          value={company.website}
-          onChange={(e) => handleChange("website", e.target.value)}
-        />
-
-        {/* ABOUT */}
-        <label className="block text-sm font-medium mb-1">
-          About Company <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          disabled={disabled}
-          value={company.about}
-          className={`w-full h-[150px] p-4 rounded-lg resize-none ${
-            disabled
-              ? "bg-gray-50 text-gray-700 cursor-not-allowed"
-              : "border-2 border-slate-400"
-          }`}
-          onChange={(e) => handleChange("about", e.target.value)}
-        />
-        {errors.about && (
-          <p className="text-sm text-red-500">{errors.about}</p>
-        )}
-
-        {/* ADDRESS */}
-        <Input
-          label={<>Address Line 1<span className="text-red-500"> *</span></>}
-          disabled={disabled}
-          value={company.address1}
-          error={errors.address1}
-          onChange={(e) => handleChange("address1", e.target.value)}
-        />
-        <Input
-          label="Address Line 2"
-          disabled={disabled}
-          value={company.address2}
-          onChange={(e) => handleChange("address2", e.target.value)}
-        />
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+        <div>
+          <h3 className="flex items-center gap-3 text-lg font-bold text-gray-900 mb-6">
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-2 rounded-lg">
+              <Globe className="w-5 h-5 text-white" />
+            </div>
+            Online Presence
+          </h3>
           <Input
-            label={<>City <span className="text-red-500"> *</span></>}
+            label="Official Website"
             disabled={disabled}
-            value={company.city}
-            error={errors.city}
-            onChange={(e) => handleChange("city", e.target.value)}
-          />
-          <Input
-            label={<>State<span className="text-red-500"> *</span></>}
-            disabled={disabled}
-            value={company.state}
-            error={errors.state}
-            onChange={(e) => handleChange("state", e.target.value)}
-          />
-          <Input
-            label={<>Pincode<span className="text-red-500"> *</span></>}
-            disabled={disabled}
-            value={company.pincode}
-            error={errors.pincode}
-            maxLength={6}
-            onChange={(e) =>
-              handleChange("pincode", e.target.value.replace(/\D/g, ""))
-            }
+            value={company.website}
+            placeholder="https://yourcompany.com"
+            onChange={(e) => handleChange("website", e.target.value)}
           />
         </div>
 
+        {/* ABOUT */}
+        <div>
+          <h3 className="flex items-center gap-3 text-lg font-bold text-gray-900 mb-6">
+            <div className="bg-gradient-to-br from-green-500 to-green-600 p-2 rounded-lg">
+              <Briefcase className="w-5 h-5 text-white" />
+            </div>
+            About Company
+          </h3>
+          <label className="block text-sm font-semibold mb-3">
+            About Company <span className="text-red-500">*</span>
+            {company.about && (
+              <span className="text-xs text-gray-500 font-normal ml-2">({company.about.length} characters)</span>
+            )}
+          </label>
+          <textarea
+            disabled={disabled}
+            value={company.about}
+            placeholder="Tell us about your company, mission, and values..."
+            className={`w-full h-[160px] p-4 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200 ${
+              disabled
+                ? "bg-gray-50 text-gray-700 cursor-not-allowed border border-gray-200"
+                : "border-2 border-blue-300 hover:border-blue-400"
+            }`}
+            onChange={(e) => handleChange("about", e.target.value)}
+          />
+          {errors.about && (
+            <p className="text-sm text-red-500 mt-2 flex items-center gap-1">
+              <AlertCircle size={16} /> {errors.about}
+            </p>
+          )}
+        </div>
+
+        {/* ADDRESS */}
+        <div>
+          <h3 className="flex items-center gap-3 text-lg font-bold text-gray-900 mb-6">
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-2 rounded-lg">
+              <MapPin className="w-5 h-5 text-white" />
+            </div>
+            Location
+          </h3>
+          
+          <Input
+            label={<>Address Line 1<span className="text-red-500"> *</span></>}
+            disabled={disabled}
+            value={company.address1}
+            placeholder="Street address"
+            error={errors.address1}
+            onChange={(e) => handleChange("address1", e.target.value)}
+          />
+          <Input
+            label="Address Line 2"
+            disabled={disabled}
+            value={company.address2}
+            placeholder="Apartment, suite, etc. (optional)"
+            className="mt-4"
+            onChange={(e) => handleChange("address2", e.target.value)}
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mt-4">
+            <Input
+              label={<>City <span className="text-red-500"> *</span></>}
+              disabled={disabled}
+              value={company.city}
+              placeholder="City"
+              error={errors.city}
+              onChange={(e) => handleChange("city", e.target.value)}
+            />
+            <Input
+              label={<>State<span className="text-red-500"> *</span></>}
+              disabled={disabled}
+              value={company.state}
+              placeholder="State"
+              error={errors.state}
+              onChange={(e) => handleChange("state", e.target.value)}
+            />
+            <Input
+              label={<>Pincode<span className="text-red-500"> *</span></>}
+              disabled={disabled}
+              value={company.pincode}
+              placeholder="XXXXXX"
+              error={errors.pincode}
+              maxLength={6}
+              onChange={(e) =>
+                handleChange("pincode", e.target.value.replace(/\D/g, ""))
+              }
+            />
+          </div>
+        </div>
+
         {/* GST */}
-        <Input
-          label={<>GST Number<span className="text-red-500"> *</span></>}
-          disabled={disabled}
-          maxLength={15}
-          value={company.gst_no}
-          error={errors.gst_no}
-          onChange={(e) => handleChange("gst_no", e.target.value.toUpperCase())}
-        />
+        <div className="border-t border-blue-100 pt-6">
+          <Input
+            label={<>GST Number<span className="text-red-500"> *</span></>}
+            disabled={disabled}
+            maxLength={15}
+            value={company.gst_no}
+            placeholder="22AAAAA0000A1Z5"
+            error={errors.gst_no}
+            onChange={(e) => handleChange("gst_no", e.target.value.toUpperCase())}
+          />
+        </div>
       </div>
 
       {/* ACTION */}
-      <div className="flex justify-center sm:justify-end mt-6 sm:mt-8">
+      <div className="flex justify-center sm:justify-end mt-8">
         <button
           disabled={disabled}
           onClick={handleSave}
-          className={`flex gap-2 px-10 py-3 rounded-lg text-sm font-semibold text-white ${
+          className={`inline-flex items-center gap-2 px-10 py-3 rounded-lg text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-lg ${
             !disabled
-              ? "bg-blue-600 hover:bg-blue-700"
-              : "bg-gray-300 cursor-not-allowed"
+              ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed opacity-75"
           }`}
         >
-          <Save size={18} className="mt-0.5" /> Save
+          {disabled ? (
+            <>
+              <Check size={18} className="animate-pulse" /> Saved
+            </>
+          ) : (
+            <>
+              <Save size={18} /> Save Information
+            </>
+          )}
         </button>
       </div>
     </>

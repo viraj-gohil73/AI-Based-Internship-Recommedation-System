@@ -1,4 +1,4 @@
-import { X, ArrowLeft } from "lucide-react";
+import { X, ArrowLeft, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function NotificationPopup({ onClose, updateCount }) {
@@ -153,9 +153,10 @@ export default function NotificationPopup({ onClose, updateCount }) {
 
         {/* LIST VIEW */}
         {!loading && !active && list.length === 0 && (
-          <p className="p-6 text-center text-sm text-slate-500">
-            No notifications 🎉
-          </p>
+          <div className="p-6 text-center flex flex-col items-center gap-2">
+            <Zap size={32} className="text-slate-400" />
+            <p className="text-sm text-slate-500">No notifications</p>
+          </div>
         )}
 
         {!active && list.map(item => (

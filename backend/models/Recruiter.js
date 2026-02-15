@@ -14,6 +14,9 @@ const RecruiterSchema = new mongoose.Schema({
         required:true,
         unique:true,
     },
+    password:{
+        type:String,
+    },
     role:{
         type:String,
         enum:["RECRUITER","HR","MANAGER"],

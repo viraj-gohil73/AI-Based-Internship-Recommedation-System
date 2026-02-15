@@ -132,6 +132,7 @@ export const updateRecruiter = async (req, res) => {
       dp,
       name,
       email,
+      password,
       role,
       gender,
       mobile,
@@ -142,6 +143,7 @@ export const updateRecruiter = async (req, res) => {
     recruiter.dp = dp ?? recruiter.dp;
     recruiter.name = name ?? recruiter.name;
     recruiter.email = email ?? recruiter.email;
+    recruiter.password = password ?? recruiter.password;
     recruiter.role = role ?? recruiter.role;
     recruiter.gender = gender ?? recruiter.gender;
     recruiter.mobile = mobile ?? recruiter.mobile;

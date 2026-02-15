@@ -42,11 +42,34 @@ import CompanyDetails from "./pages/admin/CompanyDetails";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminAuthRedirect from "./guards/AdminAuthRedirect";
 import AdminProtectedRoute from "./guards/AdminProtectedRoute";
+import RecruiterLayout from "./layout/RecruiterLayout";
+import Recuiter_Dashboard from "./pages/recruiter/Dashboard";
+import RecruiterLayoutWrapper from "./layout/RecruiterLayoutWrapper";
+import InternshipListr from "./pages/recruiter/InternshipList";
+import CreateInternship from "./pages/recruiter/CreateInternship";
+import PostInternship from "./pages/recruiter/PostInternship";
 function App() {
   return (
     <VerificationProvider>
       <BrowserRouter>
         <Routes>
+
+          <Route element={<RecruiterLayoutWrapper />}>
+  <Route element={<RecruiterLayout />}>
+    <Route
+      path="/recruiter/dashboard"
+      element={<Recuiter_Dashboard />}
+    />
+<Route path="/recruiter/internships" element={<InternshipListr />} />
+<Route path="/recruiter/internships/create" element={<CreateInternship />} />
+<Route path="/recruiter/internships/post" element={<PostInternship />} />
+
+    {/* future routes */}
+    {/* <Route path="/recruiter/internships" element={<Internships />} /> */}
+  </Route>
+</Route>
+
+
 
           {/* ========== PUBLIC ROUTES ========== */}
           <Route path="/" element={<Home />} />
@@ -84,7 +107,7 @@ function App() {
           </Route>
 
           {/* ========== OTHER ========== */}
-          <Route path="/login-recruiter" element={<LoginRecruiter />} />
+          <Route path="/auth/recruiter/login" element={<LoginRecruiter />} />
 
 
           <Route

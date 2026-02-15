@@ -18,7 +18,7 @@ export default function CompanyLayout() {
         </div>
 
         <main className="flex-1 overflow-y-auto ">
-          <div className="bg-white shadow p-4 min-h-full ">
+          <div className="bg-white shadow  min-h-full ">
             <Outlet /> {/* 👈 yahin page render hoga */}
           </div>
         </main>

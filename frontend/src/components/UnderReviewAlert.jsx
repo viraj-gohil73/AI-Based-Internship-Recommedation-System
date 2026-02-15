@@ -43,26 +43,22 @@ export default function UnderReviewAlert({
   message,
   subMessage,
 }) {
-  const storageKey = "company_approved_alert_closed";
+  const storageKey = `company_alert_${status}_closed`;
 
   const [visible, setVisible] = useState(true);
 
   /* 🔁 CHECK LOCALSTORAGE ON LOAD */
   useEffect(() => {
-    if (status === "APPROVED") {
-      const closed = localStorage.getItem(storageKey);
-      if (closed === "true") {
-        setVisible(false);
-      }
+    const closed = localStorage.getItem(storageKey);
+    if (closed === "true") {
+      setVisible(false);
     }
-  }, [status]);
+  }, [status, storageKey]);
 
   /* ❌ CLOSE HANDLER */
   const handleClose = () => {
     setVisible(false);
-    if (status === "APPROVED") {
-      localStorage.setItem(storageKey, "true");
-    }
+    localStorage.setItem(storageKey, "true");
   };
 
   if (!visible) return null;
@@ -104,16 +100,14 @@ export default function UnderReviewAlert({
         )}
       </div>
 
-      {/* ❌ CLOSE (ONLY APPROVED) */}
-      {status === "APPROVED" && (
-        <button
-          onClick={handleClose}
-          className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition"
-          aria-label="Close"
-        >
-          <X size={16} />
-        </button>
-      )}
+      {/* ❌ CLOSE BUTTON (ALL STATUSES) */}
+      <button
+        onClick={handleClose}
+        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition"
+        aria-label="Close"
+      >
+        <X size={16} />
+      </button>
     </div>
   );
 }

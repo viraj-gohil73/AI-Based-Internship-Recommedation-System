@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, Save } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, Trophy } from "lucide-react";
 import Input from "../profile/shared/Input";
 import Select from "../profile/shared/Select";
 
@@ -143,7 +143,7 @@ const removeTech = (index) => {
       className="mx-auto w-14 h-14 rounded-full bg-indigo-50
       flex items-center justify-center text-indigo-600"
     >
-      🏆
+      <Trophy size={24} />
     </div>
 
     <div>

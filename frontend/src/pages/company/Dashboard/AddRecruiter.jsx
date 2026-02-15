@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import toast from "react-hot-toast";
 
 export default function AddRecruiter() {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -51,12 +53,12 @@ const [dpUploading, setDpUploading] = useState(false);
   /* ================= SUBMIT ================= */
 
   const submit = async () => {
-    if (!form.name.trim()) return alert("Full name is required");
-    if (!emailRegex.test(form.email)) return alert("Invalid email");
+    if (!form.name.trim()) return toast.error("Full name is required");
+    if (!emailRegex.test(form.email)) return toast.error("Invalid email");
     if (!form.password || form.password.length < 6)
-      return alert("Password must be at least 6 characters");
+      return toast.error("Password must be at least 6 characters");
     if (!mobileRegex.test(form.mobile))
-      return alert("Invalid mobile number");
+      return toast.error("Invalid mobile number");
 
     try {
       setLoading(true);
@@ -80,164 +82,239 @@ const [dpUploading, setDpUploading] = useState(false);
         throw new Error(data.message || "Failed to create recruiter");
       }
 
-      alert("Recruiter created successfully");
+      toast.success("Recruiter created successfully");
       navigate("/company/dashboard/recruiters");
     } catch (err) {
       console.error(err);
-      alert(err.message || "Server error");
+      toast.error(err.message || "Server error");
     } finally {
       setLoading(false);
     }
   };
 
   const inputClass =
-    "w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg bg-white outline-none focus:ring-1 focus:ring-blue-500";
+    "w-full border-2 border-blue-200 px-4 py-2.5 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition bg-white";
 
   return (
-    <div className="flex justify-center">
-      <div className="bg-white w-full max-w-7xl rounded-2xl shadow-sm p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-4 py-8">
+      <div className="max-w-3xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-white border-2 border-blue-200 rounded-xl shadow-lg p-6 sm:p-8"
+        >
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-6 text-center sm:text-left">
+            Add Recruiter
+          </h2>
 
-        <h2 className="text-2xl font-semibold mb-6">Add Recruiter</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-
-          {/* ================= DP ================= */}
-          <div className="md:col-span-1 flex flex-col items-center">
-            <div
-              onClick={openUploader}
-              className="w-32 h-32 rounded-full border-2 border-dashed border-gray-300
-              flex items-center justify-center overflow-hidden bg-gray-50
-              hover:border-blue-400 cursor-pointer"
+            {/* ================= DP SECTION ================= */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center gap-6 pb-8 border-b-2 border-blue-100"
             >
-              {form.dp ? (
-                <img src={form.dp} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-sm text-gray-400">Upload DP</span>
-              )}
-            </div>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                onClick={openUploader}
+                className="mx-auto sm:mx-0 w-20 h-20 rounded-full border-4 border-dashed border-blue-300
+                overflow-hidden flex items-center justify-center cursor-pointer
+                hover:border-blue-500 transition bg-blue-50"
+              >
+                {form.dp ? (
+                  <img
+                    src={form.dp}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-xs text-blue-400 text-center px-2 font-medium">
+                    Upload DP
+                  </span>
+                )}
+              </motion.div>
 
-            {/* Uploadcare Hidden Input */}
-            <input
-              ref={uploadRef}
-              type="hidden"
-              role="uploadcare-uploader"
-              data-public-key={import.meta.env.VITE_UPLOADCARE_PUBLIC_KEY}
-              data-images-only="true"
-              data-crop="1:1"
-              data-image-shrink="512x512"
-            />
+              <div className="text-center sm:text-left flex-1">
+                <p className="text-sm text-gray-600">
+                  {dpUploading ? (
+                    <span className="text-blue-600 font-semibold">Uploading image...</span>
+                  ) : (
+                    "Click to change photo"
+                  )}
+                </p>
+              </div>
+
+              {/* Uploadcare Hidden Input */}
+              <input
+                ref={uploadRef}
+                type="hidden"
+                role="uploadcare-uploader"
+                data-public-key={import.meta.env.VITE_UPLOADCARE_PUBLIC_KEY}
+                data-images-only="true"
+                data-crop="1:1"
+                data-image-shrink="512x512"
+              />
+            </motion.div>
+
+            {/* ================= FORM FIELDS ================= */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4"
+            >
+
+              <div>
+                <label className="text-sm font-semibold text-gray-700 block mb-2">Full Name *</label>
+                <motion.input
+                  whileFocus={{ scale: 1.01 }}
+                  className={inputClass}
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm({ ...form, name: e.target.value })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-700 block mb-2">Email *</label>
+                <motion.input
+                  whileFocus={{ scale: 1.01 }}
+                  type="email"
+                  className={inputClass}
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm({ ...form, email: e.target.value })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-700 block mb-2">Password *</label>
+                <motion.input
+                  whileFocus={{ scale: 1.01 }}
+                  type="password"
+                  className={inputClass}
+                  value={form.password}
+                  onChange={(e) =>
+                    setForm({ ...form, password: e.target.value })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-700 block mb-2">Mobile *</label>
+                <motion.input
+                  whileFocus={{ scale: 1.01 }}
+                  className={inputClass}
+                  maxLength={10}
+                  value={form.mobile}
+                  onChange={(e) =>
+                    setForm({ ...form, mobile: e.target.value })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-700 block mb-2">Role</label>
+                <motion.select
+                  whileFocus={{ scale: 1.01 }}
+                  className={inputClass}
+                  value={form.role}
+                  onChange={(e) =>
+                    setForm({ ...form, role: e.target.value })
+                  }
+                >
+                  <option value="RECRUITER">Recruiter</option>
+                  <option value="HR">HR</option>
+                  <option value="MANAGER">Manager</option>
+                </motion.select>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-700 block mb-2">Gender</label>
+                <motion.select
+                  whileFocus={{ scale: 1.01 }}
+                  className={inputClass}
+                  value={form.gender}
+                  onChange={(e) =>
+                    setForm({ ...form, gender: e.target.value })
+                  }
+                >
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="OTHER">Other</option>
+                </motion.select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <Toggle
+                  label="Can Post Jobs"
+                  checked={form.canpost}
+                  onChange={(val) =>
+                    setForm({ ...form, canpost: val })
+                  }
+                />
+              </div>
+            </motion.div>
           </div>
 
-          {/* ================= FORM ================= */}
-          <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-5">
-
-            <div>
-              <label className="text-sm font-medium">Full Name *</label>
-              <input
-                className={inputClass}
-                value={form.name}
-                onChange={(e) =>
-                  setForm({ ...form, name: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Email *</label>
-              <input
-                type="email"
-                className={inputClass}
-                value={form.email}
-                onChange={(e) =>
-                  setForm({ ...form, email: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Password *</label>
-              <input
-                type="password"
-                className={inputClass}
-                value={form.password}
-                onChange={(e) =>
-                  setForm({ ...form, password: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Mobile *</label>
-              <input
-                className={inputClass}
-                maxLength={10}
-                value={form.mobile}
-                onChange={(e) =>
-                  setForm({ ...form, mobile: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Role</label>
-              <select
-                className={inputClass}
-                value={form.role}
-                onChange={(e) =>
-                  setForm({ ...form, role: e.target.value })
-                }
-              >
-                <option value="RECRUITER">Recruiter</option>
-                <option value="HR">HR</option>
-                <option value="MANAGER">Manager</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium">Gender</label>
-              <select
-                className={inputClass}
-                value={form.gender}
-                onChange={(e) =>
-                  setForm({ ...form, gender: e.target.value })
-                }
-              >
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
-                <option value="OTHER">Other</option>
-              </select>
-            </div>
-
-            <div className="flex items-center gap-2 sm:col-span-2 mt-2">
-              <input
-                type="checkbox"
-                checked={form.canpost}
-                onChange={(e) =>
-                  setForm({ ...form, canpost: e.target.checked })
-                }
-              />
-              <span className="text-sm">Can Post Jobs</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3 mt-10 pt-6 border-t">
-          <button
-            onClick={() => navigate(-1)}
-            className="px-5 py-2 border rounded-lg"
+          {/* ================= ACTIONS ================= */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-row justify-end gap-3 mt-8 pt-6 border-t-2 border-blue-100"
           >
-            Cancel
-          </button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => navigate(-1)}
+              className="w-full sm:w-auto border-2 border-gray-300 px-5 py-2 rounded-lg font-semibold hover:bg-gray-50 transition"
+            >
+              Cancel
+            </motion.button>
 
-          <button
-            onClick={submit}
-            disabled={loading}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg disabled:opacity-50"
-          >
-            Create Recruiter
-          </button>
-        </div>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={submit}
+              disabled={loading || dpUploading}
+              className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2 rounded-lg font-semibold disabled:opacity-50 transition"
+            >
+              {loading ? "Creating..." : "Create Recruiter"}
+            </motion.button>
+          </motion.div>
+        </motion.div>
       </div>
+    </div>
+  );
+}
+
+function Toggle({ checked, onChange, label }) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-lg bg-blue-50 border-2 border-blue-200">
+      <span className="text-sm font-semibold text-gray-700">
+        {label}
+      </span>
+
+      <motion.button
+        type="button"
+        onClick={() => onChange(!checked)}
+        whileTap={{ scale: 0.95 }}
+        className={`relative inline-flex h-8 w-14 items-center rounded-full cursor-pointer
+        transition-all duration-300
+        ${checked ? "bg-gradient-to-r from-blue-600 to-indigo-600" : "bg-gray-300"}`}
+      >
+        <motion.span
+          layout
+          transition={{ type: "spring", stiffness: 700, damping: 30 }}
+          className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md
+          ${checked ? "translate-x-7" : "translate-x-1"}`}
+        />
+      </motion.button>
     </div>
   );
 }

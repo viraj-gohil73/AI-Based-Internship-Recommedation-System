@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { CheckCircle2, AlertCircle, Clock, XCircle, Send } from "lucide-react";
 import TabsHeader from "../../../components/company/TabsHeader";
 import CompanyInfo from "../../../components/company/CompanyInfo";
 import ContactDetails from "../../../components/company/ContactDetails";
@@ -95,94 +96,94 @@ export default function CompanyProfile() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 space-y-4">
-      {/* ================= STATUS ALERTS ================= */}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* ================= STATUS ALERTS ================= */}
 
-      {isUnderReview && (
-        <UnderReviewAlert
-  status="SUBMITTED"
-  message="Your company profile is under admin review."
-  subMessage="Editing is disabled until review is completed."
-/>
-
-      )}
-
-      {isResubmission && (
-        <UnderReviewAlert
-  status="RESUBMISSION"
-  message="Admin requested changes in your profile."
-  subMessage="Please update details and resubmit."
-/>
-
-      )}
-
-      {isApproved && (
-        <UnderReviewAlert
-  status="APPROVED"
-  message="Your company profile is approved."
-  subMessage="All features are now enabled."
-/>
-
-      )}
-
-      {isRejected && (
-  <UnderReviewAlert
-    status="REJECTED"
-    message="Your company profile has been rejected by admin."
-    subMessage="Please contact support for further clarification."
-  />
-)}
-
-      {/* ================= TABS ================= */}
-      <TabsHeader
-        tabs={tabs}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-      />
-
-      {/* ================= CONTENT ================= */}
-      <div className="p-2 md:p-4">
-        {activeTab === "Company Info" && (
-          <CompanyInfo
-            setFormData={setFormData}
-            disabled={!isEditable}
+        {/* STATUS ALERTS (with cancel btn) */}
+        {isUnderReview && (
+          <UnderReviewAlert
+            status="SUBMITTED"
+            message="Under Review"
+            subMessage="Your company profile is under admin review. Editing is disabled until review is completed."
+          />
+        )}
+        {isResubmission && (
+          <UnderReviewAlert
+            status="RESUBMISSION"
+            message="Changes Requested"
+            subMessage="Admin requested changes in your profile. Please update details and resubmit."
+          />
+        )}
+        {isApproved && (
+          <UnderReviewAlert
+            status="APPROVED"
+            message="Approved"
+            subMessage="Your company profile is approved. All features are now enabled."
+          />
+        )}
+        {isRejected && (
+          <UnderReviewAlert
+            status="REJECTED"
+            message="Rejected"
+            subMessage="Your company profile has been rejected by admin. Please contact support for further clarification."
           />
         )}
 
-        {activeTab === "Contact" && (
-          <ContactDetails
-            setFormData={setFormData}
-            disabled={!isEditable}
+        {/* ================= TABS ================= */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-md">
+          <TabsHeader
+            tabs={tabs}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
           />
-        )}
 
-        {activeTab === "Documents" && (
-          <Documents
-            data={formData}
-            setFormData={setFormData}
-            disabled={!isEditable}
-          />
-        )}
-      </div>
+          {/* ================= CONTENT ================= */}
+          <div className="p-4 md:p-8">
+            {activeTab === "Company Info" && (
+              <CompanyInfo
+                setFormData={setFormData}
+                disabled={!isEditable}
+              />
+            )}
 
-      {/* ================= SUBMIT ================= */}
-      {activeTab === "Documents" && canSubmit && (
-        <div className="border-t px-4 py-3 flex justify-end">
-          <button
-            disabled={!isValid}
-            onClick={handleSubmit}
-            className={`px-6 py-2 rounded-lg text-white ${
-              isValid
-                ? "bg-blue-600 hover:bg-blue-700"
-                : "bg-gray-300 cursor-not-allowed"
-            }`}
-          >
-            {isResubmission
-              ? "Resubmit for Verification"
-              : "Submit for Verification"}
-          </button>
+            {activeTab === "Contact" && (
+              <ContactDetails
+                setFormData={setFormData}
+                disabled={!isEditable}
+              />
+            )}
+
+            {activeTab === "Documents" && (
+              <Documents
+                data={formData}
+                setFormData={setFormData}
+                disabled={!isEditable}
+              />
+            )}
+          </div>
+
+          {/* ================= SUBMIT BUTTON ================= */}
+          {activeTab === "Documents" && canSubmit && (
+            <div className="border-t border-gray-200 bg-gradient-to-r from-gray-50 to-blue-50 px-4 md:px-8 py-5 flex justify-end">
+              <button
+                disabled={!isValid}
+                onClick={handleSubmit}
+                className={`inline-flex items-center gap-2 px-8 py-3 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg ${
+                  isValid
+                    ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed opacity-75"
+                }`}
+              >
+                <Send size={18} />
+                {isResubmission
+                  ? "Resubmit for Verification"
+                  : "Submit for Verification"}
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

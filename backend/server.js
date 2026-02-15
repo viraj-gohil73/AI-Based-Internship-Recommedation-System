@@ -14,6 +14,8 @@ import cookieParser from "cookie-parser";
 import adminApprovalRoutes from './routes/admin.js'
 import authvg from "./routes/authvg.js";
 import { seedAdmin } from "./controllers/seedAdmin.js";
+import recruiterAuthRoutes from "./routes/recruiterAuthRoutes.js";
+import internshipRoutes from "./routes/internship.js";
 dotenv.config();
 const app = express();
 app.use(cookieParser());
@@ -41,6 +43,8 @@ mongoose
 app.use("/api/company", companyroutes);
 app.use("/api/auth", authvg);
 app.use("/api/admin", adminApprovalRoutes);
+app.use("/api/recruiter", recruiterAuthRoutes);
+app.use("/api/internships", internshipRoutes);
 app.listen(process.env.PORT, () =>
   console.log(`🚀 Server running on port ${process.env.PORT}`)
 );
