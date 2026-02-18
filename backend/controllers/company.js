@@ -20,7 +20,7 @@ export const getMyCompany = async (req, res) => {
   if (!company) {
     return res.status(404).json({
       success: false,
-      message: "Company not found",
+      message: "Invalid Crediatials",
     });
   }
 

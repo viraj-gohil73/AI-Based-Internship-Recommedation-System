@@ -20,6 +20,8 @@ export const createInternship = async (req, res) => {
       intern_status,
       is_published,
       perks,
+      recruiter_id,
+      company_id,
     } = req.body;
 
     /* ===== BASIC VALIDATION ===== */
@@ -64,8 +66,8 @@ export const createInternship = async (req, res) => {
   intern_status,
   is_published,
 
-  // company_id: req.companyId,   // enable after auth
-  // recruiter_id: req.userId,
+   recruiter_id: req.recruiter._id,
+  company_id: req.recruiter.companyId || null,
 });
 
 

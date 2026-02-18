@@ -1,33 +1,51 @@
-import { useState } from "react";
-import { Eye, EyeOff, Lock, Bell, Mail, Smartphone, Send } from "lucide-react";
-import Input from "../../../components/profile/shared/Input";
-import { useVerification } from "../../../context/VerificationContext";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import {
+  Bell,
+  Building2,
+  Eye,
+  EyeOff,
+  Lock,
+  Save,
+  Shield,
+} from "lucide-react";
 import UnderReviewAlert from "../../../components/UnderReviewAlert";
-import { useCompany } from "../../../context/CompanyContext"
-/* ---------------- TOGGLE SWITCH ---------------- */
+import { useCompany } from "../../../context/CompanyContext";
+
 function Toggle({ enabled, onChange, disabled }) {
   return (
     <button
       type="button"
       onClick={!disabled ? onChange : undefined}
       disabled={disabled}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 shadow-sm
-        ${enabled ? "bg-gradient-to-r from-blue-500 to-blue-600" : "bg-gray-200"}
-        ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-md"}`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 ${
+        enabled
+          ? "bg-gradient-to-r from-blue-600 to-indigo-600"
+          : "bg-slate-300"
+      } ${disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+      aria-checked={enabled}
+      role="switch"
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all duration-300 shadow-sm
-          ${enabled ? "translate-x-6" : "translate-x-1"}`}
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+          enabled ? "translate-x-6" : "translate-x-1"
+        }`}
       />
     </button>
   );
 }
 
-/* ---------------- MAIN SETTINGS PAGE ---------------- */
 export default function CompanySettings() {
-  const { company } = useCompany();
-  const { status } = useVerification();
+  const { company, updateCompany } = useCompany();
   const isLocked = company?.verificationStatus !== "APPROVED";
+
+  const [profile, setProfile] = useState({
+    companyName: "",
+    email: "",
+    mobile: "",
+    website: "",
+    industry: "",
+  });
 
   const [passwords, setPasswords] = useState({
     current: "",
@@ -47,183 +65,410 @@ export default function CompanySettings() {
     push: true,
   });
 
-  const [loading, setLoading] = useState(false);
+  const [loadingPassword, setLoadingPassword] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingNotifications, setSavingNotifications] = useState(false);
 
-  /* -------- PASSWORD UPDATE -------- */
-  const handlePasswordSubmit = (e) => {
+  useEffect(() => {
+    if (!company) return;
+    setProfile({
+      companyName: company.companyName || "",
+      email: company.email || "",
+      mobile: company.mobile || "",
+      website: company.website || "",
+      industry: company.industry || "",
+    });
+  }, [company]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("companySettingsNotifications");
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved);
+      setNotifications((prev) => ({ ...prev, ...parsed }));
+    } catch {
+      localStorage.removeItem("companySettingsNotifications");
+    }
+  }, []);
+
+  const handleProfileSave = async (e) => {
     e.preventDefault();
-
     if (isLocked) return;
 
-    if (passwords.newPass !== passwords.confirm) {
-      alert("Passwords do not match");
+    if (!profile.companyName.trim()) {
+      toast.error("Company name is required");
       return;
     }
 
-    setLoading(true);
+    setSavingProfile(true);
+    try {
+      await updateCompany({
+        companyName: profile.companyName.trim(),
+        mobile: profile.mobile.trim(),
+        website: profile.website.trim(),
+        industry: profile.industry.trim(),
+      });
+      toast.success("Company profile updated");
+    } catch (err) {
+      toast.error(err.message || "Profile update failed");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleNotificationsSave = () => {
+    if (isLocked) return;
+
+    setSavingNotifications(true);
+    localStorage.setItem(
+      "companySettingsNotifications",
+      JSON.stringify(notifications)
+    );
+
     setTimeout(() => {
-      setLoading(false);
-      alert("Password updated successfully");
+      setSavingNotifications(false);
+      toast.success("Notification preferences saved");
+    }, 350);
+  };
+
+  const handlePasswordSubmit = (e) => {
+    e.preventDefault();
+    if (isLocked) return;
+
+    if (!passwords.current || !passwords.newPass || !passwords.confirm) {
+      toast.error("All password fields are required");
+      return;
+    }
+
+    if (passwords.newPass.length < 8) {
+      toast.error("New password must be at least 8 characters");
+      return;
+    }
+
+    if (passwords.newPass !== passwords.confirm) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    setLoadingPassword(true);
+    setTimeout(() => {
+      setLoadingPassword(false);
+      toast.success("Password updated successfully");
       setPasswords({ current: "", newPass: "", confirm: "" });
     }, 1000);
   };
 
   return (
+    <div className="min-h-full bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 sm:p-6">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <div className="bg-white border border-blue-100 rounded-2xl p-5 shadow-sm">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
+            Company Settings
+          </h1>
+          <p className="text-sm text-slate-600 mt-1">
+            Manage company profile details, notifications, and security.
+          </p>
+        </div>
 
-      <div className="max-w-7xl p-4 mx-auto  space-y-6">
-
-        {/* 🔒 STATUS MESSAGE */}
         {isLocked && (
           <UnderReviewAlert
-    message="Your company profile is under admin review."
-    subMessage="Settings will be enabled after approval."
-  />
+            message="Your company profile is under admin review."
+            subMessage="Settings will be enabled after approval."
+          />
         )}
 
-        <div className="space-y-8 md:space-y-0 md:flex md:gap-6 md:items-start">
-
-          {/* ---------------- CHANGE PASSWORD ---------------- */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <section
-            className={`bg-gradient-to-br from-white to-blue-50 md:w-[50%] rounded-xl border border-blue-100 shadow-md p-6 transition-all duration-300
-              ${isLocked ? "opacity-60 pointer-events-none" : "hover:shadow-lg"}`}
+            className={`bg-white border border-blue-100 rounded-2xl p-6 shadow-sm ${
+              isLocked ? "opacity-60 pointer-events-none" : ""
+            }`}
           >
-            <div className="flex items-center gap-3 mb-6">
-              <Lock className="w-5 h-5 text-blue-600" />
-              <h2 className="text-lg font-bold text-gray-900">
-                Change Password
+            <div className="flex items-center gap-2 mb-5">
+              <Building2 className="w-5 h-5 text-blue-600" />
+              <h2 className="text-lg font-semibold text-slate-900">
+                Company Profile
               </h2>
             </div>
 
-            <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4">
-              {/* Current Password */}
-              <div className="relative">
-                <Input
-                  type={showPassword.current ? "text" : "password"}
-                  placeholder="Current Password"
-                  value={passwords.current}
+            <form onSubmit={handleProfileSave} className="space-y-4">
+              <div>
+                <label className="block text-sm text-slate-700 mb-1">
+                  Company Name
+                </label>
+                <input
+                  type="text"
+                  value={profile.companyName}
                   onChange={(e) =>
-                    setPasswords({ ...passwords, current: e.target.value })
+                    setProfile((prev) => ({
+                      ...prev,
+                      companyName: e.target.value,
+                    }))
                   }
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowPassword({
-                      ...showPassword,
-                      current: !showPassword.current,
-                    })
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                >
-                  {showPassword.current ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
               </div>
 
-              {/* New Password */}
-              <div className="relative">
-                <Input
-                  type={showPassword.newPass ? "text" : "password"}
-                  placeholder="New Password"
-                  value={passwords.newPass}
-                  onChange={(e) =>
-                    setPasswords({ ...passwords, newPass: e.target.value })
-                  }
-                  required
+              <div>
+                <label className="block text-sm text-slate-700 mb-1">
+                  Official Email
+                </label>
+                <input
+                  type="email"
+                  value={profile.email}
+                  disabled
+                  className="w-full border border-slate-200 bg-slate-100 text-slate-500 rounded-lg px-3 py-2 outline-none cursor-not-allowed"
                 />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowPassword({
-                      ...showPassword,
-                      newPass: !showPassword.newPass,
-                    })
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                >
-                  {showPassword.newPass ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
               </div>
 
-              {/* Confirm Password */}
-              <div className="relative">
-                <Input
-                  type={showPassword.confirm ? "text" : "password"}
-                  placeholder="Confirm New Password"
-                  value={passwords.confirm}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-slate-700 mb-1">
+                    Mobile
+                  </label>
+                  <input
+                    type="text"
+                    value={profile.mobile}
+                    onChange={(e) =>
+                      setProfile((prev) => ({
+                        ...prev,
+                        mobile: e.target.value.replace(/[^\d+]/g, ""),
+                      }))
+                    }
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    placeholder="Enter company mobile"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-slate-700 mb-1">
+                    Industry
+                  </label>
+                  <input
+                    type="text"
+                    value={profile.industry}
+                    onChange={(e) =>
+                      setProfile((prev) => ({
+                        ...prev,
+                        industry: e.target.value,
+                      }))
+                    }
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    placeholder="e.g. SaaS, EdTech"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-slate-700 mb-1">
+                  Website
+                </label>
+                <input
+                  type="text"
+                  value={profile.website}
                   onChange={(e) =>
-                    setPasswords({ ...passwords, confirm: e.target.value })
+                    setProfile((prev) => ({
+                      ...prev,
+                      website: e.target.value,
+                    }))
                   }
-                  required
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  placeholder="https://yourcompany.com"
                 />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowPassword({
-                      ...showPassword,
-                      confirm: !showPassword.confirm,
-                    })
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
-                >
-                  {showPassword.confirm ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
               </div>
 
               <button
                 type="submit"
-                disabled={loading || isLocked}
-                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-300 disabled:to-gray-400 disabled:opacity-75 text-white py-2 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                disabled={savingProfile || isLocked}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-white font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60"
               >
-                {isLocked
-                  ? "Locked (Under Review)"
-                  : loading
-                  ? "Updating..."
-                  : <>Confirm Password</>}
+                <Save size={16} />
+                {savingProfile ? "Saving..." : "Save Company Profile"}
               </button>
             </form>
           </section>
 
-          {/* ---------------- SECURITY SECTION ---------------- */}
           <section
-            className={`bg-gradient-to-br from-white to-gray-50 md:w-[50%] rounded-xl border border-gray-200 shadow-md p-6 transition-all duration-300
-              ${isLocked ? "opacity-60 pointer-events-none" : "hover:shadow-lg"}`}
+            className={`bg-white border border-blue-100 rounded-2xl p-6 shadow-sm ${
+              isLocked ? "opacity-60 pointer-events-none" : ""
+            }`}
           >
-            <div className="flex items-center gap-3 mb-6">
-              <Lock className="w-5 h-5 text-gray-600" />
-              <h2 className="text-lg font-bold text-gray-900">
+            <div className="flex items-center gap-2 mb-5">
+              <Bell className="w-5 h-5 text-blue-600" />
+              <h2 className="text-lg font-semibold text-slate-900">
+                Notifications
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border border-slate-200 rounded-xl p-4">
+                <div>
+                  <p className="font-medium text-slate-800">Email Alerts</p>
+                  <p className="text-xs text-slate-500">
+                    Updates on applications and approvals.
+                  </p>
+                </div>
+                <Toggle
+                  enabled={notifications.email}
+                  onChange={() =>
+                    setNotifications((prev) => ({
+                      ...prev,
+                      email: !prev.email,
+                    }))
+                  }
+                  disabled={isLocked}
+                />
+              </div>
+
+              <div className="flex items-center justify-between border border-slate-200 rounded-xl p-4">
+                <div>
+                  <p className="font-medium text-slate-800">SMS Alerts</p>
+                  <p className="text-xs text-slate-500">
+                    Receive urgent updates via SMS.
+                  </p>
+                </div>
+                <Toggle
+                  enabled={notifications.sms}
+                  onChange={() =>
+                    setNotifications((prev) => ({
+                      ...prev,
+                      sms: !prev.sms,
+                    }))
+                  }
+                  disabled={isLocked}
+                />
+              </div>
+
+              <div className="flex items-center justify-between border border-slate-200 rounded-xl p-4">
+                <div>
+                  <p className="font-medium text-slate-800">
+                    Dashboard Notifications
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    See real-time updates in dashboard.
+                  </p>
+                </div>
+                <Toggle
+                  enabled={notifications.push}
+                  onChange={() =>
+                    setNotifications((prev) => ({
+                      ...prev,
+                      push: !prev.push,
+                    }))
+                  }
+                  disabled={isLocked}
+                />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNotificationsSave}
+              disabled={savingNotifications || isLocked}
+              className="mt-5 w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-white font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60"
+            >
+              <Save size={16} />
+              {savingNotifications ? "Saving..." : "Save Notifications"}
+            </button>
+          </section>
+
+          <section
+            className={`xl:col-span-2 bg-white border border-blue-100 rounded-2xl p-6 shadow-sm ${
+              isLocked ? "opacity-60 pointer-events-none" : ""
+            }`}
+          >
+            <div className="flex items-center gap-2 mb-5">
+              <Shield className="w-5 h-5 text-blue-600" />
+              <h2 className="text-lg font-semibold text-slate-900">
                 Security
               </h2>
             </div>
 
-            {/* 2FA Toggle */}
-            <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-100 mb-4">
-              <div>
-                <p className="font-semibold text-gray-800">Two-Factor Authentication (2FA)</p>
-                <p className="text-sm text-gray-500 mt-0.5">Add an extra layer of security to your account.</p>
-              </div>
-              <Toggle enabled={false} disabled={true} />
-            </div>
+            <form
+              onSubmit={handlePasswordSubmit}
+              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+            >
+              {[
+                {
+                  key: "current",
+                  label: "Current Password",
+                  value: passwords.current,
+                  visible: showPassword.current,
+                },
+                {
+                  key: "newPass",
+                  label: "New Password",
+                  value: passwords.newPass,
+                  visible: showPassword.newPass,
+                },
+                {
+                  key: "confirm",
+                  label: "Confirm Password",
+                  value: passwords.confirm,
+                  visible: showPassword.confirm,
+                },
+              ].map((item) => (
+                <div key={item.key}>
+                  <label className="block text-sm text-slate-700 mb-1">
+                    {item.label}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={item.visible ? "text" : "password"}
+                      value={item.value}
+                      onChange={(e) =>
+                        setPasswords((prev) => ({
+                          ...prev,
+                          [item.key]: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      placeholder="Enter password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowPassword((prev) => ({
+                          ...prev,
+                          [item.key]: !prev[item.key],
+                        }))
+                      }
+                      className="absolute inset-y-0 right-3 text-slate-500"
+                    >
+                      {item.visible ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  </div>
+                </div>
+              ))}
 
-            {/* Device Management Placeholder */}
-            <div className="p-4 bg-white rounded-lg border border-gray-100">
-              <p className="font-semibold text-gray-800 mb-1">Device Management</p>
-              <p className="text-sm text-gray-500">View and manage devices that have accessed your account. (Coming soon)</p>
+              <div className="md:col-span-3">
+                <button
+                  type="submit"
+                  disabled={loadingPassword || isLocked}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-white font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60"
+                >
+                  <Lock size={16} />
+                  {loadingPassword ? "Updating..." : "Update Password"}
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-5 flex items-center justify-between border border-slate-200 rounded-xl p-4">
+              <div>
+                <p className="font-medium text-slate-800">
+                  Two-Factor Authentication (2FA)
+                </p>
+                <p className="text-xs text-slate-500">
+                  Add an extra layer of security to your account.
+                </p>
+              </div>
+              <Toggle enabled={false} disabled />
             </div>
           </section>
         </div>
       </div>
+    </div>
   );
 }

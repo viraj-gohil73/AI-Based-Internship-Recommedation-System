@@ -196,3 +196,4 @@ export const updateRecruiterstatus = async (req, res) => {
     });
   }
 };
+

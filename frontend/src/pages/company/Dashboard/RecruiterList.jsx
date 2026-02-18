@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Eye, Pencil, Ban, CheckCircle, Plus, Search } from "lucide-react";
+import { Eye, Pencil, Ban, CheckCircle, Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import UnderReviewAlert from "../../../components/UnderReviewAlert";
@@ -15,8 +15,22 @@ export default function RecruiterList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const { company } = useCompany();
   const isLocked = company?.verificationStatus !== "APPROVED";
+  const filteredRecruiters = recruiters.filter((r) => {
+    const query = search.trim().toLowerCase();
+    const matchesSearch =
+      !query ||
+      r.name?.toLowerCase().includes(query) ||
+      r.email?.toLowerCase().includes(query);
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" && r.isactive) ||
+      (statusFilter === "blocked" && !r.isactive);
+
+    return matchesSearch && matchesStatus;
+  });
   /* ---------------- FETCH FROM BACKEND ---------------- */
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -127,7 +141,7 @@ export default function RecruiterList() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-4 py-4">
       <div className="max-w-7xl mx-auto">
         {/* 🔒 STATUS MESSAGE */}
         <AnimatePresence>
@@ -146,49 +160,49 @@ export default function RecruiterList() {
           )}
         </AnimatePresence>
 
-        {/* HEADER */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-8"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
-                Recruiters
-              </h1>
-              <p className="text-gray-600">Manage your recruitment team</p>
-            </div>
-            <motion.button
-              onClick={() => navigate("/company/dashboard/recruiters/add")}
-              disabled={isLocked}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-semibold shadow-md transition"
-            >
-              <Plus size={20} />
-              Add Recruiter
-            </motion.button>
-          </div>
-        </motion.div>
 
-        {/* Search */}
+        {/* Search + Filter */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
           className="mb-6 bg-white border border-blue-200 rounded-lg shadow-sm p-3"
         >
-          <div className="relative">
-            <Search className="absolute left-3 top-3 text-blue-400" size={20} />
-            <input
-              type="text"
-              placeholder="Search recruiter by name or email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border-2 border-blue-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition"
-            />
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 text-blue-400" size={20} />
+              <input
+                type="text"
+                placeholder="Search recruiter by name or email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border-2 border-blue-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition"
+              />
+            </div>
+
+            <div className="relative sm:w-56">
+              <SlidersHorizontal className="absolute left-3 top-3 text-blue-400" size={18} />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full pl-10 pr-8 py-2 border-2 border-blue-200 rounded-lg bg-white text-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition appearance-none"
+              >
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="blocked">Blocked</option>
+              </select>
+            </div>
+
+            <motion.button
+              onClick={() => navigate("/company/dashboard/recruiters/add")}
+              disabled={isLocked}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-semibold shadow-md transition whitespace-nowrap"
+            >
+              <Plus size={20} />
+              Add Recruiter
+            </motion.button>
           </div>
         </motion.div>
 {confirmRecruiter && (
@@ -259,8 +273,8 @@ export default function RecruiterList() {
 
             <tbody>
               <AnimatePresence>
-                {recruiters.length > 0 ? (
-                  recruiters.map((r, index) => (
+                {filteredRecruiters.length > 0 ? (
+                  filteredRecruiters.map((r, index) => (
                     <motion.tr
                       key={r._id}
                       initial={{ opacity: 0, x: -20 }}
@@ -363,7 +377,7 @@ export default function RecruiterList() {
       {/* MOBILE CARDS */}
       <div className="md:hidden space-y-4">
         <AnimatePresence>
-          {recruiters.map((r, index) => (
+          {filteredRecruiters.map((r, index) => (
             <motion.div
               key={r._id}
               initial={{ opacity: 0, x: -20 }}

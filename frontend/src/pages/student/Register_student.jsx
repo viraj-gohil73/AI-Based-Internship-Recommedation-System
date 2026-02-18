@@ -65,13 +65,13 @@ export default function RegisterCompany() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-100 via-white to-indigo-50">
-      
-      <div className="w-full max-w-sm  bg-white border border-gray-200 rounded-2xl p-5 sm:p-6 md:p-7 lg:p-6 shadow-xl">
-        <h3 className="mb-6 text-center text-3xl font-bold text-gray-800">
-          Create an Account
-        </h3>
+        <div className="w-full max-w-sm bg-white border border-gray-200 rounded-2xl p-0 shadow-2xl overflow-hidden">
+        {/* Gradient header */}
+        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 py-6 px-6 text-center">
+          <h3 className="text-3xl font-semibold tracking-tight text-white drop-shadow-lg">Create Account</h3>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 ">
+        <form onSubmit={handleSubmit} className="space-y-4  px-8 py-4">
           <div className="flex flex-col sm:flex-row sm:space-x-4">
             <div className="flex-1">
                 <label className="text-gray-700 text-sm  font-medium mb-1 block">
@@ -189,7 +189,7 @@ export default function RegisterCompany() {
         </form>
 
         {/* Divider */}
-        <div className="relative mt-4">
+        <div className="relative mt-2">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300"></div>
           </div>
@@ -199,20 +199,13 @@ export default function RegisterCompany() {
         </div>
 
         {/* Social Buttons */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-3">
-          <button
-            type="button"
-            onClick={linkedinLogin}
-            className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-1 hover:bg-gray-100 transition text-sm sm:text-base"
-          >
-            <img width="30" height="30" src="https://img.icons8.com/fluency/96/linkedin.png" alt="linkedin"/>
-            LinkedIn
-          </button>
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 mx-8 sm:mt-3">
+          
 
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-2 sm:py-1 hover:bg-gray-100 transition text-sm sm:text-base"
+            className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-2 sm:py-1 hover:bg-gray-100 transition text-sm sm:text-base font-semibold shadow-sm"
           >
             <img width="28" height="28" src="https://img.icons8.com/fluency/96/google-logo.png" alt="google-logo"/>
             Google
@@ -220,7 +213,7 @@ export default function RegisterCompany() {
         </div>
 
         {/* Already have an account */}
-        <p className="text-center text-gray-700 mt-4 text-sm sm:text-base">
+        <p className="text-center text-gray-700 my-4 text-sm sm:text-base">
           Already have an account?{" "}
           <a
             href="/login-student"

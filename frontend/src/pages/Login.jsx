@@ -114,13 +114,7 @@ export default function Login() {
 
         {/* Social Buttons */}
          <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4 sm:mt-3">
-          <button
-            type="button"
-            className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-1 hover:bg-gray-100 transition text-sm sm:text-base"
-          >
-            <img width="30" height="30" src="https://img.icons8.com/fluency/96/linkedin.png" alt="linkedin"/>
-            LinkedIn
-          </button>
+         
 
           <button
             type="button"

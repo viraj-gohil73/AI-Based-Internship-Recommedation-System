@@ -16,13 +16,20 @@ export const recruiterAuth = async (req, res, next) => {
     }
 
     const recruiter = await Recruiter.findById(decoded.id).select("-password");
+
     if (!recruiter) {
       return res.status(404).json({ message: "Recruiter not found" });
     }
 
     req.recruiter = recruiter;
+
+    // ✅ SET IDs HERE
+    console.log("Setting recruiterId and companyId in middleware:", recruiter._id, recruiter.companyId);
+    req.recruiterId = recruiter._id;
+
     next();
   } catch (err) {
     return res.status(401).json({ message: "Invalid token" });
   }
 };
+

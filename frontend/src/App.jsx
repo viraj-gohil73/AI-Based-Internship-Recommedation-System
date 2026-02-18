@@ -23,7 +23,7 @@ import Overview from "./pages/company/Dashboard/overview";
 import Profile from "./pages/company/Dashboard/Profile";
 import Settings from "./pages/company/Dashboard/Settings";
 import Subscription from "./pages/company/Dashboard/Subscription";
-import InternshipList from "./pages/company/Dashboard/Internship";
+import InternshipList from "./pages/company/Dashboard/InternshipList";
 import CompanyInternshipView from "./pages/company/Dashboard/CompanyInternshipView";
 import Recruiter from "./pages/company/Dashboard/RecruiterList";
 import CompanyLayoutWrapper from "./layout/CompanyLayoutWrapper";
@@ -48,6 +48,8 @@ import RecruiterLayoutWrapper from "./layout/RecruiterLayoutWrapper";
 import InternshipListr from "./pages/recruiter/InternshipList";
 import CreateInternship from "./pages/recruiter/CreateInternship";
 import PostInternship from "./pages/recruiter/PostInternship";
+import RecruiterSettings from "./pages/recruiter/Settings";
+
 function App() {
   return (
     <VerificationProvider>
@@ -63,6 +65,7 @@ function App() {
 <Route path="/recruiter/internships" element={<InternshipListr />} />
 <Route path="/recruiter/internships/create" element={<CreateInternship />} />
 <Route path="/recruiter/internships/post" element={<PostInternship />} />
+<Route path="/recruiter/settings" element={<RecruiterSettings />} />
 
     {/* future routes */}
     {/* <Route path="/recruiter/internships" element={<Internships />} /> */}

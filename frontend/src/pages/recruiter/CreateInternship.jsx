@@ -65,6 +65,8 @@ export default function RecruiterInternshipForm() {
     setError("");
     setLoading(true);
 
+    const token = localStorage.getItem("recruiterToken");
+    
     const payload = {
       ...form,
       skill_req: skills,
@@ -74,9 +76,10 @@ export default function RecruiterInternshipForm() {
     };
 
     try {
-      const res = await fetch("/api/internships", {
+      const res = await fetch("http://localhost:5000/api/internships", {
         method: "POST",
         headers: {
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
