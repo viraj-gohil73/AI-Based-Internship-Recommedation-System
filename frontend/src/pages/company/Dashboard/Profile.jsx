@@ -29,6 +29,30 @@ export default function CompanyProfile() {
   const isResubmission = status === "RESUBMISSION";
   const isApproved = status === "APPROVED";
   const isRejected = status === "REJECTED";
+  const statusMeta = {
+    DRAFT: {
+      label: "Draft",
+      className: "border-slate-200 bg-slate-100 text-slate-700",
+    },
+    SUBMITTED: {
+      label: "Under Review",
+      className: "border-blue-200 bg-blue-50 text-blue-700",
+    },
+    RESUBMISSION: {
+      label: "Changes Requested",
+      className: "border-amber-200 bg-amber-50 text-amber-700",
+    },
+    APPROVED: {
+      label: "Approved",
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    },
+    REJECTED: {
+      label: "Rejected",
+      className: "border-rose-200 bg-rose-50 text-rose-700",
+    },
+  };
+  const statusBadge =
+    statusMeta[status] || statusMeta.DRAFT;
 
   /* 🔒 EDIT RULE */
   const isEditable = !isUnderReview && !isRejected;
@@ -131,15 +155,35 @@ export default function CompanyProfile() {
         )}
 
         {/* ================= TABS ================= */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-md">
-          <TabsHeader
-            tabs={tabs}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-          />
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-md overflow-hidden">
+          <div className="flex flex-col gap-2 border-b border-gray-100 bg-gradient-to-r from-white to-blue-50 px-6 py-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+                  Company Profile
+                </h1>
+                <p className="text-sm text-slate-600">
+                  Keep your information up to date to unlock platform features.
+                </p>
+              </div>
+              <span
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusBadge.className}`}
+              >
+                {statusBadge.label}
+              </span>
+            </div>
+          </div>
+
+          <div className="sticky top-0 z-20 bg-white/95 backdrop-blur">
+            <TabsHeader
+              tabs={tabs}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+            />
+          </div>
 
           {/* ================= CONTENT ================= */}
-          <div className="p-4 md:p-8">
+          <div>
             {activeTab === "Company Info" && (
               <CompanyInfo
                 setFormData={setFormData}

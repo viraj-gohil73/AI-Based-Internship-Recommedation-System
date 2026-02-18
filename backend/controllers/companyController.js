@@ -2,6 +2,7 @@ import Company from "../models/Company.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import fetch from "node-fetch";
+import { ensureTrialSubscription } from "../services/subscriptionService.js";
 // ✅ REGISTER COMPANY
 export const registerCompany = async (req, res) => {
   try {
@@ -18,6 +19,7 @@ export const registerCompany = async (req, res) => {
 
     // Create company
     const newCompany = await Company.create({ email, password, companyName });
+    await ensureTrialSubscription(newCompany._id);
     // Create JWT Token
     const token = jwt.sign(
       { id: newCompany._id, role: "company" },

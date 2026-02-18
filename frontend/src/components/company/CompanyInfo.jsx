@@ -148,7 +148,7 @@ export default function CompanyInfoTab({ data, setFormData, disabled }) {
       <div className="space-y-5">
        
 
-        <div className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-6 lg:p-8 space-y-6">
+        <div className="bg-white shadow-sm p-4 sm:p-6 lg:p-8 space-y-6">
           <section className="rounded-xl border border-slate-200 p-4 sm:p-5">
             <div className="flex items-center gap-3 mb-5">
               <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2 rounded-lg">
@@ -183,7 +183,7 @@ export default function CompanyInfoTab({ data, setFormData, disabled }) {
                   <button
                     type="button"
                     onClick={() => handleChange("logo", "")}
-                    className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition"
+                    className="px-4 py-2 ml-6 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 transition"
                   >
                     Remove Logo
                   </button>

@@ -1,8 +1,10 @@
 import Company from "../models/Company.js";
+import { ensureTrialSubscription } from "../services/subscriptionService.js";
 export const createCompany = async (req, res) => {
   try {
     const company = new Company(req.body);
     await company.save();
+    await ensureTrialSubscription(company._id);
 
     res.status(201).json({
       success: true,

@@ -39,6 +39,14 @@ export default function LoginAdmin() {
     }
 
     localStorage.setItem("adminToken", data.token);
+    const fallbackAdmin = {
+      name: formData.email.split("@")[0] || "Admin",
+      email: formData.email,
+    };
+    localStorage.setItem(
+      "adminUser",
+      JSON.stringify(data.admin || fallbackAdmin)
+    );
     toast.success("Admin login successful");
 
     setTimeout(() => {
@@ -54,80 +62,86 @@ export default function LoginAdmin() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-100 via-white to-indigo-50">
-      <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white/80 p-5 sm:p-6 md:p-7 lg:p-8 py-5  shadow-2xl border border-gray-200">
-        <h2 className="mb-4 text-center text-3xl font-bold text-gray-800">
-          Login
-        </h2>
+      <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+        <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-6 text-center">
+          <h2 className="text-3xl font-semibold tracking-tight text-white drop-shadow-lg">
+            Admin Login
+          </h2>
+          <p className="mt-1 text-sm text-blue-100">
+            Dashboard access for administrators
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-2">
-         
+        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-6">
           {/* Email */}
           <div>
-            <label className="block text-gray-700 mb-2 text-sm font-medium">Email</label>
+            <label className="text-gray-700 text-sm font-medium mb-1 block">
+              Official Email
+            </label>
             <input
               type="email"
               name="email"
               placeholder="Enter your email"
               value={formData.email}
               onChange={handleChange}
-              className="w-full rounded-md border border-gray-300 p-2 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              className="w-full rounded-md border border-gray-300 text-gray-900 px-3 py-2 sm:py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
               required
             />
           </div>
 
           {/* Password */}
-        <div className="relative">
-            <label className="text-gray-700 text-sm  font-medium mb-1 block">
-                Password
+          <div className="relative">
+            <label className="text-gray-700 text-sm font-medium mb-1 block">
+              Password
             </label>
             <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                maxLength={30}
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full rounded-md border border-gray-300 text-gray-900 px-3 py-2 sm:py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none pr-10"
-                required
+              type={showPassword ? "text" : "password"}
+              name="password"
+              maxLength={30}
+              placeholder="Enter your password"
+              value={formData.password}
+              onChange={handleChange}
+              className="w-full rounded-md border border-gray-300 text-gray-900 px-3 py-2 sm:py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none pr-10"
+              required
             />
             <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute top-1/2 right-3 mt-3 -translate-y-1/2 cursor-pointer text-gray-500 hover:text-gray-700"
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute top-1/2 right-3 mt-3 -translate-y-1/2 cursor-pointer text-gray-500 hover:text-gray-700"
             >
-                {showPassword ? (
+              {showPassword ? (
                 <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-5 h-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-5 w-5"
                 >
-                    <path
+                  <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 15.204 6.357 18 12 18c5.643 0 8.774-2.796 10.066-6a10.477 10.477 0 00-2.046-3.777M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
+                  />
                 </svg>
-                ) : (
+              ) : (
                 <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-5 h-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-5 w-5"
                 >
-                    <path
+                  <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 15.204 6.357 18 12 18c5.643 0 8.774-2.796 10.066-6a10.477 10.477 0 00-2.046-3.777M15 12a3 3 0 11-6 0 3 3 0 016 0zM3 3l18 18"
-                    />
+                  />
                 </svg>
-                )}
+              )}
             </button>
-            </div>
+          </div>
 
           <div className="flex items-center justify-end">
             <Link
@@ -139,22 +153,32 @@ export default function LoginAdmin() {
           </div>
 
           <button
-  type="submit"
-  disabled={loading}
-  className="w-full bg-blue-600 py-2 text-white disabled:opacity-50"
->
-  {loading ? "Logging in..." : "Login as Admin"}
-</button>
+            type="submit"
+            disabled={loading}
+            className="w-full cursor-pointer rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 py-2 text-white font-semibold hover:from-indigo-700 hover:to-blue-700 transition-all shadow-md mt-2 disabled:opacity-60"
+          >
+            {loading ? "Logging in..." : "Login as Admin"}
+          </button>
 
         </form>
 
-        {/* back to home */}
-        <div className="mt-4 text-center">
-            <a href="/choose-login"
-            className="text-md text-blue-600 font-medium hover:underline transition hover:text-blue-700">
-                Go Back
-            </a>
-            </div>
+        <div className="relative mt-1 px-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-2 text-gray-500">quick access</span>
+          </div>
+        </div>
+
+        <div className="mt-4 mb-6 text-center">
+          <a
+            href="/choose-login"
+            className="text-md text-blue-600 font-medium hover:underline transition hover:text-blue-700"
+          >
+            Go Back
+          </a>
+        </div>
 
       </div>
     </div>

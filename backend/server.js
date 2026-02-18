@@ -16,9 +16,16 @@ import authvg from "./routes/authvg.js";
 import { seedAdmin } from "./controllers/seedAdmin.js";
 import recruiterAuthRoutes from "./routes/recruiterAuthRoutes.js";
 import internshipRoutes from "./routes/internship.js";
+import { seedSubscriptionSystem } from "./controllers/seedSubscriptionSystem.js";
+import { handleRazorpayWebhook } from "./controllers/paymentWebhookController.js";
 dotenv.config();
 const app = express();
 app.use(cookieParser());
+app.post(
+  "/api/payments/razorpay/webhook",
+  express.raw({ type: "application/json" }),
+  handleRazorpayWebhook
+);
 app.use(express.json());
 app.use(
   cors({
@@ -36,6 +43,7 @@ mongoose
   .then(async () => {
     console.log("MongoDB Connected");
     await seedAdmin();
+    await seedSubscriptionSystem();
   })
   .catch((err) => console.log(err));
 

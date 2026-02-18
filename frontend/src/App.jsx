@@ -40,6 +40,13 @@ import Dashboard from "./pages/admin/Dashboard";
 import Companies from "./pages/admin/Companies";
 import CompanyDetails from "./pages/admin/CompanyDetails";
 import AdminSettings from "./pages/admin/AdminSettings";
+import Recruiters from "./pages/admin/Recruiters";
+import Students from "./pages/admin/Students";
+import SubscriptionManagement from "./pages/admin/SubscriptionManagement";
+import PlansManagement from "./pages/admin/PlansManagement";
+import AdminUsers from "./pages/admin/AdminUsers";
+import ReportsAnalytics from "./pages/admin/ReportsAnalytics";
+import AuditLogs from "./pages/admin/AuditLogs";
 import AdminAuthRedirect from "./guards/AdminAuthRedirect";
 import AdminProtectedRoute from "./guards/AdminProtectedRoute";
 import RecruiterLayout from "./layout/RecruiterLayout";
@@ -49,7 +56,6 @@ import InternshipListr from "./pages/recruiter/InternshipList";
 import CreateInternship from "./pages/recruiter/CreateInternship";
 import PostInternship from "./pages/recruiter/PostInternship";
 import RecruiterSettings from "./pages/recruiter/Settings";
-
 function App() {
   return (
     <VerificationProvider>
@@ -132,10 +138,18 @@ function App() {
     </AdminProtectedRoute>} />
             <Route path="approvals" element={<AdminProtectedRoute><CompanyApprovals /></AdminProtectedRoute>} />
             <Route path="companies" element={<Companies />} />
+            <Route path="recruiters" element={<Recruiters />} />
+            <Route path="students" element={<Students />} />
+            <Route path="subscriptions" element={<SubscriptionManagement />} />
+            <Route path="plans" element={<PlansManagement />} />
+            <Route path="admins" element={<AdminUsers />} />
+            <Route path="reports" element={<ReportsAnalytics />} />
+            <Route path="audit-logs" element={<AuditLogs />} />
             <Route path="settings" element={<AdminSettings />} />
+            {/* <Route path="recruiters" element={<Recruiters />}/> */}
             {/* 
             <Route path="students" element={<Students />} />
-            <Route path="recruiters" element={<Recruiters />} />
+             
              />
             <Route path="settings" element={<Settings />} /> */}
           </Route>

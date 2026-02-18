@@ -33,6 +33,12 @@ export const adminLogin = async (req, res) => {
     res.json({
       message: "Login successful",
       token,
+      admin: {
+        id: admin._id,
+        name: admin.name || "Admin",
+        email: admin.email,
+        role: admin.role,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: "Server error" });

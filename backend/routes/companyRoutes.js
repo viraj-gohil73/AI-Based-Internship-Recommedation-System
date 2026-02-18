@@ -7,6 +7,14 @@ import { updateCompany, updateCompanyLogo, getApprovalCompanies } from "../contr
 import { createRecruiter } from "../controllers/recruitercontroller.js";
 import { getRecruiters } from "../controllers/recruitercontroller.js";
 import { updateRecruiter, getRecruiterById, updateRecruiterstatus } from "../controllers/recruitercontroller.js";
+import { requireSubscriptionFeature } from "../middlewares/requireSubscriptionFeature.js";
+import {
+  listSubscriptionPlans,
+  getCurrentCompanySubscription,
+  getCompanySubscriptionPayments,
+  createCheckoutIntent,
+  confirmSubscriptionPayment,
+} from "../controllers/subscriptionController.js";
 const router = express.Router();
 
 /* ================= OTP ================= */
@@ -31,11 +39,22 @@ router.post(
   submitVerification
 );
 
-router.post("/recruiter/add", companyAuth, createRecruiter);
+router.post(
+  "/recruiter/add",
+  companyAuth,
+  requireSubscriptionFeature("RECRUITER_CREATE"),
+  createRecruiter
+);
 router.get("/recruiters",companyAuth, getRecruiters);
 router.put("/recruiter/:id", companyAuth, updateRecruiter);
 router.patch("/recruiter/:id/status", companyAuth, updateRecruiterstatus);
 router.get("/recruiter/:id", companyAuth, getRecruiterById);
+
+router.get("/subscription/plans", companyAuth, listSubscriptionPlans);
+router.get("/subscription/current", companyAuth, getCurrentCompanySubscription);
+router.get("/subscription/payments", companyAuth, getCompanySubscriptionPayments);
+router.post("/subscription/checkout-intent", companyAuth, createCheckoutIntent);
+router.post("/subscription/confirm", companyAuth, confirmSubscriptionPayment);
 
 router.get(
   "/google/company/callback",

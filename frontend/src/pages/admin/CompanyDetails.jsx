@@ -44,27 +44,33 @@ export default function CompanyDetails() {
   };
 
   if (!company) {
-    return <div className="p-6 text-slate-500">Loading…</div>;
+    return <div className="p-6 text-slate-500">Loading...</div>;
   }
 
   return (
     <div className="space-y-6 pb-10">
       {/* ================= HEADER ================= */}
-      <div className="sticky top-0 bg-white z-10 border-b-2 border-slate-300">
-        <div className="flex items-center gap-4 p-4">
+      <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
+        <div className="flex items-center gap-4 px-4 py-3 md:px-6">
           <button
             onClick={() => navigate(-1)}
-            className="h-9 w-9 flex items-center justify-center cursor-pointer  rounded-full border hover:bg-slate-100"
+            className="h-9 w-9 flex items-center justify-center cursor-pointer rounded-full border border-slate-200 hover:bg-slate-50"
           >
             <ArrowLeft size={16} />
           </button>
 
           <div className="flex items-center gap-3">
-            <img
-              src={company.logo}
-              alt="logo"
-              className="w-11 h-11 rounded-full border"
-            />
+            {company.logo ? (
+              <img
+                src={company.logo}
+                alt="logo"
+                className="w-11 h-11 rounded-full border border-slate-200 object-cover"
+              />
+            ) : (
+              <div className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-600">
+                {company.companyName?.slice(0, 2)?.toUpperCase()}
+              </div>
+            )}
             <div>
               <h1 className="text-lg font-semibold">
                 {company.companyName}
@@ -89,17 +95,17 @@ export default function CompanyDetails() {
             </InfoRow>
 
             <InfoRow icon={<Globe />} color="cyan" label="Website">
-              {company.website || "—"}
+              {company.website || "-"}
             </InfoRow>
 
             <InfoRow icon={<BadgeCheck />} color="indigo" label="Industry">
-              {company.industry || "—"}
+              {company.industry || "-"}
             </InfoRow>
           </Card>
 
           <Card title="About Company" iconColor="violet">
             <p className="text-sm text-slate-700 leading-relaxed">
-              {company.about || "—"}
+              {company.about || "-"}
             </p>
           </Card>
 
@@ -123,17 +129,17 @@ export default function CompanyDetails() {
               icon={<Calendar />}
               color="violet"
               label="Founded Year"
-              value={company.foundedYear || "—"}
+              value={company.foundedYear || "-"}
             />
 
             <KeyValue
               icon={<Users />}
               color="pink"
               label="Company Size"
-              value={company.companySize || "—"}
+              value={company.companySize || "-"}
             />
 
-            <KeyValue label="GST No" value={company.gst_no || "—"} />
+            <KeyValue label="GST No" value={company.gst_no || "-"} />
           </Card>
 
           <Card title="Documents" iconColor="amber">
@@ -165,8 +171,8 @@ export default function CompanyDetails() {
 
 function Card({ title, iconColor = "indigo", children }) {
   return (
-    <div className="bg-white border-2 border-slate-300 rounded-2xl shadow-sm p-5 space-y-4">
-      <div className="flex items-center gap-3 font-semibold text-sm">
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 space-y-4">
+      <div className="flex items-center gap-3 font-semibold text-sm text-slate-800">
         <IconCircle color={iconColor}>
           <Building2 size={16} />
         </IconCircle>
@@ -227,6 +233,7 @@ function KeyValue({ icon, label, value, color = "slate" }) {
 
 function StatusBadge({ status }) {
   const map = {
+    DRAFT: "bg-slate-100 text-slate-700",
     SUBMITTED: "bg-yellow-100 text-yellow-700",
     RESUBMISSION: "bg-blue-100 text-blue-700",
     APPROVED: "bg-green-100 text-green-700",
@@ -235,7 +242,7 @@ function StatusBadge({ status }) {
 
   return (
     <span
-      className={`inline-block mt-1 px-3 py-0.5 text-xs rounded-full ${map[status]}`}
+      className={`inline-block mt-1 px-3 py-0.5 text-xs rounded-full ${map[status] || map.DRAFT}`}
     >
       {status}
     </span>

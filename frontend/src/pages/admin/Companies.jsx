@@ -1,13 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
-import { Ban, CheckCircle, Eye, Search, X, Filter } from "lucide-react";
+import {
+  Ban,
+  CheckCircle,
+  Eye,
+  Search,
+  Filter,
+  Building2,
+  RefreshCcw,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import NotAvailable from "../../components/NotAvailable.jsx";
+
 export default function Companies() {
   const [companies, setCompanies] = useState([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
-  const [selectedCompany, setSelectedCompany] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const navigate = useNavigate();
 
   const token = localStorage.getItem("adminToken");
 
@@ -71,6 +82,22 @@ export default function Companies() {
     }
   };
 
+  const requestBlockChange = (company) => {
+    setConfirmAction({
+      id: company._id,
+      isActive: company.isActive,
+      name: company.companyName,
+    });
+  };
+
+  const closeConfirm = () => setConfirmAction(null);
+
+  const confirmBlockChange = () => {
+    if (!confirmAction) return;
+    toggleBlock(confirmAction.id, confirmAction.isActive);
+    closeConfirm();
+  };
+
   /* ================= SEARCH + FILTER ================= */
   const filteredCompanies = useMemo(() => {
     return companies.filter((c) => {
@@ -89,54 +116,97 @@ export default function Companies() {
     });
   }, [companies, search, filter]);
 
+  const summary = useMemo(() => {
+    const total = companies.length;
+    const active = companies.filter((c) => c.isActive).length;
+    const blocked = total - active;
+    return { total, active, blocked };
+  }, [companies]);
+
   return (
     <div className="space-y-6">
       {/* ================= HEADER ================= */}
-      <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Approved Companies</h1>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-semibold text-slate-900">
+                  Companies
+                </h1>
+                <p className="text-sm text-slate-500">
+                  Manage verified companies and control access.
+                </p>
+              </div>
+            </div>
 
-        <div className="flex gap-3">
-          {/* SEARCH */}
-          <div className="relative">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search company or email"
-              className="pl-9 pr-3 py-2 border rounded-lg text-sm"
-            />
+            <div className="flex items-center gap-2 text-xs font-semibold">
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+                Total: {summary.total}
+              </span>
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">
+                Active: {summary.active}
+              </span>
+              <span className="rounded-full bg-rose-100 px-3 py-1 text-rose-700">
+                Blocked: {summary.blocked}
+              </span>
+            </div>
           </div>
 
-          {/* FILTER */}
-          <div className="relative">
-            <Filter
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="pl-9 pr-3 py-2 border rounded-lg text-sm bg-white"
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {/* SEARCH */}
+            <div className="relative flex-1">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search company or email"
+                className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none"
+              />
+            </div>
+
+            {/* FILTER */}
+            <div className="relative">
+              <Filter
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none"
+              >
+                <option value="ALL">All</option>
+                <option value="ACTIVE">Active</option>
+                <option value="BLOCKED">Blocked</option>
+              </select>
+            </div>
+
+            <button
+              onClick={fetchApprovedCompanies}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
             >
-              <option value="ALL">All</option>
-              <option value="ACTIVE">Active</option>
-              <option value="BLOCKED">Blocked</option>
-            </select>
+              <RefreshCcw size={16} />
+              Refresh
+            </button>
           </div>
         </div>
       </div>
 
       {/* ================= DESKTOP TABLE ================= */}
-      <div className="hidden md:block bg-white border rounded-xl overflow-hidden">
+      <div className="hidden md:block bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full text-sm">
-          <thead className="bg-slate-100">
+          <thead className="bg-slate-50 text-slate-600">
             <tr>
               <th className="p-4 text-left">Company</th>
-              <th>Email</th>
-              <th>Status</th>
+              <th className="p-4 text-left">Email</th>
+              <th className="p-4 text-left">Status</th>
               <th className="p-4 text-right">Actions</th>
             </tr>
           </thead>
@@ -144,36 +214,39 @@ export default function Companies() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan="4" className="p-6 text-center">
+                <td colSpan="4" className="p-6 text-center text-slate-500">
                   Loading...
                 </td>
               </tr>
             )}
+
             {!loading && filteredCompanies.length === 0 && (
-  <tr>
-    <td colSpan="4" className="p-10">
-      <NotAvailable text="No companies found" />
-    </td>
-  </tr>
-)}
+              <tr>
+                <td colSpan="4" className="p-10">
+                  <NotAvailable text="No companies found" />
+                </td>
+              </tr>
+            )}
 
             {!loading &&
               filteredCompanies.map((c) => (
-                <tr key={c._id} className="border-t">
-                  <td className="p-4 flex items-center gap-3">
-                    <img
-                      src={c.logo}
-                      className="w-9 h-9 rounded-full"
-                    />
-                    <div>
-                      <p className="font-medium">{c.companyName}</p>
-                      <p className="text-xs text-slate-500">{c.industry}</p>
+                <tr key={c._id} className="border-t border-slate-200 hover:bg-slate-50">
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={c.logo}
+                        className="w-9 h-9 rounded-full border border-slate-200 object-cover"
+                      />
+                      <div>
+                        <p className="font-medium text-slate-900">{c.companyName}</p>
+                        <p className="text-xs text-slate-500">{c.industry}</p>
+                      </div>
                     </div>
                   </td>
 
-                  <td>{c.email}</td>
+                  <td className="p-4 text-slate-600">{c.email}</td>
 
-                  <td>
+                  <td className="p-4">
                     <span
                       className={`px-2.5 py-1 rounded-full text-xs ${
                         c.isActive
@@ -188,18 +261,18 @@ export default function Companies() {
                   <td className="p-4 text-right">
                     <div className="inline-flex gap-2">
                       <button
-                        onClick={() => setSelectedCompany(c)}
-                        className="p-2 border rounded-lg"
+                        onClick={() => navigate(`/admin/companies/${c._id}`)}
+                        className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
                       >
                         <Eye size={16} />
                       </button>
 
                       <button
-                        onClick={() => toggleBlock(c._id, c.isActive)}
-                        className={`p-2 rounded-lg text-white ${
+                        onClick={() => requestBlockChange(c)}
+                        className={`p-2 rounded-lg text-white transition ${
                           c.isActive
-                            ? "bg-red-600"
-                            : "bg-green-600"
+                            ? "bg-red-600 hover:bg-red-700"
+                            : "bg-green-600 hover:bg-green-700"
                         }`}
                       >
                         {c.isActive ? <Ban size={16} /> : <CheckCircle size={16} />}
@@ -215,11 +288,11 @@ export default function Companies() {
       {/* ================= MOBILE CARDS ================= */}
       <div className="md:hidden space-y-4">
         {filteredCompanies.map((c) => (
-          <div key={c._id} className="bg-white border rounded-xl p-4 space-y-3">
+          <div key={c._id} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
             <div className="flex gap-3">
-              <img src={c.logo} className="w-10 h-10 rounded-full" />
+              <img src={c.logo} className="w-10 h-10 rounded-full border border-slate-200 object-cover" />
               <div>
-                <p className="font-medium">{c.companyName}</p>
+                <p className="font-medium text-slate-900">{c.companyName}</p>
                 <p className="text-xs text-slate-500">{c.email}</p>
               </div>
             </div>
@@ -237,14 +310,14 @@ export default function Companies() {
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => setSelectedCompany(c)}
-                  className="p-2 border rounded-lg"
+                  onClick={() => navigate(`/admin/companies/${c._id}`)}
+                  className="p-2 border border-slate-200 rounded-lg"
                 >
                   <Eye size={16} />
                 </button>
 
                 <button
-                  onClick={() => toggleBlock(c._id, c.isActive)}
+                  onClick={() => requestBlockChange(c)}
                   className={`p-2 rounded-lg text-white ${
                     c.isActive ? "bg-red-600" : "bg-green-600"
                   }`}
@@ -257,38 +330,46 @@ export default function Companies() {
         ))}
       </div>
 
-      {/* ================= VIEW MODAL ================= */}
-      {selectedCompany && (
+      {/* Details view uses /admin/companies/:id */}
+
+      {confirmAction && (
         <div
-          className="fixed inset-0 bg-black/40 flex justify-center items-center z-50"
-          onClick={() => setSelectedCompany(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={closeConfirm}
         >
           <div
-            className="bg-white rounded-xl w-full max-w-md p-6 space-y-3"
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              className="absolute top-3 right-3"
-              onClick={() => setSelectedCompany(null)}
-            >
-              <X size={18} />
-            </button>
-
-            <div className="flex gap-3 items-center">
-              <img src={selectedCompany.logo} className="w-14 h-14 rounded-full" />
-              <div>
-                <h2 className="text-lg font-semibold">
-                  {selectedCompany.companyName}
-                </h2>
-                <p className="text-sm text-slate-500">
-                  {selectedCompany.industry}
-                </p>
-              </div>
+            <h3 className="text-lg font-semibold text-slate-900">
+              {confirmAction.isActive ? "Block company?" : "Unblock company?"}
+            </h3>
+            <p className="mt-2 text-sm text-slate-600">
+              {confirmAction.isActive
+                ? "This will prevent the company from accessing the platform."
+                : "This will restore access for the company."}
+            </p>
+            <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              {confirmAction.name}
             </div>
-
-            <p><b>Email:</b> {selectedCompany.email}</p>
-            <p><b>Status:</b> {selectedCompany.isActive ? "Active" : "Blocked"}</p>
-            <p><b>City:</b> {selectedCompany.city || "-"}</p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={closeConfirm}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmBlockChange}
+                className={`rounded-lg px-4 py-2 text-sm text-white ${
+                  confirmAction.isActive
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-emerald-600 hover:bg-emerald-700"
+                }`}
+              >
+                {confirmAction.isActive ? "Block" : "Unblock"}
+              </button>
+            </div>
           </div>
         </div>
       )}

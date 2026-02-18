@@ -18,6 +18,12 @@ export default function InternshipList() {
   const [status, setStatus] = useState("ALL");
   const [hoveredId, setHoveredId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [subscriptionState, setSubscriptionState] = useState({
+    loading: true,
+    entitlements: null,
+    usage: null,
+    status: null,
+  });
 
   // 🔹 Fetch Real Data
   useEffect(() => {
@@ -45,6 +51,47 @@ export default function InternshipList() {
 
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      try {
+        const token = localStorage.getItem("recruiterToken");
+        const res = await fetch("http://localhost:5000/api/recruiter/subscription/current", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to fetch subscription");
+        }
+        setSubscriptionState({
+          loading: false,
+          entitlements: data.entitlements || null,
+          usage: data.usage || null,
+          status: data.data?.status || null,
+        });
+      } catch (err) {
+        setSubscriptionState({
+          loading: false,
+          entitlements: null,
+          usage: null,
+          status: null,
+        });
+      }
+    };
+    fetchSubscription();
+  }, []);
+
+  const maxActivePostings = subscriptionState.entitlements?.limits?.maxActivePostings;
+  const activePostingsCount = subscriptionState.usage?.activePostingsCount || 0;
+  const postingLimitReached =
+    subscriptionState.entitlements?.accessAllowed &&
+    maxActivePostings !== null &&
+    maxActivePostings !== undefined &&
+    activePostingsCount >= maxActivePostings;
+  const canPost =
+    subscriptionState.entitlements?.accessAllowed && !postingLimitReached;
 
   const filtered = internships.filter((i) => {
     const matchSearch = i.title
@@ -92,12 +139,27 @@ export default function InternshipList() {
 
           <Link
             to="/recruiter/internships/create"
-            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2.5 rounded-lg font-semibold shadow-md hover:scale-105 transition"
+            onClick={(e) => {
+              if (!canPost) e.preventDefault();
+            }}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold shadow-md transition ${
+              canPost
+                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:scale-105"
+                : "bg-slate-200 text-slate-500 cursor-not-allowed"
+            }`}
           >
             <Plus size={18} />
             Post Internship
           </Link>
         </div>
+
+        {!subscriptionState.loading && !canPost && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            {postingLimitReached
+              ? `Posting limit reached (${activePostingsCount}/${maxActivePostings}). Upgrade plan to continue.`
+              : `Posting is blocked (subscription status: ${subscriptionState.status || "UNKNOWN"}).`}
+          </div>
+        )}
 
         {/* Filters */}
         <div className="bg-white border border-blue-200 rounded-lg shadow-sm p-4 mb-6 flex gap-4">

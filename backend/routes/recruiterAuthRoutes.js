@@ -1,6 +1,7 @@
 import express from "express";
 import { loginRecruiter,getRecruiterById } from "../controllers/recruiterAuthController.js";
 import { recruiterAuth } from "../middlewares/recruiterAuth.js";
+import { getRecruiterCurrentSubscription } from "../controllers/subscriptionController.js";
 //import { get } from "mongoose";
 import Internship from "../models/Internship.js";
 
@@ -9,6 +10,7 @@ const router = express.Router();
 
 router.post("/login", loginRecruiter);
 router.get("/me", recruiterAuth, getRecruiterById);
+router.get("/subscription/current", recruiterAuth, getRecruiterCurrentSubscription);
 router.get("/internships", recruiterAuth, async (req, res) => {
     
   try {

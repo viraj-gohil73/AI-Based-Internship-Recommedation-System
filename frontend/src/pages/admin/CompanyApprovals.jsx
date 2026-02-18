@@ -4,13 +4,15 @@ import {
   CheckCircle,
   XCircle,
   RotateCcw,
-  Building2, Clock
+  Building2,
+  Clock,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 /* ================= STATUS STYLES ================= */
 const statusStyle = {
-  SUBMITTED: "bg-yellow-100 text-yellow-700",
+  SUBMITTED: "bg-amber-100 text-amber-700",
   RESUBMISSION: "bg-blue-100 text-blue-700",
   REJECTED: "bg-red-100 text-red-700",
 };
@@ -18,6 +20,7 @@ const statusStyle = {
 export default function CompanyApprovals() {
   const [companies, setCompanies] = useState([]);
   const token = localStorage.getItem("adminToken");
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchSubmittedCompanies();
@@ -72,9 +75,7 @@ export default function CompanyApprovals() {
 
       toast.success(result.message);
 
-      setCompanies((prev) =>
-        prev.filter((c) => c._id !== id)
-      );
+      setCompanies((prev) => prev.filter((c) => c._id !== id));
     } catch {
       toast.error("Action failed");
     }
@@ -83,31 +84,31 @@ export default function CompanyApprovals() {
   return (
     <div className="space-y-6">
       {/* ================= HEADER ================= */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-  {/* Title with Icon */}
-  <div className="flex items-center gap-3">
-    <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-indigo-100">
-      <Building2 className="h-5 w-5 text-indigo-600" />
-    </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+            <Building2 className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">
+              Company Approval Requests
+            </h1>
+            <p className="text-sm text-slate-500">
+              Review, approve, or request changes from companies.
+            </p>
+          </div>
+        </div>
 
-    <h1 className="text-lg sm:text-2xl font-semibold text-slate-800">
-      Company Approval Requests
-    </h1>
-  </div>
-
-  {/* Pending Count */}
-  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100">
-    <Clock className="h-4 w-4 text-amber-600" />
-    <span className="text-xs sm:text-sm font-medium text-amber-700">
-      Pending: {companies.length}
-    </span>
-  </div>
-</div>
+        <div className="flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-700">
+          <Clock className="h-4 w-4" />
+          Pending: {companies.length}
+        </div>
+      </div>
 
       {/* ================= DESKTOP TABLE ================= */}
-      <div className="hidden md:block bg-white border-2 border-slate-300 rounded-2xl shadow-sm overflow-x-auto">
+      <div className="hidden md:block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table className="min-w-[900px] w-full text-sm">
-          <thead className="bg-slate-100 text-slate-600">
+          <thead className="bg-slate-50 text-slate-600">
             <tr>
               <th className="p-4 text-left">Company</th>
               <th className="p-4 text-left">Email</th>
@@ -120,22 +121,27 @@ export default function CompanyApprovals() {
             {companies.map((c) => (
               <tr
                 key={c._id}
-                className="border-t-2 border-slate-300 hover:bg-slate-50"
+                className="border-t border-slate-200 hover:bg-slate-50"
               >
-                <td className="p-4 flex items-center gap-3">
-                  <img
-                    src={c.logo}
-                    alt="logo"
-                    className="w-10 h-10 rounded-full border"
-                  />
-                  <span className="font-medium">
-                    {c.companyName}
-                  </span>
+                <td className="p-4">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={c.logo}
+                      alt="logo"
+                      className="w-10 h-10 rounded-full border border-slate-200 object-cover"
+                    />
+                    <div>
+                      <p className="font-medium text-slate-900">
+                        {c.companyName}
+                      </p>
+                      <p className="text-xs text-slate-500">{c.industry}</p>
+                    </div>
+                  </div>
                 </td>
 
-                <td>{c.email}</td>
+                <td className="p-4 text-slate-600">{c.email}</td>
 
-                <td>
+                <td className="p-4">
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle[c.verificationStatus]}`}
                   >
@@ -148,34 +154,25 @@ export default function CompanyApprovals() {
                     <ActionBtn
                       icon={<Eye size={14} />}
                       label="View"
-                      onClick={() =>
-                        (window.location.href =
-                          `/admin/companies/${c._id}`)
-                      }
+                      onClick={() => navigate(`/admin/companies/${c._id}`)}
                     />
                     <ActionBtn
                       icon={<CheckCircle size={14} />}
                       label="Approve"
                       color="green"
-                      onClick={() =>
-                        updateStatus(c._id, "APPROVED")
-                      }
+                      onClick={() => updateStatus(c._id, "APPROVED")}
                     />
                     <ActionBtn
                       icon={<RotateCcw size={14} />}
                       label="Re-submit"
                       color="blue"
-                      onClick={() =>
-                        updateStatus(c._id, "RESUBMISSION")
-                      }
+                      onClick={() => updateStatus(c._id, "RESUBMISSION")}
                     />
                     <ActionBtn
                       icon={<XCircle size={14} />}
                       label="Reject"
                       color="red"
-                      onClick={() =>
-                        updateStatus(c._id, "REJECTED")
-                      }
+                      onClick={() => updateStatus(c._id, "REJECTED")}
                     />
                   </div>
                 </td>
@@ -184,10 +181,7 @@ export default function CompanyApprovals() {
 
             {companies.length === 0 && (
               <tr>
-                <td
-                  colSpan="4"
-                  className="p-8 text-center text-slate-500"
-                >
+                <td colSpan="4" className="p-10 text-center text-slate-500">
                   No pending approvals
                 </td>
               </tr>
@@ -201,32 +195,25 @@ export default function CompanyApprovals() {
         {companies.map((c) => (
           <div
             key={c._id}
-            className="bg-white border rounded-2xl shadow-sm p-4 space-y-4"
+            className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 space-y-4"
           >
-            {/* TOP */}
             <div className="flex items-center gap-3">
               <img
                 src={c.logo}
                 alt="logo"
-                className="w-11 h-11 rounded-full border"
+                className="w-11 h-11 rounded-full border border-slate-200 object-cover"
               />
               <div className="flex-1">
-                <p className="font-semibold">
+                <p className="font-semibold text-slate-900">
                   {c.companyName}
                 </p>
-                <p className="text-xs text-slate-500">
-                  {c.email}
-                </p>
+                <p className="text-xs text-slate-500">{c.email}</p>
               </div>
             </div>
 
-            {/* VIEW + STATUS */}
             <div className="flex items-center justify-between">
               <button
-                onClick={() =>
-                  (window.location.href =
-                    `/admin/companies/${c._id}`)
-                }
+                onClick={() => navigate(`/admin/companies/${c._id}`)}
                 className="inline-flex items-center gap-1 text-blue-600 text-sm font-medium"
               >
                 <Eye size={16} />
@@ -240,31 +227,21 @@ export default function CompanyApprovals() {
               </span>
             </div>
 
-            {/* ACTION BUTTONS */}
             <div className="grid grid-cols-3 gap-2 pt-2">
               <MobileBtn
-                // icon={<CheckCircle size={14} />}
                 label="Approve"
                 color="green"
-                onClick={() =>
-                  updateStatus(c._id, "APPROVED")
-                }
+                onClick={() => updateStatus(c._id, "APPROVED")}
               />
               <MobileBtn
-                // icon={<RotateCcw size={14} />}
                 label="Re-Submit"
                 color="blue"
-                onClick={() =>
-                  updateStatus(c._id, "RESUBMISSION")
-                }
+                onClick={() => updateStatus(c._id, "RESUBMISSION")}
               />
               <MobileBtn
-                // icon={<XCircle size={14} />}
                 label="Reject"
                 color="red"
-                onClick={() =>
-                  updateStatus(c._id, "REJECTED")
-                }
+                onClick={() => updateStatus(c._id, "REJECTED")}
               />
             </div>
           </div>
@@ -292,10 +269,10 @@ function ActionBtn({ icon, label, onClick, color }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1 cursor-pointer px-3 py-2 rounded-lg text-xs ${
+      className={`inline-flex items-center gap-1 cursor-pointer px-3 py-2 rounded-lg text-xs transition ${
         color
           ? `text-white ${map[color]}`
-          : "border text-slate-700 hover:bg-slate-100"
+          : "border border-slate-200 text-slate-700 hover:bg-slate-50"
       }`}
     >
       {icon}
@@ -304,7 +281,7 @@ function ActionBtn({ icon, label, onClick, color }) {
   );
 }
 
-function MobileBtn({ icon, label, onClick, color }) {
+function MobileBtn({ label, onClick, color }) {
   const map = {
     green: "bg-green-600",
     blue: "bg-blue-600",
@@ -316,7 +293,6 @@ function MobileBtn({ icon, label, onClick, color }) {
       onClick={onClick}
       className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs text-white ${map[color]}`}
     >
-      {icon}
       {label}
     </button>
   );

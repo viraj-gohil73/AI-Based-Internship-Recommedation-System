@@ -2,11 +2,13 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import { useSubscription } from "../../../context/SubscriptionContext";
 
 export default function AddRecruiter() {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const mobileRegex = /^[6-9]\d{9}$/;
   const [dpUploading, setDpUploading] = useState(false);
+  const { entitlements, usage, current } = useSubscription();
 
   const navigate = useNavigate();
   const uploadRef = useRef(null);
@@ -23,6 +25,12 @@ export default function AddRecruiter() {
     mobile: "",
     canpost: true,
   });
+  const accessKnown = entitlements !== null;
+  const hardLocked = accessKnown && !entitlements?.accessAllowed;
+  const seatLimit = current?.totalRecruiterSeats ?? 0;
+  const usedSeats = usage?.recruitersCount ?? 0;
+  const seatLimitReached =
+    entitlements?.accessAllowed && seatLimit !== null && usedSeats >= seatLimit;
 
   /* ================= UPLOADCARE WIDGET HANDLER ================= */
 
@@ -52,6 +60,13 @@ export default function AddRecruiter() {
   /* ================= SUBMIT ================= */
 
   const submit = async () => {
+    if (hardLocked) {
+      return toast.error("Active approved subscription is required.");
+    }
+    if (seatLimitReached) {
+      return toast.error("Recruiter seat limit reached. Upgrade your plan.");
+    }
+
     if (!form.name.trim()) return toast.error("Full name is required");
     if (!emailRegex.test(form.email)) return toast.error("Invalid email");
     if (!form.password || form.password.length < 6)
@@ -103,6 +118,17 @@ export default function AddRecruiter() {
           transition={{ duration: 0.5 }}
           className="bg-white border-2 border-blue-200 rounded-xl shadow-lg p-6 sm:p-8"
         >
+          {hardLocked && (
+            <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              Recruiter creation is blocked. Company must be approved and subscription must be active/trial.
+            </div>
+          )}
+          {!hardLocked && seatLimitReached && (
+            <div className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              Seat limit reached ({usedSeats}/{seatLimit}). Buy extra recruiter seats to continue.
+            </div>
+          )}
+
           <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-6 text-center sm:text-left">
             Add Recruiter
           </h2>
@@ -277,7 +303,7 @@ export default function AddRecruiter() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={submit}
-              disabled={loading || dpUploading}
+              disabled={loading || dpUploading || hardLocked || seatLimitReached}
               className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2 rounded-lg font-semibold disabled:opacity-50 transition"
             >
               {loading ? "Creating..." : "Create Recruiter"}

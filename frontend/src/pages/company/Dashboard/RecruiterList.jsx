@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import UnderReviewAlert from "../../../components/UnderReviewAlert";
 import { useCompany } from "../../../context/CompanyContext"
+import { useSubscription } from "../../../context/SubscriptionContext";
 
 
 export default function RecruiterList() {
@@ -17,7 +18,14 @@ export default function RecruiterList() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const { company } = useCompany();
-  const isLocked = company?.verificationStatus !== "APPROVED";
+  const { entitlements, usage, current } = useSubscription();
+  const lockedByVerification = company?.verificationStatus !== "APPROVED";
+  const lockedBySubscription = entitlements !== null && !entitlements?.accessAllowed;
+  const seatLimit = current?.totalRecruiterSeats ?? 0;
+  const usedSeats = usage?.recruitersCount ?? 0;
+  const seatLimitReached =
+    entitlements?.accessAllowed && seatLimit !== null && usedSeats >= seatLimit;
+  const isLocked = lockedByVerification || lockedBySubscription;
   const filteredRecruiters = recruiters.filter((r) => {
     const query = search.trim().toLowerCase();
     const matchesSearch =
@@ -145,7 +153,7 @@ export default function RecruiterList() {
       <div className="max-w-7xl mx-auto">
         {/* 🔒 STATUS MESSAGE */}
         <AnimatePresence>
-          {isLocked && (
+          {(isLocked || seatLimitReached) && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -153,8 +161,20 @@ export default function RecruiterList() {
               className="mb-6"
             >
               <UnderReviewAlert
-                message="Your company profile is under admin review."
-                subMessage="Add Recruiters will be enabled after approval."
+                message={
+                  lockedByVerification
+                    ? "Your company profile is under admin review."
+                    : seatLimitReached
+                    ? "Recruiter seat limit reached."
+                    : "Subscription access is currently locked."
+                }
+                subMessage={
+                  lockedByVerification
+                    ? "Add recruiters will be enabled after approval."
+                    : seatLimitReached
+                    ? `Used ${usedSeats} of ${seatLimit} seats. Upgrade plan to add more recruiters.`
+                    : "Approve company and keep trial/active subscription to continue."
+                }
               />
             </motion.div>
           )}
@@ -195,7 +215,7 @@ export default function RecruiterList() {
 
             <motion.button
               onClick={() => navigate("/company/dashboard/recruiters/add")}
-              disabled={isLocked}
+              disabled={isLocked || seatLimitReached}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-semibold shadow-md transition whitespace-nowrap"

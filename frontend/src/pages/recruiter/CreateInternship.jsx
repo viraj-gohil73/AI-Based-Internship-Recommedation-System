@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Calendar, Check, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -29,6 +29,54 @@ export default function RecruiterInternshipForm() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [subscriptionState, setSubscriptionState] = useState({
+    loading: true,
+    entitlements: null,
+    usage: null,
+    status: null,
+  });
+
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      try {
+        const token = localStorage.getItem("recruiterToken");
+        const res = await fetch("http://localhost:5000/api/recruiter/subscription/current", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to fetch subscription access");
+        }
+        setSubscriptionState({
+          loading: false,
+          entitlements: data.entitlements || null,
+          usage: data.usage || null,
+          status: data.data?.status || null,
+        });
+      } catch (err) {
+        setSubscriptionState({
+          loading: false,
+          entitlements: null,
+          usage: null,
+          status: null,
+        });
+      }
+    };
+
+    fetchSubscription();
+  }, []);
+
+  const maxActivePostings = subscriptionState.entitlements?.limits?.maxActivePostings;
+  const activePostingsCount = subscriptionState.usage?.activePostingsCount || 0;
+  const postingLimitReached =
+    subscriptionState.entitlements?.accessAllowed &&
+    maxActivePostings !== null &&
+    maxActivePostings !== undefined &&
+    activePostingsCount >= maxActivePostings;
+  const canCreateInternship =
+    subscriptionState.entitlements?.accessAllowed && !postingLimitReached;
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -63,6 +111,14 @@ export default function RecruiterInternshipForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    if (!canCreateInternship) {
+      setError(
+        postingLimitReached
+          ? "Active posting limit reached. Upgrade your plan to post more internships."
+          : "Subscription access is blocked. Company approval + active trial/plan is required."
+      );
+      return;
+    }
     setLoading(true);
 
     const token = localStorage.getItem("recruiterToken");
@@ -121,6 +177,13 @@ export default function RecruiterInternshipForm() {
             Post Internship
           </h1>
           <p className="text-gray-600 mt-2">Create and publish a new internship opportunity</p>
+          {!subscriptionState.loading && !canCreateInternship && (
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              {postingLimitReached
+                ? `Posting limit reached (${activePostingsCount}/${maxActivePostings}).`
+                : `Posting is blocked (subscription status: ${subscriptionState.status || "UNKNOWN"}).`}
+            </div>
+          )}
         </motion.div>
 
         {/* Success Alert */}
@@ -385,7 +448,7 @@ export default function RecruiterInternshipForm() {
           >
             <motion.button
               type="submit"
-              disabled={loading}
+              disabled={loading || subscriptionState.loading || !canCreateInternship}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={`relative px-10 py-3 rounded-xl font-bold text-md text-white transition overflow-hidden shadow-lg ${

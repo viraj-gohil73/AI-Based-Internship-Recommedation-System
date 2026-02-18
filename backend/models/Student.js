@@ -54,6 +54,10 @@ const studentSchema = new mongoose.Schema({
     hobbies:{
         type: [String],
     },
+    isactive:{
+        type: Boolean,
+        default: true,
+    },
 },{timestamps: true});
 
 export default mongoose.model("Student", studentSchema);

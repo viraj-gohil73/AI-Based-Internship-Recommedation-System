@@ -3,6 +3,7 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import Company from "../models/Company.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { ensureTrialSubscription } from "../services/subscriptionService.js";
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ passport.use(
             loginType: "google",
           });
         }
+        await ensureTrialSubscription(company._id);
 
         const token = jwt.sign(
           { id: company._id, role: "company" },
@@ -48,5 +50,3 @@ passport.use(
     }
   )
 );
-
-console.log("✅ google-company strategy registered");

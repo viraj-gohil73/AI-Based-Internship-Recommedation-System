@@ -162,14 +162,7 @@ export default function CompanySettings() {
   return (
     <div className="min-h-full bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 sm:p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="bg-white border border-blue-100 rounded-2xl p-5 shadow-sm">
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
-            Company Settings
-          </h1>
-          <p className="text-sm text-slate-600 mt-1">
-            Manage company profile details, notifications, and security.
-          </p>
-        </div>
+       
 
         {isLocked && (
           <UnderReviewAlert
