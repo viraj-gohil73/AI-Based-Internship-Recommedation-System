@@ -1,121 +1,292 @@
-import { FileText, Trash2, Eye, Download, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertCircle, Download, Eye, FileText, Trash2, Upload } from "lucide-react";
+import toast from "react-hot-toast";
 import StudentLayout from "../../layout/StudentLayout";
-import { useState } from "react";
+
+const API_BASE_URL = "http://localhost:5000";
+const ACCEPT_ATTR = ".pdf,.doc,.docx";
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const ACCEPTED_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+];
+const UPLOADCARE_PUBLIC_KEY =
+  import.meta.env.VITE_UPLOADCARE_PUBLIC_KEY || window.UPLOADCARE_PUBLIC_KEY || "";
+
+const getFileNameFromUrl = (url = "") => {
+  if (!url) return "resume";
+  const cleanUrl = String(url).split("?")[0];
+  const parts = cleanUrl.split("/");
+  const fileName = parts[parts.length - 1] || "resume";
+  return decodeURIComponent(fileName);
+};
+
+const formatFileSize = (bytes) => {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "";
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 1) return `${mb.toFixed(2)} MB`;
+  return `${Math.ceil(bytes / 1024)} KB`;
+};
 
 export default function MyResume() {
-  const [resume, setResume] = useState(null);
+  const inputRef = useRef(null);
 
-  const handleUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) setResume(file);
+  const [resumeUrl, setResumeUrl] = useState("");
+  const [resumeName, setResumeName] = useState("");
+  const [resumeSize, setResumeSize] = useState(0);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const saveResumeToProfile = async (url) => {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("Please login again");
+
+    const response = await fetch(`${API_BASE_URL}/api/student/profile`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ resume: url }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.message || "Failed to save resume");
+    }
+
+    return data?.profile?.resume || url;
   };
 
-  const handleView = () => {
-    const fileURL = URL.createObjectURL(resume);
-    window.open(fileURL);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    fetch(`${API_BASE_URL}/api/student/profile`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const existingResume = data?.profile?.resume || "";
+        setResumeUrl(existingResume);
+        setResumeName(getFileNameFromUrl(existingResume));
+      })
+      .catch(() => {
+        toast.error("Failed to load resume");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  const validateFile = (file) => {
+    if (!file) return false;
+
+    const typeValid = ACCEPTED_TYPES.includes(file.type);
+    const extensionValid = ACCEPT_ATTR.split(",").some((ext) =>
+      file.name.toLowerCase().endsWith(ext)
+    );
+
+    if (!typeValid && !extensionValid) {
+      setError("Only PDF, DOC, and DOCX files are allowed.");
+      return false;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setError("File is too large. Maximum allowed size is 2 MB.");
+      return false;
+    }
+
+    setError("");
+    return true;
   };
 
-  const handleDownload = () => {
-    const fileURL = URL.createObjectURL(resume);
+  const uploadResumeToUploadcare = async (file) => {
+    if (!UPLOADCARE_PUBLIC_KEY) {
+      throw new Error("Upload service key missing. Set VITE_UPLOADCARE_PUBLIC_KEY.");
+    }
+
+    const formData = new FormData();
+    formData.append("UPLOADCARE_PUB_KEY", UPLOADCARE_PUBLIC_KEY);
+    formData.append("UPLOADCARE_STORE", "1");
+    formData.append("file", file);
+
+    const uploadResponse = await fetch("https://upload.uploadcare.com/base/", {
+      method: "POST",
+      body: formData,
+    });
+
+    const uploadData = await uploadResponse.json();
+    if (!uploadResponse.ok || !uploadData?.file) {
+      throw new Error(uploadData?.error?.content || "Upload failed");
+    }
+
+    return `https://ucarecdn.com/${uploadData.file}/`;
+  };
+
+  const handleSelectFile = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !validateFile(file)) return;
+
+    try {
+      setUploading(true);
+      setSaving(true);
+
+      const cdnUrl = await uploadResumeToUploadcare(file);
+      if (!cdnUrl) {
+        throw new Error("Upload failed. No file URL returned.");
+      }
+
+      const savedUrl = await saveResumeToProfile(cdnUrl);
+      setResumeUrl(savedUrl);
+      setResumeName(file.name);
+      setResumeSize(file.size);
+      toast.success("Resume uploaded and saved");
+    } catch (uploadError) {
+      setError(uploadError?.message || "Resume upload failed");
+      toast.error(uploadError?.message || "Resume upload failed");
+    } finally {
+      setUploading(false);
+      setSaving(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    try {
+      setSaving(true);
+      await saveResumeToProfile("");
+      setResumeUrl("");
+      setResumeName("");
+      setResumeSize(0);
+      setError("");
+      toast.success("Resume removed");
+    } catch (removeError) {
+      toast.error(removeError?.message || "Failed to remove resume");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openResume = () => {
+    if (!resumeUrl) return;
+    window.open(resumeUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const downloadResume = () => {
+    if (!resumeUrl) return;
     const link = document.createElement("a");
-    link.href = fileURL;
-    link.download = resume.name;
+    link.href = resumeUrl;
+    link.download = resumeName || "resume";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const removeResume = () => setResume(null);
-
   return (
     <StudentLayout title="My Resume">
-      {/* Container */}
-      <div className="w-full bg-white border border-slate-300 rounded-xl shadow-sm p-4 sm:p-6">
-        {!resume ? (
-          /* Upload Mode */
-          <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-8 sm:p-10 cursor-pointer hover:border-indigo-500 transition text-center">
-            <Upload className="w-12 h-12 text-indigo-500 mb-4" />
-            <p className="text-sm text-slate-600">
-              <span className="font-medium text-indigo-600">Click to upload</span>{" "}
-              or drag & drop
+      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
+            <h1 className="text-lg font-semibold text-slate-900">Resume Manager</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Upload your resume to Uploadcare and save its link to your profile.
             </p>
-            <p className="text-xs text-slate-400 mt-1">
-              PDF, DOC, DOCX • Max 2MB
-            </p>
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx"
-              hidden
-              onChange={handleUpload}
-            />
-          </label>
-        ) : (
-          /* View Resume Mode */
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 p-4 sm:p-5 border border-slate-300 rounded-xl bg-slate-50">
-            {/* Left Section */}
-            <div className="flex items-center gap-4 min-w-0">
-              <div className="bg-indigo-100 p-3 rounded-lg shrink-0">
-                <FileText className="w-7 h-7 text-indigo-600" />
-              </div>
-
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">
-                  {resume.name}
-                </p>
-                <p className="text-xs text-slate-500">
-                  {(resume.size / 1024 / 1024).toFixed(2)} MB • Uploaded
-                </p>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              <button
-                onClick={handleView}
-                className="flex items-center gap-1 text-sm px-3 py-2 rounded-md border text-slate-700 hover:bg-slate-100 w-full sm:w-auto justify-center"
-              >
-                <Eye className="w-4 h-4" />
-                View
-              </button>
-
-              <button
-                onClick={handleDownload}
-                className="flex items-center gap-1 text-sm px-3 py-2 rounded-md border text-slate-700 hover:bg-slate-100 w-full sm:w-auto justify-center"
-              >
-                <Download className="w-4 h-4" />
-                Download
-              </button>
-
-              <label className="flex items-center gap-1 text-sm px-3 py-2 rounded-md border text-indigo-600 hover:bg-indigo-50 cursor-pointer w-full sm:w-auto justify-center">
-                <Upload className="w-4 h-4" />
-                Replace
-                <input
-                  type="file"
-                  hidden
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleUpload}
-                />
-              </label>
-
-              <button
-                onClick={removeResume}
-                className="flex items-center justify-center p-2 rounded-md text-red-500 hover:bg-red-50 w-full sm:w-auto"
-                title="Delete Resume"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
-            </div>
           </div>
-        )}
-      </div>
 
-      {/* Tips */}
-      <div className="mt-6 text-sm text-slate-500">
-        <ul className="list-disc pl-5 space-y-1">
-          <li>Recruiters prefer PDF resumes</li>
-          <li>Keep projects & skills updated</li>
-          <li>Use clear formatting for ATS systems</li>
-        </ul>
+          <div className="space-y-4 p-5 sm:p-6">
+            <label className="block cursor-pointer rounded-xl border-2 border-dashed border-slate-300 p-8 text-center transition hover:border-sky-400 hover:bg-slate-50">
+              <div className="mx-auto flex max-w-md flex-col items-center gap-2">
+                <Upload className="h-6 w-6 text-sky-700" />
+                <p className="text-sm font-medium text-slate-700">
+                  {uploading ? "Uploading..." : "Click to upload or replace resume"}
+                </p>
+                <p className="text-xs text-slate-500">PDF, DOC, DOCX | Max 2 MB</p>
+              </div>
+              <input
+                ref={inputRef}
+                type="file"
+                accept={ACCEPT_ATTR}
+                onChange={handleSelectFile}
+                className="hidden"
+                disabled={uploading || saving}
+              />
+            </label>
+
+            {error && (
+              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {loading ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                Loading resume...
+              </div>
+            ) : resumeUrl ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="rounded-lg bg-sky-100 p-2.5">
+                      <FileText className="h-6 w-6 text-sky-700" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-800">
+                        {resumeName || getFileNameFromUrl(resumeUrl)}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {formatFileSize(resumeSize) || "Uploaded to Uploadcare"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                    <button
+                      type="button"
+                      onClick={openResume}
+                      className="inline-flex items-center justify-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                    >
+                      <Eye className="h-4 w-4" />
+                      View
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={downloadResume}
+                      className="inline-flex items-center justify-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleRemove}
+                      disabled={saving || uploading}
+                      className="inline-flex items-center justify-center gap-1 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                No resume saved yet.
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </StudentLayout>
   );

@@ -1,9 +1,15 @@
 import express from "express";
-import { createInternship } from "../controllers/internshipcontroller.js";
+import {
+  createInternship,
+  getExploreInternships,
+} from "../controllers/internshipcontroller.js";
 import { recruiterAuth } from "../middlewares/recruiterAuth.js";
 import { requireSubscriptionFeature } from "../middlewares/requireSubscriptionFeature.js";
 
 const router = express.Router();
+
+/* GET: Public list for student explore page */
+router.get("/explore", getExploreInternships);
 
 /* POST: Create Internship */
 router.post(

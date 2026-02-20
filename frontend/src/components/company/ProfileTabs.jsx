@@ -8,7 +8,7 @@ export default function ProfileTabs({ activeTab, setActiveTab }) {
   ];
   
   return (
-    <div className="bg-white rounded-t-xl border border-b-0 border-blue-200 shadow-md">
+    <div className="sticky top-0 z-20 bg-white rounded-t-xl border border-b-0 border-blue-200 shadow-md">
       <nav className="flex space-x-1 overflow-x-auto" aria-label="Tabs">
         {tabs.map((tab) => (
           <button

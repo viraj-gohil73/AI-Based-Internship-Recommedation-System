@@ -2,13 +2,14 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast  from 'react-hot-toast';
 
-export default function RegisterCompany() {
+export default function RegisterStudent() {
     const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     fname :"",
     lname :"",
     email: "",
     password: "",
+    role: "student",
   });
 
   const [error, setError] = useState("");
@@ -30,7 +31,10 @@ export default function RegisterCompany() {
     const res = await fetch("http://localhost:5000/api/auth/send-otp", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email : formData.email  }),
+      body: JSON.stringify({
+        email: formData.email,
+        role: "student",
+      }),
     });
   
     const data = await res.json();
@@ -41,7 +45,9 @@ export default function RegisterCompany() {
   state: {
     email: formData.email,
     password: formData.password,
-    role: formData.role,
+    fname: formData.fname,
+    lname: formData.lname,
+    role: "student",
   },
 });
     } else {
@@ -55,7 +61,7 @@ export default function RegisterCompany() {
 };
 
  const handleGoogleLogin = async () => {
- window.location.href = "http://localhost:5000/api/auth/google";
+ window.location.href = "http://localhost:5000/api/auth/google/student";
 };
 
   const linkedinLogin = () => {

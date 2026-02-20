@@ -61,7 +61,7 @@ export default function LoginAdmin() {
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-100 via-white to-indigo-50">
+    <div className="admin-ui min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-indigo-100 via-white to-indigo-50">
       <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
         <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-6 text-center">
           <h2 className="text-3xl font-semibold tracking-tight text-white drop-shadow-lg">

@@ -5,7 +5,7 @@ import { useState } from "react";
 export default function AdminLayout() {
     const [open, setOpen] = useState(false);
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
+    <div className="admin-ui flex h-screen bg-slate-50 overflow-hidden">
       <Sidebaradmin open={open} onClose={() => setOpen(false)}/>
 
       <div className="flex-1 flex flex-col">

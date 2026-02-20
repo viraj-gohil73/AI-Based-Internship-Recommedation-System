@@ -1,19 +1,61 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function Login() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: "", password: "", role: "" });
   const [showPassword, setShowPassword] = useState(false);
+  const handleGoogleLogin = () => {
+    window.location.href = "http://localhost:5000/api/auth/google/student";
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log("Login Data:", formData);
-    alert("Login Successful! (Check console for details)");
+    const email = formData.email.trim().toLowerCase();
+    const password = formData.password.trim();
+
+    if (!email || !password) {
+      alert("Email and password are required");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://localhost:5000/api/auth/student/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data?.token) {
+        alert(data?.message || "Login failed");
+        return;
+      }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem(
+        "user",
+        JSON.stringify(
+          data.user || {
+            id: data.student?.id,
+            email: data.student?.email,
+            role: "student",
+          }
+        )
+      );
+
+      alert("Login Successful!");
+      navigate("/student-dashboard", { replace: true });
+    } catch (error) {
+      alert("Server not responding");
+      return;
+    }
 
     setFormData({
       email: "",
@@ -105,6 +147,7 @@ export default function Login() {
 
             <button
               type="button"
+              onClick={handleGoogleLogin}
               className="flex items-center cursor-pointer justify-center gap-2 border text-gray-800 border-gray-300 rounded-lg py-2 sm:py-1 hover:bg-gray-100 transition text-sm sm:text-base font-semibold shadow-sm"
             >
               <img width="28" height="28" src="https://img.icons8.com/fluency/96/google-logo.png" alt="google-logo" />

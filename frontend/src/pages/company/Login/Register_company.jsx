@@ -66,9 +66,7 @@ export default function RegisterCompany() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        companyName: formData.companyName,
-        email: formData.email,
-        password: formData.password,
+        email,
         role: "company",
       }),
     });

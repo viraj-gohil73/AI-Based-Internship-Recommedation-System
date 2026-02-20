@@ -1,508 +1,372 @@
-// SavedInternshipsPro_Upgraded.jsx
-import React, { useMemo, useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Search,
-  Filter,
-  BookmarkX,
-  Bookmark,
-  Briefcase,
-  Clock,
-  ArrowRight,
-  Calendar,
-  X,
-  MapPin,
-  ChevronLeft,
-  Trash2,
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { BookmarkX, Briefcase, Clock3, Eye, MapPin, Search, Users, Wallet } from "lucide-react";
+import { Link } from "react-router-dom";
+import StudentLayout from "../../layout/StudentLayout";
 
-/**
- * Upgraded Saved Internships Page
- * - Confirmation centered modal (Popup A)
- * - Material-style bottom snackbar with Undo (Snackbar 1)
- * - Smooth remove animation + exit
- * - Radio buttons for "Type" filter (single-select)
- * - Fully responsive
- *
- * Uses uploaded sample asset path as sample image URL:
- * "/mnt/data/da22bf33-67c5-47d8-9e1c-655209219993.png"
- */
+const API_BASE_URL = "http://localhost:5000";
 
-const sampleAsset = "/mnt/data/da22bf33-67c5-47d8-9e1c-655209219993.png";
+const formatStipend = (min, max) => {
+  if (!min && !max) return "Unpaid";
+  const n = new Intl.NumberFormat("en-IN");
+  return `INR ${n.format(min || 0)} - INR ${n.format(max || 0)} / month`;
+};
 
-const INITIAL_SAVED = [
-  {
-    id: "S-2001",
-    title: "React Frontend Intern",
-    company: "Meta",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/0/05/Meta_Platforms_Inc._logo.svg",
-    location: "Remote",
-    type: "Full-time",
-    stipend: "₹25,000 / month",
-    postedOn: "2025-01-12",
-    deadline: "2025-02-10",
-  },
-  {
-    id: "S-2002",
-    title: "Python Backend Intern",
-    company: "Flipkart",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/1/11/Flipkart_logo.png",
-    location: "Bangalore",
-    type: "Part-time",
-    stipend: "₹20,000 / month",
-    postedOn: "2025-01-18",
-    deadline: "2025-02-15",
-  },
-  {
-    id: "S-2003",
-    title: "AI/ML Research Intern",
-    company: "OpenAI",
-    logo: "",
-    location: "Hyderabad",
-    type: "Remote",
-    stipend: "₹30,000 / month",
-    postedOn: "2025-01-22",
-    deadline: "2025-02-12",
-  },
-  {
-    id: "S-2004",
-    title: "UI/UX Design Intern",
-    company: "Swiggy",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/1/13/Swiggy_logo.png",
-    location: "Delhi",
-    type: "Hybrid",
-    stipend: "₹18,000 / month",
-    postedOn: "2025-01-10",
-    deadline: "2025-02-05",
-  },
-];
+const normalizeInternship = (item) => ({
+  id: String(item?._id || item?.id || ""),
+  title: item?.title || "Untitled Internship",
+  company: item?.company || "Unknown Company",
+  companyLogo: item?.companyLogo || "",
+  location: item?.location || "Remote",
+  workmode: item?.workmode || "Remote",
+  employmentType: item?.employment_type || "Full Time",
+  duration: Number(item?.duration || 0),
+  openings: Number(item?.openings || 0),
+  stipendMin: Number(item?.stipend_min || 0),
+  stipendMax: Number(item?.stipend_max || 0),
+  skills: Array.isArray(item?.skills) ? item.skills : [],
+  aboutWork: item?.about_work || "",
+  createdAt: item?.createdAt || "",
+  deadlineAt: item?.deadline_at || "",
+});
 
-function formatDate(d) {
-  return new Date(d).toLocaleDateString(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+const clampText = (value, limit = 140) => {
+  if (!value) return "No additional description shared yet.";
+  if (value.length <= limit) return value;
+  return `${value.slice(0, limit).trim()}...`;
+};
+
+export default function SavedInternshipsPro() {
+  const [savedInternships, setSavedInternships] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [query, setQuery] = useState("");
+  const [location, setLocation] = useState("");
+  const [mode, setMode] = useState("all");
+  const [sortBy, setSortBy] = useState("saved-order");
+
+  const [appliedIds, setAppliedIds] = useState(new Set());
+  const [busyIds, setBusyIds] = useState(new Set());
+  const [applyLimit, setApplyLimit] = useState({
+    monthlyApplicationLimit: 0,
+    appliedThisMonth: 0,
+    remainingThisMonth: 0,
   });
-}
 
-export default function SavedInternshipsProUpgraded() {
-  // main data state (saved list)
-  const [savedList, setSavedList] = useState(INITIAL_SAVED);
-
-  // filters
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("All"); // radio: All / Remote / Full-time / Part-time / Hybrid
-  const [locationFilter, setLocationFilter] = useState("");
-
-  // UI
-  const [viewMode, setViewMode] = useState("compact"); // cards | compact
-  const [selected, setSelected] = useState(null);
-  const [filterOpen, setFilterOpen] = useState(false);
-
-  // confirmation modal
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [toRemoveId, setToRemoveId] = useState(null);
-
-  // undo snackbar
-  const [snackbar, setSnackbar] = useState({ open: false, item: null });
-  const undoTimerRef = useRef(null);
-
-  // compute filtered list
-  const filtered = useMemo(() => {
-    let list = savedList.slice();
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (i) =>
-          i.title.toLowerCase().includes(q) ||
-          i.company.toLowerCase().includes(q) ||
-          i.id.toLowerCase().includes(q)
-      );
-    }
-    if (typeFilter !== "All") {
-      list = list.filter((i) => i.type === typeFilter);
-    }
-    if (locationFilter.trim()) {
-      const loc = locationFilter.toLowerCase();
-      list = list.filter((i) => i.location.toLowerCase().includes(loc));
-    }
-    return list;
-  }, [savedList, search, typeFilter, locationFilter]);
-
-  // ---------- Handlers ----------
-  function handleRequestRemove(id) {
-    // open confirmation modal
-    setToRemoveId(id);
-    setConfirmOpen(true);
-  }
-
-  function confirmRemove() {
-    if (!toRemoveId) {
-      setConfirmOpen(false);
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      setError("Please login to view saved internships.");
       return;
     }
-    // find item and remove from list, but keep copy for undo
-    const removedItem = savedList.find((s) => s.id === toRemoveId);
-    setSavedList((prev) => prev.filter((s) => s.id !== toRemoveId));
 
-    // show snackbar with undo
-    setSnackbar({ open: true, item: removedItem });
+    const controller = new AbortController();
 
-    // auto-dismiss snackbar after 6s and clear undo data
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    undoTimerRef.current = setTimeout(() => {
-      setSnackbar({ open: false, item: null });
-      undoTimerRef.current = null;
-    }, 6000);
+    (async () => {
+      try {
+        setLoading(true);
+        setError("");
 
-    // close modal
-    setConfirmOpen(false);
-    setToRemoveId(null);
-  }
+        const [savedRes, statusRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/student/internships/saved`, {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          }),
+          fetch(`${API_BASE_URL}/api/student/internships/status`, {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          }),
+        ]);
 
-  function cancelRemove() {
-    setConfirmOpen(false);
-    setToRemoveId(null);
-  }
+        const savedData = await savedRes.json();
+        const statusData = statusRes.ok
+          ? await statusRes.json()
+          : { appliedIds: [], monthlyApplicationLimit: 0, appliedThisMonth: 0, remainingThisMonth: 0 };
 
-  function handleUndo() {
-    // restore item if exists
-    if (snackbar.item) {
-      setSavedList((prev) => [snackbar.item, ...prev]);
-    }
-    // hide snackbar and clear timer
-    if (undoTimerRef.current) {
-      clearTimeout(undoTimerRef.current);
-      undoTimerRef.current = null;
-    }
-    setSnackbar({ open: false, item: null });
-  }
+        if (!savedRes.ok) throw new Error(savedData?.message || "Failed to load saved internships");
 
-  // cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    };
+        const list = Array.isArray(savedData?.savedInternships)
+          ? savedData.savedInternships.map(normalizeInternship).filter((x) => x.id)
+          : [];
+
+        setSavedInternships(list);
+        setAppliedIds(new Set((statusData?.appliedIds || []).map(String)));
+        setApplyLimit({
+          monthlyApplicationLimit: Number(statusData?.monthlyApplicationLimit || 0),
+          appliedThisMonth: Number(statusData?.appliedThisMonth || 0),
+          remainingThisMonth: Number(statusData?.remainingThisMonth || 0),
+        });
+      } catch (err) {
+        if (err?.name !== "AbortError") setError(err?.message || "Failed to load saved internships");
+      } finally {
+        setLoading(false);
+      }
+    })();
+
+    return () => controller.abort();
   }, []);
 
-  // remove permanently (if wanted) - in this demo, removal is immediate; undo restores client state
-  // In real app integrate backend remove call and support optimistic updates & rollback.
+  const filtered = useMemo(() => {
+    let list = [...savedInternships];
 
-  // helper to toggle saved state (bookmarks) - here simply remove
-  function handleUnsave(id) {
-    handleRequestRemove(id);
-  }
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      list = list.filter((i) =>
+        i.title.toLowerCase().includes(q) ||
+        i.company.toLowerCase().includes(q) ||
+        i.id.toLowerCase().includes(q)
+      );
+    }
 
-  // mobile filter modal close helper
-  function applyMobileFilters() {
-    setFilterOpen(false);
-  }
+    if (location.trim()) {
+      const l = location.toLowerCase();
+      list = list.filter((i) => i.location.toLowerCase().includes(l));
+    }
 
-  // ---------- Render ----------
+    if (mode !== "all") list = list.filter((i) => i.workmode === mode);
+
+    if (sortBy === "deadline") list.sort((a, b) => new Date(a.deadlineAt) - new Date(b.deadlineAt));
+    if (sortBy === "stipend") list.sort((a, b) => b.stipendMax - a.stipendMax);
+
+    return list;
+  }, [savedInternships, query, location, mode, sortBy]);
+  const isMonthlyLimitReached =
+    applyLimit.monthlyApplicationLimit > 0 &&
+    applyLimit.appliedThisMonth >= applyLimit.monthlyApplicationLimit;
+
+  const setBusy = (key, value) => {
+    setBusyIds((prev) => {
+      const next = new Set(prev);
+      if (value) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  };
+
+  const unsaveInternship = async (id) => {
+    const token = localStorage.getItem("token");
+    if (!token) return setError("Please login to manage saved internships.");
+
+    const key = `unsave:${id}`;
+    if (busyIds.has(key)) return;
+
+    try {
+      setBusy(key, true);
+      const response = await fetch(`${API_BASE_URL}/api/student/internships/${id}/save`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.message || "Failed to remove saved internship");
+
+      setSavedInternships((prev) => prev.filter((i) => i.id !== id));
+    } catch (err) {
+      setError(err?.message || "Failed to remove saved internship");
+    } finally {
+      setBusy(key, false);
+    }
+  };
+
+  const applyInternship = async (id) => {
+    const token = localStorage.getItem("token");
+    if (!token) return setError("Please login to apply internships.");
+    if (isMonthlyLimitReached) {
+      return setError(`Monthly application limit reached (${applyLimit.monthlyApplicationLimit}).`);
+    }
+
+    const key = `apply:${id}`;
+    if (busyIds.has(key) || appliedIds.has(id)) return;
+
+    try {
+      setBusy(key, true);
+      const response = await fetch(`${API_BASE_URL}/api/student/internships/${id}/apply`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.message || "Failed to apply internship");
+
+      setAppliedIds((prev) => new Set(prev).add(id));
+      setApplyLimit((prev) => ({
+        ...prev,
+        appliedThisMonth: prev.appliedThisMonth + 1,
+        remainingThisMonth: Math.max(0, prev.remainingThisMonth - 1),
+      }));
+    } catch (err) {
+      setError(err?.message || "Failed to apply internship");
+    } finally {
+      setBusy(key, false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* LEFT FILTER (DESKTOP) */}
-        <aside className="hidden md:block col-span-1 sticky top-6">
-          <div className="bg-white rounded-2xl border shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Filters</h3>
-              <button
-                onClick={() => {
-                  setTypeFilter("All");
-                  setLocationFilter("");
-                  setSearch("");
-                }}
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                Reset
-              </button>
-            </div>
+    <StudentLayout title="Saved Internships">
+      <div className="min-h-full bg-slate-50 p-4 md:p-6">
+      {error ? (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      ) : null}
 
-            <div className="mb-4">
-              <label className="text-sm font-medium text-gray-700">Location</label>
-              <input
-                className="mt-2 input-box text-sm"
-                placeholder="e.g., Bangalore"
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-              />
-            </div>
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-3">
+          <h2 className="text-lg font-semibold text-slate-900">Saved Internships</h2>
+          <p className="text-sm text-slate-600">Manage your watchlist and apply quickly.</p>
+        </div>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700">Internship Type</label>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+          <label className="md:col-span-2 flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2">
+            <Search size={16} className="text-slate-500" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search saved internships"
+              className="w-full bg-transparent text-sm outline-none"
+            />
+          </label>
+          <input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="Location"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none"
+          />
+          <select value={mode} onChange={(e) => setMode(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none">
+            <option value="all">All modes</option>
+            <option value="Remote">Remote</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="Onsite">Onsite</option>
+          </select>
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none">
+            <option value="saved-order">Saved order</option>
+            <option value="deadline">Closest deadline</option>
+            <option value="stipend">Highest stipend</option>
+          </select>
+        </div>
 
-              {/* Radio buttons */}
-              <div className="mt-2 flex flex-col gap-2">
-                {["All", "Remote", "Full-time", "Part-time", "Hybrid"].map((t) => (
-                  <label key={t} className="inline-flex items-center gap-3 p-2 rounded-md hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="typeFilter"
-                      value={t}
-                      checked={typeFilter === t}
-                      onChange={() => setTypeFilter(t)}
-                      className="form-radio h-4 w-4 accent-purple-600"
-                    />
-                    <span className="text-sm text-gray-700">{t}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* MAIN */}
-        <main className="col-span-3">
-          {/* Top controls */}
-          <div className="flex flex-col md:flex-row justify-between gap-3 mb-6">
-            <div className="flex items-center bg-white shadow rounded-xl px-4 py-2 flex-1">
-              <Search size={18} className="text-gray-500" />
-              <input
-                type="text"
-                className="ml-2 w-full outline-none text-sm"
-                placeholder="Search saved internships..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-            
-
-              <button
-                onClick={() => setFilterOpen(true)}
-                className="px-4 py-2 border rounded-xl flex md:hidden items-center gap-2 text-sm"
-              >
-                <Filter size={16} /> Filters
-              </button>
-            </div>
-          </div>
-
-          {/* Count */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">Saved Internships</h3>
-            <p className="text-gray-500 text-sm">{filtered.length} results</p>
-          </div>
-
-          {/* List */}
-          <div className="space-y-4">
-            <AnimatePresence>
-              {filtered.length === 0 && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-6 text-center border rounded-xl bg-white shadow-sm text-gray-500">
-                  No saved internships found.
-                </motion.div>
-              )}
-
-              {filtered.map((item) => (
-                <motion.div
-                  key={item.id}
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.98, height: 0, margin: 0, padding: 0 }}
-                  transition={{ duration: 0.18 }}
-                  className={`bg-white border rounded-2xl shadow-sm p-4 ${viewMode === "compact" ? "flex items-center justify-between" : ""}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <img src={item.logo || sampleAsset} alt={item.company} className="w-12 h-12 object-contain rounded" />
-                    <div>
-                      <h4 className="text-md font-semibold text-gray-800">{item.title}</h4>
-                      <p className="text-sm text-gray-500">{item.company}</p>
-
-                      <div className="flex gap-3 text-sm text-gray-500 mt-1">
-                        <span className="flex gap-1 items-center"><MapPin size={14} /> {item.location}</span>
-                        <span className="flex gap-1 items-center"><Briefcase size={14} /> {item.type}</span>
-                        <span className="flex gap-1 items-center"><Clock size={14} /> {formatDate(item.postedOn)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 mt-3 md:mt-0">
-                    <button
-                      onClick={() => setSelected(item)}
-                      className="hidden md:flex px-3 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm items-center gap-2"
-                    >
-                      View <ArrowRight size={14} />
-                    </button>
-
-                    <button
-                      onClick={() => handleUnsave(item.id)}
-                      className="p-2 bg-gray-100 rounded-lg hover:bg-red-50"
-                      aria-label="Remove saved internship"
-                      title="Remove saved internship"
-                    >
-                      <BookmarkX className="text-red-600" />
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        </main>
+        <div className="mt-3 flex items-center justify-between text-sm">
+          <p className="text-slate-600">{filtered.length} saved internships</p>
+          {applyLimit.monthlyApplicationLimit > 0 ? (
+            <p className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+              {applyLimit.remainingThisMonth} / {applyLimit.monthlyApplicationLimit} applications left this month
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              setLocation("");
+              setMode("all");
+              setSortBy("saved-order");
+            }}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-slate-700"
+          >
+            Reset
+          </button>
+        </div>
       </div>
 
-      {/* Slide-over detail */}
-      <AnimatePresence>
-        {selected && (
-          <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} className="fixed right-0 top-0 h-full w-full md:w-[450px] bg-white shadow-2xl z-50">
-            <div className="border-b p-5 flex items-center gap-3">
-              <button onClick={() => setSelected(null)} className="p-2 rounded-md hover:bg-gray-100"><ChevronLeft size={18} /></button>
-              <div>
-                <h3 className="text-lg font-semibold">{selected.title}</h3>
-                <p className="text-sm text-gray-500">{selected.company}</p>
-              </div>
-            </div>
+      <div className="mt-4">
+        {loading ? <div className="rounded-xl border bg-white p-8 text-center text-slate-500">Loading saved internships...</div> : null}
 
-            <div className="p-5 overflow-auto h-[calc(100vh-80px)]">
-              <img src={selected.logo || sampleAsset} className="w-20 h-20 object-contain mb-2" alt="" />
-              <div className="space-y-3">
-                <p className="flex items-center gap-2 text-gray-700"><MapPin size={16} /> {selected.location}</p>
-                <p className="flex items-center gap-2 text-gray-700"><Briefcase size={16} /> {selected.type}</p>
-                <p className="text-gray-600 text-sm">Posted: {formatDate(selected.postedOn)}</p>
-                <p className="flex items-center gap-2 text-gray-700"><Calendar size={16} /> Deadline: {formatDate(selected.deadline)}</p>
+        {!loading && filtered.length === 0 ? (
+          <div className="rounded-xl border bg-white p-8 text-center text-slate-500">
+            <p>No saved internships found.</p>
+            <Link to="/student/explore" className="mt-2 inline-flex rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700">
+              Explore internships
+            </Link>
+          </div>
+        ) : null}
 
-                <div className="bg-gray-50 border rounded-xl p-3">
-                  <h4 className="font-semibold mb-1">Stipend</h4>
-                  <p className="text-gray-800">{selected.stipend}</p>
-                </div>
+        {!loading ? (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {filtered.map((item) => {
+              const unsaveKey = `unsave:${item.id}`;
+              const applyKey = `apply:${item.id}`;
+              const unsaveBusy = busyIds.has(unsaveKey);
+              const applyBusy = busyIds.has(applyKey);
 
-                <button className="w-full mt-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-medium">Apply Now</button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              return (
+                <article key={item.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                        {item.companyLogo ? (
+                          <img src={item.companyLogo} alt={`${item.company} logo`} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-500">
+                            {item.company.slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
 
-      {/* Centered Confirmation Modal (Popup A) */}
-      <AnimatePresence>
-        {confirmOpen && (
-          <motion.div className="fixed inset-0 z-50 flex items-center justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            {/* blurred backdrop */}
-            <motion.div className="absolute inset-0 bg-black/40 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+                      <div className="min-w-0 flex-1">
+                        <h3 className="truncate text-lg font-semibold text-slate-900">{item.title}</h3>
+                        <p className="truncate text-sm text-slate-600">{item.company}</p>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                          <span className="inline-flex items-center gap-1"><MapPin size={14} /> {item.location}</span>
+                          <span className="inline-flex items-center gap-1"><Briefcase size={14} /> {item.workmode} / {item.employmentType}</span>
+                          <span className="inline-flex items-center gap-1"><Wallet size={14} /> {formatStipend(item.stipendMin, item.stipendMax)}</span>
+                          <span className="inline-flex items-center gap-1"><Clock3 size={14} /> {item.duration || 0} months</span>
+                          <span className="inline-flex items-center gap-1"><Users size={14} /> {item.openings || 0} openings</span>
+                        </div>
+                      </div>
+                    </div>
 
-            <motion.div
-              initial={{ scale: 0.96, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              transition={{ duration: 0.14 }}
-              className="relative z-10 w-full max-w-lg bg-white rounded-2xl p-6 shadow-2xl"
-            >
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Are you sure?</h3>
-              <p className="text-sm text-gray-600 mb-4">Do you want to remove this internship from your saved list? You can undo this action for a short time.</p>
+                    <p className="text-sm leading-6 text-slate-600">{clampText(item.aboutWork)}</p>
 
-              <div className="flex items-center justify-end gap-3">
-                <button onClick={cancelRemove} className="px-4 py-2 rounded-md border text-sm">Cancel</button>
-                <button onClick={confirmRemove} className="px-4 py-2 rounded-md bg-red-600 text-white text-sm">Yes, Remove</button>
-              </div>
+                    {item.skills.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {item.skills.slice(0, 4).map((skill, index) => (
+                          <span key={`${item.id}-skill-${index}`} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                            {skill}
+                          </span>
+                        ))}
+                        {item.skills.length > 4 ? (
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                            +{item.skills.length - 4} more
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
 
-              {/* small close button top-right */}
-              <button onClick={cancelRemove} className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100">
-                <X size={16} />
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        to={`/student/explore/${item.id}`}
+                        state={{ internship: item }}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
+                      >
+                        <Eye size={15} />
+                        View Details
+                      </Link>
 
-      {/* Material-style bottom snackbar with Undo */}
-      <AnimatePresence>
-        {snackbar.open && snackbar.item && (
-          <motion.div
-            initial={{ y: 80, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 80, opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[min(640px,calc(100%-32px))]"
-          >
-            <div className="bg-white border shadow-lg rounded-lg px-4 py-3 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-md overflow-hidden">
-                  <img src={snackbar.item.logo || sampleAsset} alt="removed" className="w-full h-full object-cover" />
-                </div>
-                <div>
-                  <div className="font-medium text-gray-800">Saved internship removed</div>
-                  <div className="text-sm text-gray-500">{snackbar.item.title} • {snackbar.item.company}</div>
-                </div>
-              </div>
+                      <button
+                        type="button"
+                        onClick={() => applyInternship(item.id)}
+                        disabled={appliedIds.has(item.id) || applyBusy || isMonthlyLimitReached}
+                        className={`rounded-lg px-3 py-2 text-sm font-medium ${
+                          appliedIds.has(item.id) ? "bg-emerald-100 text-emerald-700" : "bg-emerald-600 text-white"
+                        }`}
+                      >
+                        {applyBusy ? "Applying..." : appliedIds.has(item.id) ? "Applied" : "Apply"}
+                      </button>
 
-              <div className="flex items-center gap-3">
-                <button onClick={handleUndo} className="px-3 py-1 rounded-md bg-gray-100 text-sm">Undo</button>
-                <button onClick={() => { setSnackbar({ open: false, item: null }); if (undoTimerRef.current) { clearTimeout(undoTimerRef.current); undoTimerRef.current = null; } }} className="px-3 py-1 rounded-md border text-sm">Dismiss</button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Mobile filters modal */}
-      <AnimatePresence>
-        {filterOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/30 md:hidden">
-            <motion.div initial={{ y: "30%" }} animate={{ y: 0 }} exit={{ y: "30%" }} className="absolute bottom-0 w-full bg-white rounded-t-2xl p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="font-semibold">Filters</h4>
-                <button onClick={() => setFilterOpen(false)} className="p-2"><X /></button>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium">Location</label>
-                  <input className="input-box mt-2 text-sm" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)} />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium">Type</label>
-                  <div className="mt-2 flex flex-col gap-2">
-                    {["All", "Remote", "Full-time", "Part-time", "Hybrid"].map((t) => (
-                      <label key={t} className="inline-flex items-center gap-3 p-2 rounded-md hover:bg-gray-50 cursor-pointer">
-                        <input type="radio" name="typeMobile" value={t} checked={typeFilter === t} onChange={() => setTypeFilter(t)} className="form-radio h-4 w-4 accent-purple-600" />
-                        <span className="text-sm text-gray-700">{t}</span>
-                      </label>
-                    ))}
+                      <button
+                        type="button"
+                        onClick={() => unsaveInternship(item.id)}
+                        disabled={unsaveBusy}
+                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600"
+                      >
+                        <BookmarkX size={15} />
+                        {unsaveBusy ? "Removing..." : "Unsave"}
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <button onClick={() => { applyMobileFilters(); }} className="flex-1 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white">Apply</button>
-                  <button onClick={() => { setTypeFilter("All"); setLocationFilter(""); setFilterOpen(false); }} className="flex-1 py-3 rounded-lg border">Reset</button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Small styles */}
-      <style>{`
-        .input-box {
-          width: 100%;
-          padding: 10px 12px;
-          border-radius: 10px;
-          background: #fbfdff;
-          border: 1px solid #e5e8ef;
-          outline: none;
-          transition: border .15s, box-shadow .15s;
-        }
-        .input-box:focus {
-          border-color: #6b46ff;
-          box-shadow: 0 8px 30px rgba(99,102,241,.06);
-        }
-        .form-radio { /* ensure visible on older browsers */
-          -webkit-appearance: none;
-          appearance: none;
-          border: 1px solid #cbd5e1;
-          width: 16px;
-          height: 16px;
-          border-radius: 9999px;
-          display: inline-block;
-          position: relative;
-        }
-        .form-radio:checked {
-          background: linear-gradient(90deg,#6b46ff,#4f46e5);
-          border-color: transparent;
-        }
-      `}</style>
-    </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+      </div>
+    </StudentLayout>
   );
 }

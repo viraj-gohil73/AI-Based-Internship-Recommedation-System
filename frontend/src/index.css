@@ -1,4 +1,9 @@
 @import "tailwindcss";
+
+.admin-ui button:not(:disabled) {
+  cursor: pointer;
+}
+
 .label {
   @apply block text-sm font-medium text-slate-700 mb-1;
 }

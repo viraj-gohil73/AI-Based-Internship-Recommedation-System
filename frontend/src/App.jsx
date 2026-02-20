@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { VerificationProvider } from "./context/VerificationContext";
 
 /* ================= PUBLIC ================= */
@@ -12,7 +12,14 @@ import ResetPassword from "./pages/ResetPassword";
 /* ================= STUDENT ================= */
 import RegisterStudent from "./pages/student/Register_student";
 import LoginStudent from "./pages/student/Login_Student";
+import StudentProfile from "./pages/student/Profile";
 import SavedInternshipsPro from "./pages/student/SavedInternshipsPro";
+import AIRecommend from "./pages/student/AIRecommend";
+import ExploreInternships from "./pages/student/ExploreInternships";
+import InternshipDetails from "./pages/student/InternshipDetails";
+import AppliedInternships from "./pages/student/AppliedInternships";
+import MyResume from "./pages/student/MyResume";
+import StudentSettings from "./pages/student/Settings";
 
 /* ================= COMPANY AUTH ================= */
 import RegisterCompany from "./pages/company/Login/Register_company";
@@ -49,6 +56,7 @@ import ReportsAnalytics from "./pages/admin/ReportsAnalytics";
 import AuditLogs from "./pages/admin/AuditLogs";
 import AdminAuthRedirect from "./guards/AdminAuthRedirect";
 import AdminProtectedRoute from "./guards/AdminProtectedRoute";
+import StudentProfileRequiredRoute from "./guards/StudentProfileRequiredRoute";
 import RecruiterLayout from "./layout/RecruiterLayout";
 import Recuiter_Dashboard from "./pages/recruiter/Dashboard";
 import RecruiterLayoutWrapper from "./layout/RecruiterLayoutWrapper";
@@ -56,6 +64,10 @@ import InternshipListr from "./pages/recruiter/InternshipList";
 import CreateInternship from "./pages/recruiter/CreateInternship";
 import PostInternship from "./pages/recruiter/PostInternship";
 import RecruiterSettings from "./pages/recruiter/Settings";
+import RecruiterApplicants from "./pages/recruiter/Applicants";
+
+
+
 function App() {
   return (
     <VerificationProvider>
@@ -71,6 +83,7 @@ function App() {
 <Route path="/recruiter/internships" element={<InternshipListr />} />
 <Route path="/recruiter/internships/create" element={<CreateInternship />} />
 <Route path="/recruiter/internships/post" element={<PostInternship />} />
+<Route path="/recruiter/applicants" element={<RecruiterApplicants />} />
 <Route path="/recruiter/settings" element={<RecruiterSettings />} />
 
     {/* future routes */}
@@ -91,8 +104,78 @@ function App() {
           {/* ========== STUDENT ROUTES ========== */}
           <Route path="/register-student" element={<RegisterStudent />} />
           <Route path="/login-student" element={<LoginStudent />} />
-          <Route path="/student-dashboard" element={<SavedInternshipsPro />} />
-
+          <Route
+            path="/student-dashboard"
+            element={
+              <StudentProfileRequiredRoute>
+                <Navigate to="/student/watchlist" replace />
+              </StudentProfileRequiredRoute>
+            }
+          />
+          <Route
+            path="/student/ai-recommend"
+            element={
+              <StudentProfileRequiredRoute>
+                <AIRecommend />
+              </StudentProfileRequiredRoute>
+            }
+          />
+          <Route
+            path="/student/explore"
+            element={
+              <StudentProfileRequiredRoute>
+                <ExploreInternships />
+              </StudentProfileRequiredRoute>
+            }
+          />
+          <Route
+            path="/student/explore/:id"
+            element={
+              <StudentProfileRequiredRoute>
+                <InternshipDetails />
+              </StudentProfileRequiredRoute>
+            }
+          />
+          <Route
+            path="/student/applied"
+            element={
+              <StudentProfileRequiredRoute>
+                <AppliedInternships />
+              </StudentProfileRequiredRoute>
+            }
+          />
+          <Route
+            path="/student/resume"
+            element={
+              <StudentProfileRequiredRoute>
+                <MyResume />
+              </StudentProfileRequiredRoute>
+            }
+          />
+          <Route
+            path="/student/watchlist"
+            element={
+              <StudentProfileRequiredRoute>
+                <SavedInternshipsPro />
+              </StudentProfileRequiredRoute>
+            }
+          />
+          <Route
+            path="/student/profile"
+            element={
+              <StudentProfileRequiredRoute requireCompletion={false}>
+                <StudentProfile />
+              </StudentProfileRequiredRoute>
+            }
+          />
+          <Route
+            path="/student/settings"
+            element={
+              <StudentProfileRequiredRoute>
+                <StudentSettings />
+              </StudentProfileRequiredRoute>
+            }
+          />
           {/* ========== COMPANY AUTH ROUTES ========== */}
           <Route path="/auth/company/register" element={<RegisterCompany />} />
           <Route path="/auth/company/login" element={<LoginComapny />} />

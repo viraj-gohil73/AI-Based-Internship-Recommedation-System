@@ -20,7 +20,7 @@ export default function StudentLayout({ children, title }) {
 
         {/* BODY (SCROLLABLE) */}
         <main className="flex-1 overflow-y-auto ">
-          <div className="bg-white  shadow p-4 px-2 sm:py-4 min-h-full">
+          <div className="bg-white  shadow min-h-full">
             {children}
           </div>
         </main>

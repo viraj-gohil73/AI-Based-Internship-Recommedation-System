@@ -1,5 +1,11 @@
 import express from "express";
-import { loginRecruiter,getRecruiterById } from "../controllers/recruiterAuthController.js";
+import {
+  loginRecruiter,
+  getRecruiterById,
+  getRecruiterApplicants,
+  updateApplicationStatus,
+  getStudentProfileForRecruiter,
+} from "../controllers/recruiterAuthController.js";
 import { recruiterAuth } from "../middlewares/recruiterAuth.js";
 import { getRecruiterCurrentSubscription } from "../controllers/subscriptionController.js";
 //import { get } from "mongoose";
@@ -11,6 +17,13 @@ const router = express.Router();
 router.post("/login", loginRecruiter);
 router.get("/me", recruiterAuth, getRecruiterById);
 router.get("/subscription/current", recruiterAuth, getRecruiterCurrentSubscription);
+router.get("/applicants", recruiterAuth, getRecruiterApplicants);
+router.get("/students/:studentId", recruiterAuth, getStudentProfileForRecruiter);
+router.patch(
+  "/applications/:internshipId/:studentId/status",
+  recruiterAuth,
+  updateApplicationStatus
+);
 router.get("/internships", recruiterAuth, async (req, res) => {
     
   try {
