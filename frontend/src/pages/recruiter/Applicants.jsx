@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import {
   Search,
@@ -7,8 +8,12 @@ import {
   CheckCircle2,
   Clock3,
   XCircle,
-  Sparkles,
   Users,
+  Mail,
+  Phone,
+  MapPin,
+  GraduationCap,
+  ExternalLink,
 } from "lucide-react";
 
 const STATUS_OPTIONS = [
@@ -43,6 +48,12 @@ const getStatusClasses = (status) => {
   }
 };
 
+const formatDate = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString();
+};
+
 export default function Applicants() {
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +63,18 @@ export default function Applicants() {
   const [busyKey, setBusyKey] = useState("");
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [loadingStudentProfile, setLoadingStudentProfile] = useState(false);
+  const studentSkills = Array.isArray(selectedStudent?.skills)
+    ? selectedStudent.skills
+    : `${selectedStudent?.skills || ""}`
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+  const studentEducations = Array.isArray(selectedStudent?.educations)
+    ? selectedStudent.educations
+    : [];
+  const studentSocialLinks = Array.isArray(selectedStudent?.socialLinks)
+    ? selectedStudent.socialLinks
+    : [];
 
   const fetchApplicants = async () => {
     try {
@@ -313,6 +336,12 @@ export default function Applicants() {
                             <Eye size={14} />
                             Profile
                           </button>
+                          <Link
+                            to={`/recruiter/applicants/${applicant.internshipId}/${applicant.studentId}`}
+                            className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                          >
+                            Details
+                          </Link>
                           {STATUS_ACTIONS.map((action) => (
                             <button
                               key={action.value}
@@ -338,113 +367,201 @@ export default function Applicants() {
       </div>
 
       {selectedStudent && (
-        <div className="fixed inset-0 z-50 bg-slate-950/40 p-4 overflow-y-auto">
-          <div className="max-w-3xl mx-auto mt-4 mb-8 rounded-2xl border border-slate-200 bg-white shadow-xl">
-            <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-5">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-900">
-                  {`${selectedStudent.fname || ""} ${selectedStudent.lname || ""}`.trim() ||
-                    "Student Profile"}
-                </h2>
-                <p className="text-sm text-slate-600">{selectedStudent.email || "-"}</p>
+        <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="max-w-5xl mx-auto mt-4 mb-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <div className="relative overflow-hidden border-b border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-6 text-white">
+              <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-sky-400/20 blur-2xl" />
+              <div className="absolute -bottom-16 -left-14 h-52 w-52 rounded-full bg-indigo-400/20 blur-2xl" />
+              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="h-16 w-16 rounded-2xl border border-white/20 bg-white/10 text-lg font-semibold flex items-center justify-center overflow-hidden">
+                    {selectedStudent.profilePic ? (
+                      <img
+                        src={selectedStudent.profilePic}
+                        alt={selectedStudent.fname || "Student"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      `${selectedStudent.fname || selectedStudent.name || "S"}`
+                        .charAt(0)
+                        .toUpperCase()
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight">
+                      {`${selectedStudent.fname || ""} ${selectedStudent.lname || ""}`.trim() ||
+                        selectedStudent.name ||
+                        "Student Profile"}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-200">
+                      Candidate Profile for Internship Review
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedStudent(null)}
+                  className="self-start rounded-xl border border-white/20 bg-white/10 p-2 text-slate-100 transition hover:bg-white/20 sm:self-auto"
+                >
+                  <XCircle size={18} />
+                </button>
               </div>
-              <button
-                onClick={() => setSelectedStudent(null)}
-                className="rounded-md border border-slate-300 p-2 text-slate-600 hover:bg-slate-100"
-              >
-                <XCircle size={16} />
-              </button>
             </div>
 
-            <div className="p-5 space-y-5">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 p-3">
-                  <p className="text-xs text-slate-500">Phone</p>
-                  <p className="font-medium text-slate-900">{selectedStudent.phone_no || "-"}</p>
+            <div className="grid gap-5 p-5 lg:grid-cols-12">
+              <div className="space-y-4 lg:col-span-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <h3 className="text-sm font-semibold text-slate-900">Contact Information</h3>
+                  <div className="mt-3 space-y-3 text-sm">
+                    <p className="flex items-center gap-2 text-slate-700">
+                      <Mail size={15} className="text-slate-500" />
+                      {selectedStudent.email || "-"}
+                    </p>
+                    <p className="flex items-center gap-2 text-slate-700">
+                      <Phone size={15} className="text-slate-500" />
+                      {selectedStudent.phone_no || "-"}
+                    </p>
+                    <p className="flex items-center gap-2 text-slate-700">
+                      <MapPin size={15} className="text-slate-500" />
+                      {[selectedStudent.city, selectedStudent.state]
+                        .filter(Boolean)
+                        .join(", ") || "-"}
+                    </p>
+                  </div>
                 </div>
-                <div className="rounded-xl border border-slate-200 p-3">
-                  <p className="text-xs text-slate-500">Location</p>
-                  <p className="font-medium text-slate-900">
-                    {[selectedStudent.city, selectedStudent.state].filter(Boolean).join(", ") ||
-                      "-"}
-                  </p>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <h3 className="text-sm font-semibold text-slate-900">Preferences</h3>
+                  <div className="mt-2 text-sm text-slate-700">
+                    <p>
+                      <span className="text-slate-500">Preferred Location:</span>{" "}
+                      {selectedStudent.preferredLocation || "-"}
+                    </p>
+                    <p className="mt-2">
+                      <span className="text-slate-500">Date of Birth:</span>{" "}
+                      {formatDate(selectedStudent.dob)}
+                    </p>
+                  </div>
                 </div>
-                <div className="rounded-xl border border-slate-200 p-3 sm:col-span-2">
-                  <p className="text-xs text-slate-500">Preferred Location</p>
-                  <p className="font-medium text-slate-900">
-                    {selectedStudent.preferredLocation || "-"}
-                  </p>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <h3 className="text-sm font-semibold text-slate-900">Documents & Links</h3>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedStudent.resume ? (
+                      <a
+                        href={selectedStudent.resume}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+                      >
+                        <Download size={14} />
+                        View Resume
+                      </a>
+                    ) : (
+                      <span className="text-xs text-slate-500">Resume not uploaded</span>
+                    )}
+                    {studentSocialLinks
+                      .slice(0, 4)
+                      .map((link, idx) => (
+                        <a
+                          key={`${link.url || "social"}-${idx}`}
+                          href={link.url || "#"}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+                        >
+                          <ExternalLink size={13} />
+                          {link.platform || "Profile"}
+                        </a>
+                      ))}
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <p className="text-sm font-semibold text-slate-800 mb-2">Skills</p>
-                <div className="flex flex-wrap gap-2">
-                  {(selectedStudent.skills || []).length ? (
-                    selectedStudent.skills.map((skill) => (
-                      <span
-                        key={skill}
-                        className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700"
-                      >
-                        {skill}
-                      </span>
-                    ))
+              <div className="space-y-4 lg:col-span-8">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <h3 className="text-sm font-semibold text-slate-900">Profile Overview</h3>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-slate-200 p-3">
+                      <p className="text-xs text-slate-500">Full Name</p>
+                      <p className="text-sm font-medium text-slate-900">
+                        {`${selectedStudent.fname || ""} ${selectedStudent.lname || ""}`.trim() ||
+                          selectedStudent.name ||
+                          "-"}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 p-3">
+                      <p className="text-xs text-slate-500">Gender</p>
+                      <p className="text-sm font-medium text-slate-900">
+                        {selectedStudent.gender || "-"}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 p-3">
+                      <p className="text-xs text-slate-500">Current Course</p>
+                      <p className="text-sm font-medium text-slate-900">
+                        {selectedStudent.currentCourse || selectedStudent.degree || "-"}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 p-3">
+                      <p className="text-xs text-slate-500">CGPA / Score</p>
+                      <p className="text-sm font-medium text-slate-900">
+                        {selectedStudent.cgpa || selectedStudent.score || "-"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <h3 className="text-sm font-semibold text-slate-900">Skills</h3>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {studentSkills.length ? (
+                      studentSkills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700"
+                        >
+                          {skill}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-sm text-slate-500">No skills listed.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <GraduationCap size={16} className="text-slate-600" />
+                    Education
+                  </h3>
+                  {studentEducations.length ? (
+                    <div className="mt-3 space-y-3">
+                      {studentEducations.map((edu, idx) => (
+                        <div
+                          key={`${edu.instituteName || "edu"}-${idx}`}
+                          className="rounded-xl border border-slate-200 p-3"
+                        >
+                          <p className="font-medium text-slate-900">
+                            {edu.degreeType || "Degree"}
+                            {edu.fieldOfStudy ? ` - ${edu.fieldOfStudy}` : ""}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-600">
+                            {edu.instituteName || "-"}
+                            {edu.startYear || edu.endYear
+                              ? ` (${edu.startYear || "-"} - ${edu.endYear || "-"})`
+                              : ""}
+                          </p>
+                          {(edu.grade || edu.cgpa) && (
+                            <p className="mt-1 text-xs text-slate-500">
+                              Grade: {edu.grade || edu.cgpa}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   ) : (
-                    <span className="text-sm text-slate-500">No skills listed</span>
+                    <p className="mt-2 text-sm text-slate-500">No education details found.</p>
                   )}
                 </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold text-slate-800 mb-2">Education</p>
-                {(selectedStudent.educations || []).length ? (
-                  <div className="space-y-2">
-                    {selectedStudent.educations.slice(0, 3).map((edu, idx) => (
-                      <div
-                        key={`${edu.instituteName || "edu"}-${idx}`}
-                        className="rounded-xl border border-slate-200 p-3"
-                      >
-                        <p className="font-medium text-slate-900">
-                          {edu.degreeType || "Degree"} {edu.fieldOfStudy ? `- ${edu.fieldOfStudy}` : ""}
-                        </p>
-                        <p className="text-sm text-slate-600">
-                          {edu.instituteName || "-"}{" "}
-                          {edu.startYear || edu.endYear
-                            ? `(${edu.startYear || "-"} - ${edu.endYear || "-"})`
-                            : ""}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-500">No education details</p>
-                )}
-              </div>
-
-              <div className="flex flex-wrap gap-2 pt-1">
-                {selectedStudent.resume ? (
-                  <a
-                    href={selectedStudent.resume}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
-                  >
-                    <Download size={14} />
-                    Resume
-                  </a>
-                ) : null}
-                {(selectedStudent.socialLinks || []).slice(0, 3).map((link, idx) => (
-                  <a
-                    key={`${link.url || "link"}-${idx}`}
-                    href={link.url || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
-                  >
-                    <Sparkles size={13} />
-                    {link.platform || "Profile"}
-                  </a>
-                ))}
               </div>
             </div>
           </div>

@@ -17,6 +17,11 @@ import {
   verifyCheckoutSignature,
 } from "../services/razorpayService.js";
 import Company from "../models/Company.js";
+import {
+  createNotification,
+  notifyAdmins,
+  runNotificationTask,
+} from "../services/notificationService.js";
 
 const toClientSubscription = (subscription) => ({
   _id: subscription._id,
@@ -284,6 +289,36 @@ export const confirmSubscriptionPayment = async (req, res) => {
       },
       { upsert: true }
     );
+
+    await runNotificationTask("confirm-subscription-payment", async () => {
+      await createNotification({
+        recipientModel: "Company",
+        recipientId: req.companyId,
+        type: "SUBSCRIPTION_ACTIVATED",
+        title: "Subscription activated",
+        message: `Your ${plan.name} subscription is active now.`,
+        entityType: "Subscription",
+        entityId: subscription._id,
+        metadata: {
+          planCode: plan.code,
+          billingCycle: pending.billingCycle,
+          paymentId: razorpay_payment_id,
+        },
+      });
+
+      await notifyAdmins({
+        type: "SUBSCRIPTION_ACTIVATED",
+        title: "Company subscription activated",
+        message: `Plan ${plan.code} activated for company ${req.companyId}.`,
+        entityType: "Subscription",
+        entityId: subscription._id,
+        metadata: {
+          companyId: req.companyId,
+          planCode: plan.code,
+          paymentId: razorpay_payment_id,
+        },
+      });
+    });
 
     const refreshedSnapshot = await getSubscriptionSnapshot(req.companyId);
     return res.status(200).json({

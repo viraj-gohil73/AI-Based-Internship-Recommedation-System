@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
+import { Camera, Lock, UserPlus, UsersRound } from "lucide-react";
 import { useSubscription } from "../../../context/SubscriptionContext";
 
 export default function AddRecruiter() {
@@ -107,30 +108,66 @@ export default function AddRecruiter() {
   };
 
   const inputClass =
-    "w-full border-2 border-blue-200 px-4 py-2.5 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition bg-white";
+    "w-full rounded-xl border border-slate-300 px-4 py-2.5 text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100 transition bg-white";
+
+  const seatsLeft = Math.max((seatLimit || 0) - (usedSeats || 0), 0);
+  const statusTone = hardLocked
+    ? "border-rose-200 bg-rose-50 text-rose-700"
+    : seatLimitReached
+      ? "border-amber-200 bg-amber-50 text-amber-700"
+      : "border-emerald-200 bg-emerald-50 text-emerald-700";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-4 py-8">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#dff6ff,_#f8fbff_42%,_#eef5ff)] px-4 py-8">
+      <div className="mx-auto max-w-6xl">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-5 rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm sm:p-6"
+        >
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-700">
+                Team Management
+              </p>
+              <h1 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Add Recruiter</h1>
+              <p className="mt-2 text-sm text-slate-600">
+                Create recruiter access with role, permissions, and profile details.
+              </p>
+            </div>
+            <div className={`rounded-xl border px-4 py-3 text-sm ${statusTone}`}>
+              <div className="flex items-center gap-2 font-semibold">
+                {hardLocked ? <Lock size={16} /> : <UsersRound size={16} />}
+                {hardLocked ? "Creation blocked" : `Seats: ${usedSeats}/${seatLimit}`}
+              </div>
+              {!hardLocked && (
+                <p className="mt-1 text-xs">
+                  {seatLimitReached ? "No recruiter seats left" : `${seatsLeft} seat(s) remaining`}
+                </p>
+              )}
+            </div>
+          </div>
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="bg-white border-2 border-blue-200 rounded-xl shadow-lg p-6 sm:p-8"
+          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-lg sm:p-8"
         >
           {hardLocked && (
-            <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
               Recruiter creation is blocked. Company must be approved and subscription must be active/trial.
             </div>
           )}
           {!hardLocked && seatLimitReached && (
-            <div className="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
               Seat limit reached ({usedSeats}/{seatLimit}). Buy extra recruiter seats to continue.
             </div>
           )}
 
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-6 text-center sm:text-left">
-            Add Recruiter
+          <h2 className="mb-6 text-xl font-bold text-slate-900 sm:text-2xl">
+            Recruiter Information
           </h2>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -138,14 +175,14 @@ export default function AddRecruiter() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="lg:col-span-1 border-2 border-blue-100 rounded-xl p-5 bg-gradient-to-b from-blue-50 to-white"
+              className="lg:col-span-1 rounded-2xl border border-cyan-100 p-5 bg-gradient-to-b from-cyan-50 to-white"
             >
-              <p className="text-sm font-semibold text-gray-800 mb-4">Profile</p>
+              <p className="mb-4 text-sm font-semibold text-slate-800">Profile & Access</p>
               <div className="flex flex-col items-center gap-4">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   onClick={openUploader}
-                  className="w-24 h-24 rounded-full border-4 border-dashed border-blue-300 overflow-hidden flex items-center justify-center cursor-pointer hover:border-blue-500 transition bg-blue-50"
+                  className="flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full border-4 border-dashed border-cyan-300 bg-cyan-50 transition hover:border-cyan-500"
                 >
                   {form.dp ? (
                     <img
@@ -154,22 +191,27 @@ export default function AddRecruiter() {
                       alt="Recruiter profile"
                     />
                   ) : (
-                    <span className="text-xs text-blue-400 text-center px-2 font-medium">
-                      Upload DP
+                    <span className="px-2 text-center text-xs font-medium text-cyan-600">
+                      <Camera size={16} className="mx-auto mb-1" />
+                      Upload
                     </span>
                   )}
                 </motion.div>
 
-                <p className="text-sm text-gray-600 text-center">
+                <p className="text-center text-sm text-slate-600">
                   {dpUploading ? (
-                    <span className="text-blue-600 font-semibold">Uploading image...</span>
+                    <span className="font-semibold text-cyan-700">Uploading image...</span>
                   ) : (
                     "Click photo to upload"
                   )}
                 </p>
               </div>
 
-              <div className="mt-5 pt-5 border-t border-blue-100">
+              <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                Role defines access scope for postings and candidate management.
+              </div>
+
+              <div className="mt-5 border-t border-cyan-100 pt-5">
                 <Toggle
                   label="Can Post Jobs"
                   checked={form.canpost}
@@ -196,9 +238,9 @@ export default function AddRecruiter() {
               transition={{ delay: 0.2 }}
               className="lg:col-span-2"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 block mb-2">Full Name *</label>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Full Name *</label>
                   <motion.input
                     whileFocus={{ scale: 1.01 }}
                     className={inputClass}
@@ -210,7 +252,7 @@ export default function AddRecruiter() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 block mb-2">Email *</label>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Email *</label>
                   <motion.input
                     whileFocus={{ scale: 1.01 }}
                     type="email"
@@ -223,7 +265,7 @@ export default function AddRecruiter() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 block mb-2">Password *</label>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Password *</label>
                   <motion.input
                     whileFocus={{ scale: 1.01 }}
                     type="password"
@@ -236,7 +278,7 @@ export default function AddRecruiter() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 block mb-2">Mobile *</label>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Mobile *</label>
                   <motion.input
                     whileFocus={{ scale: 1.01 }}
                     className={inputClass}
@@ -249,7 +291,7 @@ export default function AddRecruiter() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 block mb-2">Role</label>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Role</label>
                   <motion.select
                     whileFocus={{ scale: 1.01 }}
                     className={inputClass}
@@ -265,7 +307,7 @@ export default function AddRecruiter() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-semibold text-gray-700 block mb-2">Gender</label>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Gender</label>
                   <motion.select
                     whileFocus={{ scale: 1.01 }}
                     className={inputClass}
@@ -288,13 +330,13 @@ export default function AddRecruiter() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="flex flex-col sm:flex-row justify-end gap-3 mt-8 pt-6 border-t-2 border-blue-100"
+            className="mt-8 flex flex-col justify-end gap-3 border-t border-slate-200 pt-6 sm:flex-row"
           >
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => navigate(-1)}
-              className="w-full sm:w-auto border-2 border-gray-300 px-5 py-2 rounded-lg font-semibold hover:bg-gray-50 transition"
+              className="w-full rounded-xl border border-slate-300 px-5 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto"
             >
               Cancel
             </motion.button>
@@ -304,8 +346,9 @@ export default function AddRecruiter() {
               whileTap={{ scale: 0.98 }}
               onClick={submit}
               disabled={loading || dpUploading || hardLocked || seatLimitReached}
-              className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2 rounded-lg font-semibold disabled:opacity-50 transition"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:shadow-md disabled:opacity-50 sm:w-auto"
             >
+              <UserPlus size={16} />
               {loading ? "Creating..." : "Create Recruiter"}
             </motion.button>
           </motion.div>
@@ -317,8 +360,8 @@ export default function AddRecruiter() {
 
 function Toggle({ checked, onChange, label }) {
   return (
-    <div className="flex items-center justify-between gap-4 px-4 py-3 rounded-lg bg-blue-50 border-2 border-blue-200">
-      <span className="text-sm font-semibold text-gray-700">
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-3">
+      <span className="text-sm font-semibold text-slate-700">
         {label}
       </span>
 
@@ -326,9 +369,9 @@ function Toggle({ checked, onChange, label }) {
         type="button"
         onClick={() => onChange(!checked)}
         whileTap={{ scale: 0.95 }}
-        className={`relative inline-flex h-8 w-14 items-center rounded-full cursor-pointer
+        className={`relative inline-flex h-8 w-14 cursor-pointer items-center rounded-full
         transition-all duration-300
-        ${checked ? "bg-gradient-to-r from-blue-600 to-indigo-600" : "bg-gray-300"}`}
+        ${checked ? "bg-gradient-to-r from-cyan-600 to-blue-700" : "bg-slate-300"}`}
       >
         <motion.span
           layout

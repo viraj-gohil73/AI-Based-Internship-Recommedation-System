@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Eye,
   Pencil,
@@ -8,169 +8,125 @@ import {
   Briefcase,
   CircleCheck,
   CircleOff,
-  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const EMPTY_FORM = {
-  title: "",
-  recruiter: "",
-  mode: "Remote",
-  location: "Remote",
-  stipend: "",
-  status: "Active",
-};
-
-const INITIAL_INTERNSHIPS = [
-  {
-    id: "INT-101",
-    title: "Frontend Developer Intern",
-    recruiter: "Amit Sharma",
-    mode: "Remote",
-    location: "Remote",
-    stipend: "8,000 - 12,000",
-    status: "Active",
-    applications: 48,
-    postedOn: "2026-01-15",
-  },
-  {
-    id: "INT-102",
-    title: "Backend Developer Intern",
-    recruiter: "Neha Patel",
-    mode: "Onsite",
-    location: "Ahmedabad",
-    stipend: "10,000",
-    status: "Closed",
-    applications: 26,
-    postedOn: "2026-01-04",
-  },
-  {
-    id: "INT-103",
-    title: "UI/UX Intern",
-    recruiter: "Rahul Verma",
-    mode: "Hybrid",
-    location: "Bengaluru",
-    stipend: "12,000 - 15,000",
-    status: "Active",
-    applications: 64,
-    postedOn: "2026-02-02",
-  },
-  {
-    id: "INT-104",
-    title: "Data Analyst Intern",
-    recruiter: "Sneha Desai",
-    mode: "Remote",
-    location: "Remote",
-    stipend: "9,000 - 11,000",
-    status: "Draft",
-    applications: 0,
-    postedOn: "2026-02-10",
-  },
-];
-
 export default function InternshipList() {
   const navigate = useNavigate();
-
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [modeFilter, setModeFilter] = useState("all");
-  const [internships, setInternships] = useState(INITIAL_INTERNSHIPS);
+  const [internships, setInternships] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [actionLoadingId, setActionLoadingId] = useState("");
 
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const fetchInternships = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const token = localStorage.getItem("token");
+      const res = await fetch("http://localhost:5000/api/company/internships", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to fetch internships");
+      }
+      setInternships(Array.isArray(data.internships) ? data.internships : []);
+    } catch (err) {
+      setError(err.message || "Failed to fetch internships");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInternships();
+  }, []);
 
   const filteredInternships = useMemo(() => {
     const q = query.trim().toLowerCase();
-
     return internships.filter((item) => {
-      const matchesQuery =
-        !q ||
-        item.title.toLowerCase().includes(q) ||
-        item.recruiter.toLowerCase().includes(q);
+      const status = (item.intern_status || "").toLowerCase();
+      const mode = (item.workmode || "").toLowerCase();
+      const recruiter = (item.recruiter?.name || "").toLowerCase();
+      const title = (item.title || "").toLowerCase();
 
-      const matchesStatus =
-        statusFilter === "all" || item.status.toLowerCase() === statusFilter;
-
-      const matchesMode = modeFilter === "all" || item.mode.toLowerCase() === modeFilter;
-
+      const matchesQuery = !q || title.includes(q) || recruiter.includes(q);
+      const matchesStatus = statusFilter === "all" || status === statusFilter;
+      const matchesMode = modeFilter === "all" || mode === modeFilter;
       return matchesQuery && matchesStatus && matchesMode;
     });
   }, [internships, modeFilter, query, statusFilter]);
 
   const stats = useMemo(() => {
-    const active = internships.filter((item) => item.status === "Active").length;
-    const closed = internships.filter((item) => item.status === "Closed").length;
-    const applications = internships.reduce((sum, item) => sum + item.applications, 0);
-
-    return {
-      total: internships.length,
-      active,
-      closed,
-      applications,
-    };
+    const active = internships.filter((item) => item.intern_status === "ACTIVE").length;
+    const closed = internships.filter((item) => item.intern_status === "CLOSED").length;
+    const applications = internships.reduce(
+      (sum, item) => sum + (Number(item.applicationsCount) || 0),
+      0
+    );
+    return { total: internships.length, active, closed, applications };
   }, [internships]);
 
-  const openCreate = () => {
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setShowForm(true);
+  const formatMoney = (value) => {
+    const n = Number(value);
+    if (Number.isNaN(n)) return "-";
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(n);
   };
 
-  const openEdit = (item) => {
-    setEditingId(item.id);
-    setForm({
-      title: item.title,
-      recruiter: item.recruiter,
-      mode: item.mode,
-      location: item.location,
-      stipend: item.stipend,
-      status: item.status,
-    });
-    setShowForm(true);
-  };
+  const toggleStatus = async (item) => {
+    const nextStatus = item.intern_status === "ACTIVE" ? "CLOSED" : "ACTIVE";
+    const message =
+      nextStatus === "CLOSED"
+        ? "Close this internship posting?"
+        : "Activate this internship posting?";
+    if (!window.confirm(message)) return;
 
-  const closeForm = () => {
-    setShowForm(false);
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-  };
-
-  const handleSave = () => {
-    if (!form.title.trim() || !form.recruiter.trim() || !form.location.trim()) return;
-
-    if (editingId) {
+    try {
+      setActionLoadingId(item._id);
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `http://localhost:5000/api/company/internships/${item._id}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ intern_status: nextStatus }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to update internship status");
+      }
       setInternships((prev) =>
-        prev.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                ...form,
-              }
-            : item
+        prev.map((row) =>
+          row._id === item._id
+            ? { ...row, intern_status: data?.internship?.intern_status || nextStatus }
+            : row
         )
       );
-    } else {
-      setInternships((prev) => [
-        {
-          id: `INT-${Math.floor(Math.random() * 900 + 100)}`,
-          ...form,
-          applications: 0,
-          postedOn: new Date().toISOString().slice(0, 10),
-        },
-        ...prev,
-      ]);
+    } catch (err) {
+      alert(err.message || "Failed to update internship status");
+    } finally {
+      setActionLoadingId("");
     }
-
-    closeForm();
   };
 
-  const handleDelete = (id) => {
-    const ok = window.confirm("Delete this internship?");
-    if (!ok) return;
+  if (loading) {
+    return <div className="p-6 text-sm text-slate-600">Loading internships...</div>;
+  }
 
-    setInternships((prev) => prev.filter((item) => item.id !== id));
-  };
+  if (error) {
+    return <div className="p-6 text-sm text-red-600">{error}</div>;
+  }
 
   return (
     <div className="min-h-full bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 sm:p-6">
@@ -180,15 +136,15 @@ export default function InternshipList() {
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">Internship Listings</h1>
               <p className="text-blue-100 mt-1 text-sm sm:text-base">
-                Manage, edit, and monitor all internship postings.
+                Showing all internships posted by recruiters of your company.
               </p>
             </div>
             <button
               type="button"
-              onClick={openCreate}
+              onClick={() => navigate("/company/dashboard/recruiters")}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-white text-blue-700 px-4 py-2.5 font-semibold hover:bg-blue-50 transition"
             >
-              <Plus size={18} /> Add Internship
+              <Plus size={18} /> Manage Recruiters
             </button>
           </div>
         </section>
@@ -196,7 +152,12 @@ export default function InternshipList() {
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <StatCard label="Total Listings" value={stats.total} icon={Briefcase} />
           <StatCard label="Active Jobs" value={stats.active} icon={CircleCheck} />
-          <StatCard label="Closed Jobs" value={stats.closed} icon={CircleOff} secondary={`Applications: ${stats.applications}`} />
+          <StatCard
+            label="Closed Jobs"
+            value={stats.closed}
+            icon={CircleOff}
+            secondary={`Applications: ${stats.applications}`}
+          />
         </section>
 
         <section className="bg-white rounded-2xl border border-blue-100 shadow-sm p-4 sm:p-5">
@@ -255,35 +216,36 @@ export default function InternshipList() {
             </thead>
             <tbody>
               {filteredInternships.map((item) => (
-                <tr key={item.id} className="border-t border-slate-100 hover:bg-blue-50/40">
+                <tr key={item._id} className="border-t border-slate-100 hover:bg-blue-50/40">
                   <td className="px-4 py-3">
-                    <p className="font-semibold text-slate-800">{item.title}</p>
+                    <p className="font-semibold text-slate-800">{item.title || "-"}</p>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Posted: {new Date(item.postedOn).toLocaleDateString()} | Stipend: Rs. {item.stipend}
+                      Posted: {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "-"}{" "}
+                      | Stipend: {formatMoney(item.stipend_min)} - {formatMoney(item.stipend_max)}
                     </p>
                   </td>
-                  <td className="px-4 py-3 text-slate-700">{item.recruiter}</td>
-                  <td className="px-4 py-3 text-slate-700">{item.mode}</td>
-                  <td className="px-4 py-3 text-slate-700">{item.location}</td>
-                  <td className="px-4 py-3 text-slate-700">{item.applications}</td>
+                  <td className="px-4 py-3 text-slate-700">{item.recruiter?.name || "-"}</td>
+                  <td className="px-4 py-3 text-slate-700">{item.workmode || "-"}</td>
+                  <td className="px-4 py-3 text-slate-700">{item.location || "-"}</td>
+                  <td className="px-4 py-3 text-slate-700">{item.applicationsCount || 0}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                        item.status === "Active"
+                        item.intern_status === "ACTIVE"
                           ? "bg-emerald-100 text-emerald-700"
-                          : item.status === "Draft"
+                          : item.intern_status === "DRAFT"
                           ? "bg-amber-100 text-amber-700"
                           : "bg-rose-100 text-rose-700"
                       }`}
                     >
-                      {item.status}
+                      {item.intern_status || "DRAFT"}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => navigate(`/company/dashboard/internships/${item.id}`)}
+                        onClick={() => navigate(`/company/dashboard/internships/${item._id}`)}
                         className="p-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200"
                         title="View"
                       >
@@ -291,7 +253,7 @@ export default function InternshipList() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => openEdit(item)}
+                        onClick={() => navigate(`/company/dashboard/internships/${item._id}/edit`)}
                         className="p-2 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200"
                         title="Edit"
                       >
@@ -299,9 +261,10 @@ export default function InternshipList() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDelete(item.id)}
-                        className="p-2 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200"
-                        title="Delete"
+                        onClick={() => toggleStatus(item)}
+                        disabled={actionLoadingId === item._id}
+                        className="p-2 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                        title={item.intern_status === "ACTIVE" ? "Close" : "Activate"}
                       >
                         <Trash2 size={16} />
                       </button>
@@ -321,62 +284,6 @@ export default function InternshipList() {
           </table>
         </section>
       </div>
-
-      {showForm && (
-        <div className="fixed inset-0 z-50 bg-black/40 p-4 flex items-center justify-center">
-          <div className="w-full max-w-2xl rounded-2xl bg-white border border-slate-200 shadow-xl p-5 sm:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-slate-900">
-                {editingId ? "Edit Internship" : "Add Internship"}
-              </h2>
-              <button
-                type="button"
-                onClick={closeForm}
-                className="p-1.5 rounded-lg hover:bg-slate-100"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <TextField label="Title" value={form.title} onChange={(value) => setForm((prev) => ({ ...prev, title: value }))} />
-              <TextField label="Recruiter" value={form.recruiter} onChange={(value) => setForm((prev) => ({ ...prev, recruiter: value }))} />
-              <TextField label="Location" value={form.location} onChange={(value) => setForm((prev) => ({ ...prev, location: value }))} />
-              <TextField label="Stipend" value={form.stipend} onChange={(value) => setForm((prev) => ({ ...prev, stipend: value }))} />
-
-              <SelectField
-                label="Mode"
-                value={form.mode}
-                options={["Remote", "Onsite", "Hybrid"]}
-                onChange={(value) => setForm((prev) => ({ ...prev, mode: value }))}
-              />
-              <SelectField
-                label="Status"
-                value={form.status}
-                options={["Active", "Draft", "Closed"]}
-                onChange={(value) => setForm((prev) => ({ ...prev, status: value }))}
-              />
-            </div>
-
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={closeForm}
-                className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                className="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold hover:from-blue-700 hover:to-indigo-700"
-              >
-                {editingId ? "Save Changes" : "Create Internship"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -396,39 +303,6 @@ function StatCard({ label, value, icon: Icon, secondary }) {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function TextField({ label, value, onChange }) {
-  return (
-    <div>
-      <label className="block text-sm text-slate-700 mb-1">{label}</label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none"
-      />
-    </div>
-  );
-}
-
-function SelectField({ label, value, onChange, options }) {
-  return (
-    <div>
-      <label className="block text-sm text-slate-700 mb-1">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-100 focus:border-blue-500 outline-none bg-white"
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
     </div>
   );
 }

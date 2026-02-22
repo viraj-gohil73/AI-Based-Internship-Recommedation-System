@@ -1,4 +1,9 @@
 import Internship from "../models/Internship.js";
+import {
+  createNotification,
+  notifyAdmins,
+  runNotificationTask,
+} from "../services/notificationService.js";
 
 const toClientInternship = (internshipDoc) => {
   if (!internshipDoc) return null;
@@ -115,6 +120,45 @@ export const createInternship = async (req, res) => {
 
       recruiter_id: req.recruiter._id,
       company_id: req.recruiter.companyId || null,
+    });
+
+    await runNotificationTask("create-internship", async () => {
+      const internshipTitle = internship.title || "Internship";
+
+      await createNotification({
+        recipientModel: "Recruiter",
+        recipientId: req.recruiter._id,
+        type: "INTERNSHIP_CREATED",
+        title: "Internship created",
+        message: `${internshipTitle} has been created successfully.`,
+        entityType: "Internship",
+        entityId: internship._id,
+      });
+
+      if (req.recruiter.companyId) {
+        await createNotification({
+          recipientModel: "Company",
+          recipientId: req.recruiter.companyId,
+          type: "INTERNSHIP_CREATED",
+          title: "New internship posted",
+          message: `${internshipTitle} has been posted by your recruiter team.`,
+          entityType: "Internship",
+          entityId: internship._id,
+          metadata: { recruiterId: req.recruiter._id },
+        });
+      }
+
+      await notifyAdmins({
+        type: "INTERNSHIP_CREATED",
+        title: "New internship posted",
+        message: `${internshipTitle} has been posted.`,
+        entityType: "Internship",
+        entityId: internship._id,
+        metadata: {
+          recruiterId: req.recruiter._id,
+          companyId: req.recruiter.companyId || null,
+        },
+      });
     });
 
     return res.status(201).json({

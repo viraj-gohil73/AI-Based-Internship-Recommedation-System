@@ -1,39 +1,39 @@
-import { Bell, CheckCheck, Menu, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-
-const INITIAL_NOTIFICATIONS = [
-  {
-    id: "n-1",
-    title: "New company registered",
-    message: "A new company account is waiting for approval.",
-    createdAt: "2026-02-18T09:20:00Z",
-    read: false,
-  },
-  {
-    id: "n-2",
-    title: "Subscription renewed",
-    message: "A company successfully renewed a Pro subscription.",
-    createdAt: "2026-02-17T14:45:00Z",
-    read: false,
-  },
-  {
-    id: "n-3",
-    title: "Support ticket updated",
-    message: "A pending support ticket has a new reply.",
-    createdAt: "2026-02-16T11:30:00Z",
-    read: true,
-  },
-];
+import { Bell, CheckCheck, Menu } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export default function Header({ title, onMenuClick }) {
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
   const wrapperRef = useRef(null);
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.read).length,
     [notifications]
   );
+
+  const loadNotifications = useCallback(async () => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) return;
+
+    try {
+      setNotificationsLoading(true);
+      const res = await fetch("http://localhost:5000/api/notifications?limit=50", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) return;
+      setNotifications(Array.isArray(data?.data) ? data.data : []);
+    } catch (error) {
+      console.error("Failed to load admin notifications:", error);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
 
   useEffect(() => {
     const onMouseDown = (event) => {
@@ -55,18 +55,40 @@ export default function Header({ title, onMenuClick }) {
     };
   }, []);
 
-  const markOneRead = (id) => {
+  const markOneRead = async (id) => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) return;
+
     setNotifications((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, read: true } : item))
+      prev.map((item) =>
+        String(item.id) === String(id) ? { ...item, read: true } : item
+      )
     );
+
+    try {
+      await fetch(`http://localhost:5000/api/notifications/${id}/read`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (error) {
+      console.error("Failed to mark admin notification:", error);
+    }
   };
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) return;
+
     setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
-  };
 
-  const clearAll = () => {
-    setNotifications([]);
+    try {
+      await fetch("http://localhost:5000/api/notifications/read-all", {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (error) {
+      console.error("Failed to mark all admin notifications:", error);
+    }
   };
 
   return (
@@ -85,7 +107,11 @@ export default function Header({ title, onMenuClick }) {
 
         <div className="flex items-center gap-3 relative" ref={wrapperRef}>
           <button
-            onClick={() => setOpen((v) => !v)}
+            onClick={async () => {
+              const next = !open;
+              setOpen(next);
+              if (next) await loadNotifications();
+            }}
             aria-label="Show notifications"
             className="relative p-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 hover:bg-blue-100 text-gray-700 hover:text-blue-600 transition group"
           >
@@ -112,20 +138,16 @@ export default function Header({ title, onMenuClick }) {
                     >
                       <CheckCheck size={16} />
                     </button>
-                    <button
-                      type="button"
-                      onClick={clearAll}
-                      className="p-1.5 rounded-md hover:bg-rose-50 text-rose-500"
-                      title="Clear all"
-                    >
-                      <Trash2 size={16} />
-                    </button>
                   </div>
                 )}
               </div>
 
               <div className="max-h-[380px] overflow-y-auto">
-                {notifications.length === 0 ? (
+                {notificationsLoading ? (
+                  <div className="px-4 py-10 text-center text-sm text-slate-500">
+                    Loading...
+                  </div>
+                ) : notifications.length === 0 ? (
                   <div className="px-4 py-10 text-center text-sm text-slate-500">
                     No notifications
                   </div>

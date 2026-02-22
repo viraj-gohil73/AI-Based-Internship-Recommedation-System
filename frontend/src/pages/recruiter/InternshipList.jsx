@@ -9,6 +9,10 @@ import {
   Briefcase,
   Globe,
   MapPin,
+  CircleAlert,
+  Layers,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -16,8 +20,8 @@ export default function InternshipList() {
   const [internships, setInternships] = useState([]);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
-  const [hoveredId, setHoveredId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoadingId, setActionLoadingId] = useState("");
   const [subscriptionState, setSubscriptionState] = useState({
     loading: true,
     entitlements: null,
@@ -25,23 +29,19 @@ export default function InternshipList() {
     status: null,
   });
 
-  // 🔹 Fetch Real Data
   useEffect(() => {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem("recruiterToken");
 
-        const res = await fetch(
-          "http://localhost:5000/api/recruiter/internships",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await fetch("http://localhost:5000/api/recruiter/internships", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         const data = await res.json();
-        setInternships(data);
+        setInternships(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error(err);
       } finally {
@@ -90,23 +90,40 @@ export default function InternshipList() {
     maxActivePostings !== null &&
     maxActivePostings !== undefined &&
     activePostingsCount >= maxActivePostings;
-  const canPost =
-    subscriptionState.entitlements?.accessAllowed && !postingLimitReached;
+  const canPost = subscriptionState.entitlements?.accessAllowed && !postingLimitReached;
+
+  const isInternshipExpired = (internship) => {
+    if (!internship?.deadline_at) return false;
+    const deadline = new Date(internship.deadline_at);
+    if (Number.isNaN(deadline.getTime())) return false;
+    return deadline < new Date();
+  };
+
+  const getEffectiveStatus = (internship) => {
+    if (internship?.intern_status === "ACTIVE" && isInternshipExpired(internship)) return "EXPIRED";
+    return internship?.intern_status || "-";
+  };
+
+  const activeCount = internships.filter((i) => getEffectiveStatus(i) === "ACTIVE").length;
+  const closedCount = internships.filter((i) => getEffectiveStatus(i) === "CLOSED").length;
+  const draftCount = internships.filter((i) => getEffectiveStatus(i) === "DRAFT").length;
+  const expiredCount = internships.filter((i) => getEffectiveStatus(i) === "EXPIRED").length;
 
   const filtered = internships.filter((i) => {
-    const matchSearch = i.title
-      .toLowerCase()
-      .includes(search.toLowerCase());
-    const matchStatus =
-      status === "ALL" || i.intern_status === status;
+    const matchSearch = (i.title || "").toLowerCase().includes(search.toLowerCase());
+    const matchStatus = status === "ALL" || getEffectiveStatus(i) === status;
 
     return matchSearch && matchStatus;
   });
 
-  const getStatusStyle = (status) =>
-    status === "ACTIVE"
-      ? "bg-green-100 text-green-700 border-green-300"
-      : "bg-red-100 text-red-700 border-red-300";
+  const getStatusStyle = (value) =>
+    value === "ACTIVE"
+      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+      : value === "CLOSED"
+      ? "bg-rose-100 text-rose-700 border-rose-200"
+      : value === "EXPIRED"
+      ? "bg-slate-200 text-slate-700 border-slate-300"
+      : "bg-amber-100 text-amber-700 border-amber-200";
 
   const getModeIcon = (mode) => {
     switch (mode) {
@@ -119,191 +136,310 @@ export default function InternshipList() {
     }
   };
 
-  if (loading)
-    return <div className="p-8 text-center">Loading internships...</div>;
+  const formatMoney = (value) => {
+    if (value === null || value === undefined || value === "") return "-";
+    const numericValue = Number(value);
+    if (Number.isNaN(numericValue)) return "-";
+
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(numericValue);
+  };
+
+  const formatDate = (value) => {
+    if (!value) return "-";
+    return new Date(value).toLocaleDateString();
+  };
+
+  const updateInternshipStatus = async (internship) => {
+    const nextStatus = internship.intern_status === "ACTIVE" ? "CLOSED" : "ACTIVE";
+    if (nextStatus === "ACTIVE" && isInternshipExpired(internship)) {
+      alert("This internship deadline has passed. It cannot be re-activated.");
+      return;
+    }
+
+    const confirmText =
+      nextStatus === "CLOSED"
+        ? "Close this internship? Students will no longer be able to apply."
+        : "Re-activate this internship?";
+
+    if (!window.confirm(confirmText)) return;
+
+    try {
+      setActionLoadingId(internship._id);
+      const token = localStorage.getItem("recruiterToken");
+      const res = await fetch(`http://localhost:5000/api/recruiter/internships/${internship._id}/status`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ intern_status: nextStatus }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to update internship status");
+
+      setInternships((prev) =>
+        prev.map((item) =>
+          item._id === internship._id ? { ...item, intern_status: data?.data?.intern_status || nextStatus } : item
+        )
+      );
+    } catch (error) {
+      alert(error.message || "Failed to update internship status");
+    } finally {
+      setActionLoadingId("");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50 px-4 py-8">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <div className="h-20 animate-pulse rounded-2xl bg-white/80" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="h-28 animate-pulse rounded-2xl bg-white/80" />
+            ))}
+          </div>
+          <div className="h-96 animate-pulse rounded-2xl bg-white/80" />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-4 py-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50 px-4 py-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">Recruiter Workspace</p>
+              <h1 className="text-3xl font-bold text-slate-900">Internship Listings</h1>
+              <p className="mt-1 text-sm text-slate-600">Manage postings, review status, and track listing activity.</p>
+            </div>
 
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Internship Listings
-            </h1>
-            <p className="text-gray-600 text-sm">
-              Manage and monitor your internship postings
-            </p>
+            <Link
+              to="/recruiter/internships/create"
+              onClick={(e) => {
+                if (!canPost) e.preventDefault();
+              }}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
+                canPost ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700" : "bg-slate-200 text-slate-500 cursor-not-allowed"
+              }`}
+            >
+              <Plus size={18} />
+              Post Internship
+            </Link>
           </div>
-
-          <Link
-            to="/recruiter/internships/create"
-            onClick={(e) => {
-              if (!canPost) e.preventDefault();
-            }}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-semibold shadow-md transition ${
-              canPost
-                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:scale-105"
-                : "bg-slate-200 text-slate-500 cursor-not-allowed"
-            }`}
-          >
-            <Plus size={18} />
-            Post Internship
-          </Link>
-        </div>
+        </motion.div>
 
         {!subscriptionState.loading && !canPost && (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             {postingLimitReached
               ? `Posting limit reached (${activePostingsCount}/${maxActivePostings}). Upgrade plan to continue.`
               : `Posting is blocked (subscription status: ${subscriptionState.status || "UNKNOWN"}).`}
           </div>
         )}
 
-        {/* Filters */}
-        <div className="bg-white border border-blue-200 rounded-lg shadow-sm p-4 mb-6 flex gap-4">
-          <div className="relative flex-1">
-            <Search
-              className="absolute left-3 top-2.5 text-blue-400"
-              size={16}
-            />
-            <input
-              type="text"
-              placeholder="Search by title..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-blue-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 outline-none"
-            />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Total</p>
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-2xl font-bold text-slate-900">{internships.length}</p>
+              <Layers className="text-blue-600" size={20} />
+            </div>
           </div>
-
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="px-3 py-2 border border-blue-200 rounded-lg text-sm"
-          >
-            <option value="ALL">All Status</option>
-            <option value="ACTIVE">Active</option>
-            <option value="DISABLED">Disabled</option>
-          </select>
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-emerald-700">Active</p>
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-2xl font-bold text-emerald-900">{activeCount}</p>
+              <CheckCircle2 className="text-emerald-700" size={20} />
+            </div>
+          </div>
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-rose-700">Closed</p>
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-2xl font-bold text-rose-900">{closedCount}</p>
+              <XCircle className="text-rose-700" size={20} />
+            </div>
+          </div>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-amber-700">Draft</p>
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-2xl font-bold text-amber-900">{draftCount}</p>
+              <CircleAlert className="text-amber-700" size={20} />
+            </div>
+          </div>
         </div>
 
-        {/* Table */}
-        <div className="bg-white border border-blue-200 rounded-lg shadow-lg overflow-hidden">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+              <input
+                type="text"
+                placeholder="Search by internship title..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="ALL">All Status</option>
+              <option value="ACTIVE">Active</option>
+              <option value="CLOSED">Closed</option>
+              <option value="EXPIRED">Expired</option>
+              <option value="DRAFT">Draft</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+              <thead className="bg-slate-900 text-slate-100">
                 <tr>
-                  <th className="px-4 py-3 text-left">Internship</th>
-                  <th className="px-4 py-3 text-center">Mode</th>
-                  <th className="px-4 py-3 text-center">Stipend</th>
-                  <th className="px-4 py-3 text-center">Status</th>
-                  <th className="px-4 py-3 text-center">Actions</th>
+                  <th className="px-4 py-3 text-left font-semibold">Internship</th>
+                  <th className="px-4 py-3 text-left font-semibold">Important Details</th>
+                  <th className="px-4 py-3 text-center font-semibold">Mode</th>
+                  <th className="px-4 py-3 text-center font-semibold">Stipend</th>
+                  <th className="px-4 py-3 text-center font-semibold">Status</th>
+                  <th className="px-4 py-3 text-center font-semibold">Actions</th>
                 </tr>
               </thead>
 
               <tbody>
                 <AnimatePresence>
                   {filtered.length > 0 ? (
-                    filtered.map((item, index) => (
-                      <motion.tr
+                    filtered.map((item, index) => {
+                      const effectiveStatus = getEffectiveStatus(item);
+                      return (
+                        <motion.tr
                         key={item._id}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        onMouseEnter={() => setHoveredId(item._id)}
-                        onMouseLeave={() => setHoveredId(null)}
-                        className={`border-t ${
-                          hoveredId === item._id
-                            ? "bg-blue-50"
-                            : "hover:bg-blue-25"
-                        }`}
+                        className="border-t border-slate-100 hover:bg-slate-50"
                       >
-                        {/* Internship Info */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-lg overflow-hidden border">
+                            <div className="h-12 w-12 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
                               {item.thumbnail ? (
-                                <img
-                                  src={item.thumbnail}
-                                  alt={item.title}
-                                  className="w-full h-full object-cover"
-                                />
+                                <img src={item.thumbnail} alt={item.title} className="h-full w-full object-cover" />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-blue-100">
+                                <div className="flex h-full w-full items-center justify-center bg-blue-100 text-blue-700">
                                   <Briefcase size={16} />
                                 </div>
                               )}
                             </div>
 
                             <div>
-                              <p className="font-semibold">
-                                {item.title}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {item.duration} Months • Deadline{" "}
-                                {new Date(
-                                  item.deadline_at
-                                ).toLocaleDateString()}
-                              </p>
+                              <p className="font-semibold text-slate-900">{item.title || "Untitled Internship"}</p>
+                              <p className="text-xs text-slate-500">Posted: {formatDate(item.createdAt)}</p>
                             </div>
                           </div>
                         </td>
 
-                        {/* Mode */}
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex justify-center items-center gap-1 text-blue-600 font-medium">
-                            {getModeIcon(item.workmode)}
-                            {item.workmode}
+                        <td className="px-4 py-3">
+                          <div className="space-y-1 text-xs text-slate-600">
+                            <p>
+                              <span className="font-semibold text-slate-700">Location:</span> {item.location || "-"}
+                            </p>
+                            <p>
+                              <span className="font-semibold text-slate-700">Openings:</span> {item.openings ?? 0}
+                            </p>
+                            <p>
+                              <span className="font-semibold text-slate-700">Type:</span> {item.employment_type || "-"}
+                            </p>
+                            <p>
+                              <span className="font-semibold text-slate-700">Deadline:</span> {formatDate(item.deadline_at)}
+                            </p>
                           </div>
                         </td>
 
-                        {/* Stipend */}
-                        <td className="px-4 py-3 text-center font-medium">
-                          ₹{item.stipend_min} - ₹{item.stipend_max}
+                        <td className="px-4 py-3 text-center">
+                          <div className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 font-medium text-blue-700">
+                            {getModeIcon(item.workmode)}
+                            {item.workmode || "-"}
+                          </div>
                         </td>
 
-                        {/* Status */}
+                        <td className="px-4 py-3 text-center font-medium text-slate-700">
+                          {formatMoney(item.stipend_min)} - {formatMoney(item.stipend_max)}
+                        </td>
+
                         <td className="px-4 py-3 text-center">
                           <span
-                            className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusStyle(
-                              item.intern_status
+                            className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${getStatusStyle(
+                              effectiveStatus
                             )}`}
                           >
-                            {item.intern_status}
+                            {effectiveStatus}
                           </span>
                         </td>
 
-                        {/* Actions */}
                         <td className="px-4 py-3 text-center">
                           <div className="flex justify-center gap-2">
                             <Link
                               to={`/recruiter/internships/${item._id}`}
-                              className="p-2 bg-blue-100 rounded-lg hover:bg-blue-200"
+                              className="rounded-lg bg-blue-100 p-2 text-blue-700 hover:bg-blue-200"
+                              title="View"
                             >
                               <Eye size={16} />
                             </Link>
 
                             <Link
                               to={`/recruiter/internships/edit/${item._id}`}
-                              className="p-2 bg-indigo-100 rounded-lg hover:bg-indigo-200"
+                              className="rounded-lg bg-indigo-100 p-2 text-indigo-700 hover:bg-indigo-200"
+                              title="Edit"
                             >
                               <Pencil size={16} />
                             </Link>
 
                             <button
-                              className="p-2 bg-red-100 rounded-lg hover:bg-red-200"
+                              onClick={() => updateInternshipStatus(item)}
+                              disabled={
+                                actionLoadingId === item._id ||
+                                (item.intern_status !== "ACTIVE" && isInternshipExpired(item))
+                              }
+                              className="rounded-lg bg-rose-100 p-2 text-rose-700 hover:bg-rose-200 disabled:cursor-not-allowed disabled:opacity-60"
+                              title={
+                                item.intern_status !== "ACTIVE" && isInternshipExpired(item)
+                                  ? "Deadline passed - cannot activate"
+                                  : item.intern_status === "ACTIVE"
+                                  ? "Close"
+                                  : "Activate"
+                              }
                             >
                               <Ban size={16} />
                             </button>
                           </div>
                         </td>
-                      </motion.tr>
-                    ))
+                        </motion.tr>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td colSpan="5" className="text-center py-10">
-                        No internships found.
+                      <td colSpan="6" className="px-4 py-14">
+                        <div className="mx-auto max-w-sm text-center">
+                          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                            <Briefcase size={18} />
+                          </div>
+                          <p className="text-sm font-semibold text-slate-800">No internships found</p>
+                          <p className="mt-1 text-xs text-slate-500">Try another filter or create a new internship posting.</p>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -312,20 +448,16 @@ export default function InternshipList() {
             </table>
           </div>
 
-          {/* Footer Stats */}
           {filtered.length > 0 && (
-            <div className="px-5 py-4 bg-blue-50 border-t flex justify-between text-sm">
+            <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-600">
               <span>
-                Showing <strong>{filtered.length}</strong> of{" "}
-                <strong>{internships.length}</strong>
+                Showing <strong>{filtered.length}</strong> of <strong>{internships.length}</strong>
               </span>
               <span>
-                Active:{" "}
-                <strong>
-                  {internships.filter(
-                    (i) => i.intern_status === "ACTIVE"
-                  ).length}
-                </strong>
+                Active listings: <strong>{activeCount}</strong>
+              </span>
+              <span>
+                Expired listings: <strong>{expiredCount}</strong>
               </span>
             </div>
           )}

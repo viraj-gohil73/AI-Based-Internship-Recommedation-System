@@ -32,6 +32,7 @@ import Settings from "./pages/company/Dashboard/Settings";
 import Subscription from "./pages/company/Dashboard/Subscription";
 import InternshipList from "./pages/company/Dashboard/InternshipList";
 import CompanyInternshipView from "./pages/company/Dashboard/CompanyInternshipView";
+import CompanyEditInternship from "./pages/company/Dashboard/EditInternship";
 import Recruiter from "./pages/company/Dashboard/RecruiterList";
 import CompanyLayoutWrapper from "./layout/CompanyLayoutWrapper";
 import CompanyApprovals from "./pages/admin/CompanyApprovals";
@@ -65,6 +66,10 @@ import CreateInternship from "./pages/recruiter/CreateInternship";
 import PostInternship from "./pages/recruiter/PostInternship";
 import RecruiterSettings from "./pages/recruiter/Settings";
 import RecruiterApplicants from "./pages/recruiter/Applicants";
+import RecruiterInternshipView from "./pages/recruiter/InternshipView";
+import RecruiterEditInternship from "./pages/recruiter/EditInternship";
+import RecruiterApplicantDetail from "./pages/recruiter/ApplicantDetail";
+import RecruiterInterviews from "./pages/recruiter/Interviews";
 
 
 
@@ -83,7 +88,14 @@ function App() {
 <Route path="/recruiter/internships" element={<InternshipListr />} />
 <Route path="/recruiter/internships/create" element={<CreateInternship />} />
 <Route path="/recruiter/internships/post" element={<PostInternship />} />
+<Route path="/recruiter/internships/:id" element={<RecruiterInternshipView />} />
+<Route path="/recruiter/internships/edit/:id" element={<RecruiterEditInternship />} />
 <Route path="/recruiter/applicants" element={<RecruiterApplicants />} />
+<Route
+  path="/recruiter/applicants/:internshipId/:studentId"
+  element={<RecruiterApplicantDetail />}
+/>
+<Route path="/recruiter/interviews" element={<RecruiterInterviews />} />
 <Route path="/recruiter/settings" element={<RecruiterSettings />} />
 
     {/* future routes */}
@@ -196,6 +208,10 @@ function App() {
               path="/company/dashboard/internships/:id"
               element={<CompanyInternshipView />}
             />
+            <Route
+              path="/company/dashboard/internships/:id/edit"
+              element={<CompanyEditInternship />}
+            />
           </Route>
 
           {/* ========== OTHER ========== */}
@@ -203,24 +219,27 @@ function App() {
 
 
           <Route
-  path="/admin/login"
+  path="/login-admin"
   element={
     <AdminAuthRedirect>
       <LoginAdmin />
     </AdminAuthRedirect>
   }
 />
-          <Route path="/admin" element={<AdminLayout />}>
           <Route
-  path="/admin/companies/:id"
-  element={<CompanyDetails />}
-/>
+            path="/admin"
+            element={
+              <AdminProtectedRoute>
+                <AdminLayout />
+              </AdminProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
 
-            <Route path="dashboard" element={<AdminProtectedRoute>
-      <Dashboard />
-    </AdminProtectedRoute>} />
-            <Route path="approvals" element={<AdminProtectedRoute><CompanyApprovals /></AdminProtectedRoute>} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="approvals" element={<CompanyApprovals />} />
             <Route path="companies" element={<Companies />} />
+            <Route path="companies/:id" element={<CompanyDetails />} />
             <Route path="recruiters" element={<Recruiters />} />
             <Route path="students" element={<Students />} />
             <Route path="subscriptions" element={<SubscriptionManagement />} />

@@ -4,6 +4,12 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import Internship from "../models/Internship.js";
 import Student from "../models/Student.js";
+import Interview from "../models/Interview.js";
+import {
+  createNotification,
+  notifyAdmins,
+  runNotificationTask,
+} from "../services/notificationService.js";
 
 const APPLICATION_STATUSES = [
   "APPLIED",
@@ -12,6 +18,70 @@ const APPLICATION_STATUSES = [
   "SELECTED",
   "REJECTED",
 ];
+const INTERVIEW_STATUSES = ["SCHEDULED", "COMPLETED", "CANCELLED", "NO_SHOW"];
+const INTERVIEW_MODES = ["ONLINE", "OFFLINE", "PHONE"];
+
+const resolveRecruiterApplicationContext = async (recruiterId, internshipId, studentId) => {
+  if (
+    !mongoose.Types.ObjectId.isValid(internshipId) ||
+    !mongoose.Types.ObjectId.isValid(studentId)
+  ) {
+    return { error: { code: 400, message: "Invalid id provided" } };
+  }
+
+  const internship = await Internship.findOne({
+    _id: internshipId,
+    recruiter_id: recruiterId,
+  }).select("_id title company_id");
+
+  if (!internship) {
+    return { error: { code: 404, message: "Internship not found" } };
+  }
+
+  const student = await Student.findOne(
+    {
+      _id: studentId,
+      "appliedInternships.internship": internshipId,
+    },
+    {
+      fname: 1,
+      lname: 1,
+      email: 1,
+      profilePic: 1,
+      phone_no: 1,
+      city: 1,
+      state: 1,
+      address: 1,
+      dob: 1,
+      gender: 1,
+      skills: 1,
+      preferredLocation: 1,
+      languages: 1,
+      hobbies: 1,
+      projects: 1,
+      educations: 1,
+      certificates: 1,
+      socialLinks: 1,
+      resume: 1,
+      createdAt: 1,
+      appliedInternships: 1,
+    }
+  ).lean();
+
+  if (!student) {
+    return { error: { code: 404, message: "Application not found" } };
+  }
+
+  const application = (student.appliedInternships || []).find(
+    (entry) => String(entry.internship) === String(internshipId)
+  );
+
+  if (!application) {
+    return { error: { code: 404, message: "Application not found" } };
+  }
+
+  return { internship, student, application };
+};
 
 export const loginRecruiter = async (req, res) => {
   try {
@@ -171,7 +241,7 @@ export const updateApplicationStatus = async (req, res) => {
     const internship = await Internship.findOne({
       _id: internshipId,
       recruiter_id: req.recruiter?._id,
-    }).select("_id");
+    }).select("_id title company_id");
 
     if (!internship) {
       return res.status(404).json({ message: "Internship not found" });
@@ -185,6 +255,48 @@ export const updateApplicationStatus = async (req, res) => {
     if (!updateResult.matchedCount) {
       return res.status(404).json({ message: "Application not found" });
     }
+
+    await runNotificationTask("update-application-status", async () => {
+      const internshipTitle = internship.title || "Internship";
+
+      await createNotification({
+        recipientModel: "Student",
+        recipientId: studentId,
+        type: "APPLICATION_STATUS_UPDATED",
+        title: "Application status updated",
+        message: `Your application for ${internshipTitle} is now ${status}.`,
+        entityType: "Internship",
+        entityId: internship._id,
+        metadata: { status, recruiterId: req.recruiter?._id || null },
+      });
+
+      if (internship.company_id) {
+        await createNotification({
+          recipientModel: "Company",
+          recipientId: internship.company_id,
+          type: "APPLICATION_STATUS_UPDATED",
+          title: "Candidate status updated",
+          message: `Application status changed to ${status} for ${internshipTitle}.`,
+          entityType: "Internship",
+          entityId: internship._id,
+          metadata: { status, studentId },
+        });
+      }
+
+      await notifyAdmins({
+        type: "APPLICATION_STATUS_UPDATED",
+        title: "Application status changed",
+        message: `Status updated to ${status} for ${internshipTitle}.`,
+        entityType: "Internship",
+        entityId: internship._id,
+        metadata: {
+          status,
+          studentId,
+          recruiterId: req.recruiter?._id || null,
+          companyId: internship.company_id || null,
+        },
+      });
+    });
 
     return res.status(200).json({
       message: "Application status updated",
@@ -252,6 +364,232 @@ export const getStudentProfileForRecruiter = async (req, res) => {
     return res.status(200).json({ student });
   } catch (error) {
     console.error("Get student profile for recruiter error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getRecruiterApplicantDetail = async (req, res) => {
+  try {
+    const { internshipId, studentId } = req.params;
+    const context = await resolveRecruiterApplicationContext(
+      req.recruiter?._id,
+      internshipId,
+      studentId
+    );
+
+    if (context.error) {
+      return res.status(context.error.code).json({ message: context.error.message });
+    }
+
+    const { internship, student, application } = context;
+    const interviews = await Interview.find({
+      recruiterId: req.recruiter?._id,
+      internshipId,
+      studentId,
+    })
+      .sort({ scheduledAt: -1 })
+      .lean();
+
+    return res.status(200).json({
+      internship: {
+        _id: internship._id,
+        title: internship.title || "Internship",
+      },
+      application: {
+        internshipId: String(internship._id),
+        studentId: String(student._id),
+        status: application.status || "APPLIED",
+        appliedAt: application.appliedAt || null,
+      },
+      student: {
+        ...student,
+        appliedInternships: undefined,
+      },
+      interviews,
+    });
+  } catch (error) {
+    console.error("Get recruiter applicant detail error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getRecruiterInterviews = async (req, res) => {
+  try {
+    const { status, internshipId } = req.query;
+    const filter = { recruiterId: req.recruiter?._id };
+
+    if (status) {
+      if (!INTERVIEW_STATUSES.includes(status)) {
+        return res.status(400).json({ message: "Invalid interview status" });
+      }
+      filter.status = status;
+    }
+
+    if (internshipId) {
+      if (!mongoose.Types.ObjectId.isValid(internshipId)) {
+        return res.status(400).json({ message: "Invalid internship id" });
+      }
+      filter.internshipId = internshipId;
+    }
+
+    const interviews = await Interview.find(filter)
+      .sort({ scheduledAt: 1 })
+      .populate("internshipId", "title")
+      .populate("studentId", "fname lname email profilePic phone_no")
+      .lean();
+
+    return res.status(200).json({ interviews });
+  } catch (error) {
+    console.error("Get recruiter interviews error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const createRecruiterInterview = async (req, res) => {
+  try {
+    const {
+      internshipId,
+      studentId,
+      scheduledAt,
+      durationMinutes,
+      mode = "ONLINE",
+      meetingLink = "",
+      location = "",
+      notes = "",
+    } = req.body;
+
+    if (!scheduledAt) {
+      return res.status(400).json({ message: "scheduledAt is required" });
+    }
+
+    const scheduledDate = new Date(scheduledAt);
+    if (Number.isNaN(scheduledDate.getTime())) {
+      return res.status(400).json({ message: "Invalid scheduledAt value" });
+    }
+
+    if (!INTERVIEW_MODES.includes(mode)) {
+      return res.status(400).json({ message: "Invalid interview mode" });
+    }
+
+    const context = await resolveRecruiterApplicationContext(
+      req.recruiter?._id,
+      internshipId,
+      studentId
+    );
+    if (context.error) {
+      return res.status(context.error.code).json({ message: context.error.message });
+    }
+
+    const { internship } = context;
+    const interview = await Interview.create({
+      recruiterId: req.recruiter?._id,
+      companyId: internship.company_id || req.recruiter?.companyId || null,
+      internshipId,
+      studentId,
+      scheduledAt: scheduledDate,
+      durationMinutes:
+        Number.isFinite(Number(durationMinutes)) && Number(durationMinutes) > 0
+          ? Number(durationMinutes)
+          : 30,
+      mode,
+      meetingLink: `${meetingLink || ""}`.trim(),
+      location: `${location || ""}`.trim(),
+      notes: `${notes || ""}`.trim(),
+      status: "SCHEDULED",
+    });
+
+    await Student.updateOne(
+      { _id: studentId, "appliedInternships.internship": internshipId },
+      { $set: { "appliedInternships.$.status": "INTERVIEW" } }
+    );
+
+    await runNotificationTask("schedule-interview", async () => {
+      await createNotification({
+        recipientModel: "Student",
+        recipientId: studentId,
+        type: "INTERVIEW_SCHEDULED",
+        title: "Interview scheduled",
+        message: `Interview scheduled for ${internship.title || "your application"}.`,
+        entityType: "Internship",
+        entityId: internship._id,
+        metadata: {
+          interviewId: interview._id,
+          scheduledAt: interview.scheduledAt,
+          mode: interview.mode,
+        },
+      });
+    });
+
+    return res.status(201).json({
+      message: "Interview scheduled",
+      interview,
+    });
+  } catch (error) {
+    console.error("Create recruiter interview error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const updateRecruiterInterview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid interview id" });
+    }
+
+    const interview = await Interview.findOne({ _id: id, recruiterId: req.recruiter?._id });
+    if (!interview) {
+      return res.status(404).json({ message: "Interview not found" });
+    }
+
+    const updates = {};
+    const { scheduledAt, durationMinutes, mode, meetingLink, location, notes, status } = req.body;
+
+    if (typeof scheduledAt !== "undefined") {
+      const parsed = new Date(scheduledAt);
+      if (Number.isNaN(parsed.getTime())) {
+        return res.status(400).json({ message: "Invalid scheduledAt value" });
+      }
+      updates.scheduledAt = parsed;
+    }
+
+    if (typeof durationMinutes !== "undefined") {
+      const parsedDuration = Number(durationMinutes);
+      if (!Number.isFinite(parsedDuration) || parsedDuration <= 0) {
+        return res.status(400).json({ message: "Invalid durationMinutes value" });
+      }
+      updates.durationMinutes = parsedDuration;
+    }
+
+    if (typeof mode !== "undefined") {
+      if (!INTERVIEW_MODES.includes(mode)) {
+        return res.status(400).json({ message: "Invalid interview mode" });
+      }
+      updates.mode = mode;
+    }
+
+    if (typeof status !== "undefined") {
+      if (!INTERVIEW_STATUSES.includes(status)) {
+        return res.status(400).json({ message: "Invalid interview status" });
+      }
+      updates.status = status;
+    }
+
+    if (typeof meetingLink !== "undefined") updates.meetingLink = `${meetingLink || ""}`.trim();
+    if (typeof location !== "undefined") updates.location = `${location || ""}`.trim();
+    if (typeof notes !== "undefined") updates.notes = `${notes || ""}`.trim();
+
+    const updated = await Interview.findByIdAndUpdate(id, updates, {
+      new: true,
+      runValidators: true,
+    });
+
+    return res.status(200).json({
+      message: "Interview updated",
+      interview: updated,
+    });
+  } catch (error) {
+    console.error("Update recruiter interview error:", error);
     return res.status(500).json({ message: "Server error" });
   }
 };

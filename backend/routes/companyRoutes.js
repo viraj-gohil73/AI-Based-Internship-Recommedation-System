@@ -15,6 +15,12 @@ import {
   createCheckoutIntent,
   confirmSubscriptionPayment,
 } from "../controllers/subscriptionController.js";
+import {
+  listCompanyInternships,
+  getCompanyInternshipById,
+  updateCompanyInternship,
+  updateCompanyInternshipStatus,
+} from "../controllers/companyInternshipController.js";
 const router = express.Router();
 
 /* ================= OTP ================= */
@@ -49,6 +55,11 @@ router.get("/recruiters",companyAuth, getRecruiters);
 router.put("/recruiter/:id", companyAuth, updateRecruiter);
 router.patch("/recruiter/:id/status", companyAuth, updateRecruiterstatus);
 router.get("/recruiter/:id", companyAuth, getRecruiterById);
+
+router.get("/internships", companyAuth, listCompanyInternships);
+router.get("/internships/:id", companyAuth, getCompanyInternshipById);
+router.patch("/internships/:id", companyAuth, updateCompanyInternship);
+router.patch("/internships/:id/status", companyAuth, updateCompanyInternshipStatus);
 
 router.get("/subscription/plans", companyAuth, listSubscriptionPlans);
 router.get("/subscription/current", companyAuth, getCurrentCompanySubscription);

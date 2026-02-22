@@ -6,6 +6,11 @@ import Subscription from "../models/Subscription.js";
 import AuditLog from "../models/AuditLog.js";
 import bcrypt from "bcryptjs";
 import Internship from "../models/Internship.js";
+import {
+  createNotification,
+  notifyAdmins,
+  runNotificationTask,
+} from "../services/notificationService.js";
 
 const getActor = (req) =>
   req.headers["x-admin-email"] || "admin@system.com";
@@ -103,6 +108,26 @@ export const respondToCompany = async (req, res) => {
 
     company.verificationStatus = action;
     await company.save();
+    await runNotificationTask("admin-respond-company", async () => {
+      await createNotification({
+        recipientModel: "Company",
+        recipientId: company._id,
+        type: "COMPANY_VERIFICATION_UPDATED",
+        title: "Verification status updated",
+        message: `Your company verification status is now ${action}.`,
+        entityType: "Company",
+        entityId: company._id,
+      });
+
+      await notifyAdmins({
+        type: "COMPANY_VERIFICATION_UPDATED",
+        title: "Company verification updated",
+        message: `${company.companyName || company.email} marked as ${action}.`,
+        entityType: "Company",
+        entityId: company._id,
+        metadata: { action, actor: getActor(req) },
+      });
+    });
     await logAdminAction({
       action: `Company ${action.toLowerCase()}`,
       actor: getActor(req),
@@ -468,6 +493,28 @@ export const cancelSubscription = async (req, res) => {
     subscription.cancelAtPeriodEnd = false;
     subscription.currentPeriodEnd = new Date();
     await subscription.save();
+    await runNotificationTask("admin-cancel-subscription", async () => {
+      if (subscription.companyId?._id) {
+        await createNotification({
+          recipientModel: "Company",
+          recipientId: subscription.companyId._id,
+          type: "SUBSCRIPTION_CANCELLED",
+          title: "Subscription cancelled",
+          message: "Your subscription has been cancelled by admin.",
+          entityType: "Subscription",
+          entityId: subscription._id,
+        });
+      }
+
+      await notifyAdmins({
+        type: "SUBSCRIPTION_CANCELLED",
+        title: "Subscription cancelled",
+        message: `${subscription.companyId?.companyName || subscription.billingEmail} subscription cancelled.`,
+        entityType: "Subscription",
+        entityId: subscription._id,
+        metadata: { actor: getActor(req) },
+      });
+    });
 
     await logAdminAction({
       action: "Subscription cancelled",

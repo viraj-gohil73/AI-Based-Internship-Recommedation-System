@@ -1,6 +1,11 @@
 import mongoose from "mongoose";
 import Internship from "../models/Internship.js";
 import Student from "../models/Student.js";
+import {
+  createNotification,
+  notifyAdmins,
+  runNotificationTask,
+} from "../services/notificationService.js";
 
 const DEFAULT_MONTHLY_APPLICATION_LIMIT = 5;
 const MONTHLY_APPLICATION_LIMIT = Number.isFinite(Number(process.env.STUDENT_MONTHLY_APPLICATION_LIMIT))
@@ -232,7 +237,7 @@ export const applyInternship = async (req, res) => {
     }
 
     const internship = await Internship.findById(internshipId).select(
-      "_id intern_status"
+      "_id title intern_status recruiter_id company_id"
     );
 
     if (!internship) {
@@ -247,7 +252,7 @@ export const applyInternship = async (req, res) => {
     }
 
     const student = await Student.findById(req.studentId).select(
-      "appliedInternships savedInternships"
+      "fname lname appliedInternships savedInternships"
     );
     if (!student) {
       return res.status(404).json({ success: false, message: "Student not found" });
@@ -288,6 +293,60 @@ export const applyInternship = async (req, res) => {
     }
 
     await student.save();
+
+    await runNotificationTask("student-apply-internship", async () => {
+      const studentName = `${student.fname || ""} ${student.lname || ""}`.trim() || "A student";
+      const internshipTitle = internship.title || "Internship";
+
+      await createNotification({
+        recipientModel: "Student",
+        recipientId: student._id,
+        type: "APPLICATION_SUBMITTED",
+        title: "Application submitted",
+        message: `You applied for ${internshipTitle}.`,
+        entityType: "Internship",
+        entityId: internship._id,
+      });
+
+      if (internship.recruiter_id) {
+        await createNotification({
+          recipientModel: "Recruiter",
+          recipientId: internship.recruiter_id,
+          type: "NEW_APPLICATION",
+          title: "New internship application",
+          message: `${studentName} applied for ${internshipTitle}.`,
+          entityType: "Internship",
+          entityId: internship._id,
+          metadata: { studentId: student._id },
+        });
+      }
+
+      if (internship.company_id) {
+        await createNotification({
+          recipientModel: "Company",
+          recipientId: internship.company_id,
+          type: "NEW_APPLICATION",
+          title: "New internship application",
+          message: `${studentName} applied for ${internshipTitle}.`,
+          entityType: "Internship",
+          entityId: internship._id,
+          metadata: { studentId: student._id },
+        });
+      }
+
+      await notifyAdmins({
+        type: "APPLICATION_SUBMITTED",
+        title: "New internship application",
+        message: `${studentName} applied for ${internshipTitle}.`,
+        entityType: "Internship",
+        entityId: internship._id,
+        metadata: {
+          studentId: student._id,
+          recruiterId: internship.recruiter_id || null,
+          companyId: internship.company_id || null,
+        },
+      });
+    });
 
     return res.status(201).json({
       success: true,

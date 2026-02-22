@@ -52,7 +52,7 @@ export default function Sidebar_company({ open, onClose }) {
     localStorage.removeItem("adminToken");
     localStorage.removeItem("adminUser");
     localStorage.removeItem("user");
-    navigate("/admin/login", { replace: true });
+    navigate("/login-admin", { replace: true });
   };
 
   // 🔒 SAFE GUARD (VERY IMPORTANT)

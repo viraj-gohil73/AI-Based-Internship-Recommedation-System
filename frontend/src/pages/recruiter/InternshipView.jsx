@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Clock3, Briefcase, IndianRupee, Users } from "lucide-react";
+import { Clock3, Briefcase, IndianRupee } from "lucide-react";
 
 function formatDate(value) {
   if (!value) return "-";
@@ -18,7 +18,7 @@ function formatMoney(value) {
   }).format(n);
 }
 
-export default function CompanyInternshipView() {
+export default function RecruiterInternshipView() {
   const { id } = useParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -29,13 +29,13 @@ export default function CompanyInternshipView() {
       try {
         setLoading(true);
         setError("");
-        const token = localStorage.getItem("token");
-        const res = await fetch(`http://localhost:5000/api/company/internships/${id}`, {
+        const token = localStorage.getItem("recruiterToken");
+        const res = await fetch(`http://localhost:5000/api/recruiter/internships/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to fetch internship");
-        setInternship(data.internship || null);
+        setInternship(data);
       } catch (err) {
         setError(err.message || "Failed to fetch internship");
       } finally {
@@ -56,20 +56,18 @@ export default function CompanyInternshipView() {
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">{internship.title}</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Recruiter: {internship.recruiter?.name || "-"} | Applications: {internship.applicationsCount || 0}
-            </p>
+            <p className="mt-1 text-sm text-slate-500">Detailed internship overview for recruiters.</p>
           </div>
 
           <div className="flex gap-2">
             <Link
-              to="/company/dashboard/internships"
+              to="/recruiter/internships"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               Back
             </Link>
             <Link
-              to={`/company/dashboard/internships/${internship._id}/edit`}
+              to={`/recruiter/internships/edit/${internship._id}`}
               className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               Edit Internship
@@ -78,7 +76,7 @@ export default function CompanyInternshipView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
             <Briefcase size={16} />
@@ -109,15 +107,6 @@ export default function CompanyInternshipView() {
           </p>
           <p className="text-sm text-slate-600">Openings: {internship.openings || 0}</p>
           <p className="text-sm text-slate-600">Status: {internship.intern_status || "-"}</p>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <Users size={16} />
-            Applicants
-          </div>
-          <p className="text-sm text-slate-600">Total Applications: {internship.applicationsCount || 0}</p>
-          <p className="text-sm text-slate-600">Recruiter Email: {internship.recruiter?.email || "-"}</p>
         </div>
       </div>
 

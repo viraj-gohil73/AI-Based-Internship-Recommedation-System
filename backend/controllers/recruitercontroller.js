@@ -1,5 +1,10 @@
 import Recruiter from "../models/Recruiter.js";
 import bcrypt from "bcryptjs";
+import {
+  createNotification,
+  notifyAdmins,
+  runNotificationTask,
+} from "../services/notificationService.js";
 
 export const createRecruiter = async (req, res) => {
   try {
@@ -39,6 +44,37 @@ export const createRecruiter = async (req, res) => {
       mobile,
       canpost,
       companyId: req.companyId,
+    });
+
+    await runNotificationTask("company-create-recruiter", async () => {
+      await createNotification({
+        recipientModel: "Recruiter",
+        recipientId: recruiter._id,
+        type: "RECRUITER_ACCOUNT_CREATED",
+        title: "Recruiter account created",
+        message: "Your recruiter account has been created. You can now log in.",
+        entityType: "Recruiter",
+        entityId: recruiter._id,
+      });
+
+      await createNotification({
+        recipientModel: "Company",
+        recipientId: req.companyId,
+        type: "RECRUITER_ADDED",
+        title: "Recruiter added",
+        message: `${recruiter.name} has been added to your company.`,
+        entityType: "Recruiter",
+        entityId: recruiter._id,
+      });
+
+      await notifyAdmins({
+        type: "RECRUITER_ADDED",
+        title: "New recruiter added",
+        message: `${recruiter.name} (${recruiter.email}) was added by a company.`,
+        entityType: "Recruiter",
+        entityId: recruiter._id,
+        metadata: { companyId: req.companyId },
+      });
     });
 
     return res.status(201).json({

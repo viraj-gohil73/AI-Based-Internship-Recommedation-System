@@ -2,6 +2,11 @@ import Subscription from "../models/Subscription.js";
 import SubscriptionPayment from "../models/SubscriptionPayment.js";
 import { verifyWebhookSignature } from "../services/razorpayService.js";
 import { SUBSCRIPTION_STATUSES } from "../services/subscriptionService.js";
+import {
+  createNotification,
+  notifyAdmins,
+  runNotificationTask,
+} from "../services/notificationService.js";
 
 const fromUnixSeconds = (value) => {
   if (!value) return null;
@@ -98,6 +103,36 @@ export const handleRazorpayWebhook = async (req, res) => {
     };
     await subscription.save();
 
+    await runNotificationTask("razorpay-webhook", async () => {
+      await createNotification({
+        recipientModel: "Company",
+        recipientId: subscription.companyId,
+        type: "SUBSCRIPTION_WEBHOOK_EVENT",
+        title: "Subscription update",
+        message: `Subscription event received: ${event}. Current status: ${subscription.status}.`,
+        entityType: "Subscription",
+        entityId: subscription._id,
+        metadata: {
+          event,
+          providerSubscriptionId,
+          paymentId: paymentEntity?.id || null,
+        },
+      });
+
+      await notifyAdmins({
+        type: "SUBSCRIPTION_WEBHOOK_EVENT",
+        title: "Subscription webhook processed",
+        message: `Event ${event} processed for subscription ${providerSubscriptionId}.`,
+        entityType: "Subscription",
+        entityId: subscription._id,
+        metadata: {
+          event,
+          companyId: subscription.companyId,
+          paymentId: paymentEntity?.id || null,
+        },
+      });
+    });
+
     if (paymentEntity?.id) {
       await SubscriptionPayment.updateOne(
         {
@@ -150,4 +185,3 @@ export const handleRazorpayWebhook = async (req, res) => {
     return res.status(500).json({ success: false, message: "Webhook failed" });
   }
 };
-

@@ -18,6 +18,7 @@ import internshipRoutes from "./routes/internship.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import { seedSubscriptionSystem } from "./controllers/seedSubscriptionSystem.js";
 import { handleRazorpayWebhook } from "./controllers/paymentWebhookController.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -56,6 +57,7 @@ app.use("/api/admin", adminApprovalRoutes);
 app.use("/api/recruiter", recruiterAuthRoutes);
 app.use("/api/internships", internshipRoutes);
 app.use("/api/student", studentRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.listen(process.env.PORT, () =>
   console.log(`Server running on port ${process.env.PORT}`)
