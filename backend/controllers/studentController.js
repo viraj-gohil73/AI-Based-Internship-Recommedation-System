@@ -337,7 +337,6 @@ export const updateStudentProfile = async (req, res) => {
       gender,
       dob,
       phone,
-      email,
       address1,
       address2,
       city,
@@ -359,7 +358,6 @@ export const updateStudentProfile = async (req, res) => {
     if (Object.prototype.hasOwnProperty.call(req.body, "gender")) student.gender = gender || undefined;
     if (Object.prototype.hasOwnProperty.call(req.body, "dob")) student.dob = dob || undefined;
     if (Object.prototype.hasOwnProperty.call(req.body, "phone")) student.phone_no = phone || "";
-    if (Object.prototype.hasOwnProperty.call(req.body, "email")) student.email = email || student.email;
     if (Object.prototype.hasOwnProperty.call(req.body, "address1")) student.address1 = address1 || "";
     if (Object.prototype.hasOwnProperty.call(req.body, "address2")) student.address2 = address2 || "";
     if (Object.prototype.hasOwnProperty.call(req.body, "city")) student.city = city || "";

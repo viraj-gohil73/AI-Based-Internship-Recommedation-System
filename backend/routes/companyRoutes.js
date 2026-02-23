@@ -11,9 +11,6 @@ import { requireSubscriptionFeature } from "../middlewares/requireSubscriptionFe
 import {
   listSubscriptionPlans,
   getCurrentCompanySubscription,
-  getCompanySubscriptionPayments,
-  createCheckoutIntent,
-  confirmSubscriptionPayment,
 } from "../controllers/subscriptionController.js";
 import {
   listCompanyInternships,
@@ -21,6 +18,7 @@ import {
   updateCompanyInternship,
   updateCompanyInternshipStatus,
 } from "../controllers/companyInternshipController.js";
+import { listCompanyReviews } from "../controllers/feedbackController.js";
 const router = express.Router();
 
 /* ================= OTP ================= */
@@ -60,12 +58,10 @@ router.get("/internships", companyAuth, listCompanyInternships);
 router.get("/internships/:id", companyAuth, getCompanyInternshipById);
 router.patch("/internships/:id", companyAuth, updateCompanyInternship);
 router.patch("/internships/:id/status", companyAuth, updateCompanyInternshipStatus);
+router.get("/reviews", companyAuth, listCompanyReviews);
 
 router.get("/subscription/plans", companyAuth, listSubscriptionPlans);
 router.get("/subscription/current", companyAuth, getCurrentCompanySubscription);
-router.get("/subscription/payments", companyAuth, getCompanySubscriptionPayments);
-router.post("/subscription/checkout-intent", companyAuth, createCheckoutIntent);
-router.post("/subscription/confirm", companyAuth, confirmSubscriptionPayment);
 
 router.get(
   "/google/company/callback",

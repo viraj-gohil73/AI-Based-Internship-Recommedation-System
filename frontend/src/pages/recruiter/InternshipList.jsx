@@ -22,11 +22,9 @@ export default function InternshipList() {
   const [status, setStatus] = useState("ALL");
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState("");
-  const [subscriptionState, setSubscriptionState] = useState({
-    loading: true,
-    entitlements: null,
-    usage: null,
-    status: null,
+  const [postingLimits, setPostingLimits] = useState({
+    maxActivePostings: null,
+    activePostingsCount: 0,
   });
 
   useEffect(() => {
@@ -53,7 +51,7 @@ export default function InternshipList() {
   }, []);
 
   useEffect(() => {
-    const fetchSubscription = async () => {
+    const fetchPostingLimits = async () => {
       try {
         const token = localStorage.getItem("recruiterToken");
         const res = await fetch("http://localhost:5000/api/recruiter/subscription/current", {
@@ -62,35 +60,25 @@ export default function InternshipList() {
           },
         });
         const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || "Failed to fetch subscription");
-        }
-        setSubscriptionState({
-          loading: false,
-          entitlements: data.entitlements || null,
-          usage: data.usage || null,
-          status: data.data?.status || null,
+        if (!res.ok) return;
+        setPostingLimits({
+          maxActivePostings: data?.entitlements?.limits?.maxActivePostings ?? null,
+          activePostingsCount: data?.usage?.activePostingsCount ?? 0,
         });
       } catch (err) {
-        setSubscriptionState({
-          loading: false,
-          entitlements: null,
-          usage: null,
-          status: null,
+        setPostingLimits({
+          maxActivePostings: null,
+          activePostingsCount: 0,
         });
       }
     };
-    fetchSubscription();
+    fetchPostingLimits();
   }, []);
 
-  const maxActivePostings = subscriptionState.entitlements?.limits?.maxActivePostings;
-  const activePostingsCount = subscriptionState.usage?.activePostingsCount || 0;
   const postingLimitReached =
-    subscriptionState.entitlements?.accessAllowed &&
-    maxActivePostings !== null &&
-    maxActivePostings !== undefined &&
-    activePostingsCount >= maxActivePostings;
-  const canPost = subscriptionState.entitlements?.accessAllowed && !postingLimitReached;
+    postingLimits.maxActivePostings !== null &&
+    postingLimits.maxActivePostings !== undefined &&
+    postingLimits.activePostingsCount >= postingLimits.maxActivePostings;
 
   const isInternshipExpired = (internship) => {
     if (!internship?.deadline_at) return false;
@@ -228,10 +216,12 @@ export default function InternshipList() {
             <Link
               to="/recruiter/internships/create"
               onClick={(e) => {
-                if (!canPost) e.preventDefault();
+                if (postingLimitReached) e.preventDefault();
               }}
               className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
-                canPost ? "bg-blue-600 text-white shadow-sm hover:bg-blue-700" : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                postingLimitReached
+                  ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                  : "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
               }`}
             >
               <Plus size={18} />
@@ -240,11 +230,9 @@ export default function InternshipList() {
           </div>
         </motion.div>
 
-        {!subscriptionState.loading && !canPost && (
+        {postingLimitReached && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            {postingLimitReached
-              ? `Posting limit reached (${activePostingsCount}/${maxActivePostings}). Upgrade plan to continue.`
-              : `Posting is blocked (subscription status: ${subscriptionState.status || "UNKNOWN"}).`}
+            Posting limit reached ({postingLimits.activePostingsCount}/{postingLimits.maxActivePostings}).
           </div>
         )}
 

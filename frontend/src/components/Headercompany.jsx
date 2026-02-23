@@ -1,4 +1,4 @@
-import { Bell, CheckCheck, Menu, Search } from "lucide-react";
+import { Bell, CheckCheck, Menu, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCompany } from "../context/CompanyContext";
 
@@ -95,10 +95,26 @@ export default function Header({ title, onMenuClick }) {
     }
   };
 
+  const clearAllNotifications = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setNotifications([]);
+
+    try {
+      await fetch("http://localhost:5000/api/notifications/clear-all", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (error) {
+      console.error("Failed to clear company notifications:", error);
+    }
+  };
+
   if (loading) return null;
 
   return (
-    <header className="sticky top-0 z-30 bg-gradient-to-r from-white via-blue-50 to-white border-b border-blue-200 shadow-md px-4 sm:px-6 py-4">
+    <header className="sticky top-0 z-30 bg-gradient-to-r from-white via-blue-50 to-white border-b border-blue-200 shadow-md px-4 sm:px-6 py-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
@@ -153,6 +169,14 @@ export default function Header({ title, onMenuClick }) {
                       title="Mark all as read"
                     >
                       <CheckCheck size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearAllNotifications}
+                      className="p-1.5 rounded-md hover:bg-slate-100 text-red-500"
+                      title="Clear all notifications"
+                    >
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 )}

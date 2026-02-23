@@ -125,7 +125,7 @@ const ensureDefaultsForSubscription = (subscription, plan) => {
     subscription.totalAmount ??
     Number(subscription.get?.("amount")) ??
     pricing.totalAmount;
-  updates.provider = subscription.provider || "razorpay";
+  updates.provider = "manual";
   updates.meta = subscription.meta || {};
 
   if (
@@ -188,11 +188,10 @@ export const seedSubscriptionSystem = async () => {
       addonAmount: 0,
       totalAmount: 0,
       currency: "INR",
-      provider: "razorpay",
+      provider: "manual",
       meta: { source: "startup-migration" },
     });
   }
 
   console.log("Subscription system initialized");
 };
-

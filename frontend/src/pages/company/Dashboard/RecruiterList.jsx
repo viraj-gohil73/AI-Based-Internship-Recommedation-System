@@ -2,9 +2,6 @@ import { useEffect, useState } from "react";
 import { Eye, Pencil, Ban, CheckCircle, Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import UnderReviewAlert from "../../../components/UnderReviewAlert";
-import { useCompany } from "../../../context/CompanyContext"
-import { useSubscription } from "../../../context/SubscriptionContext";
 
 
 export default function RecruiterList() {
@@ -17,15 +14,6 @@ export default function RecruiterList() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const { company } = useCompany();
-  const { entitlements, usage, current } = useSubscription();
-  const lockedByVerification = company?.verificationStatus !== "APPROVED";
-  const lockedBySubscription = entitlements !== null && !entitlements?.accessAllowed;
-  const seatLimit = current?.totalRecruiterSeats ?? 0;
-  const usedSeats = usage?.recruitersCount ?? 0;
-  const seatLimitReached =
-    entitlements?.accessAllowed && seatLimit !== null && usedSeats >= seatLimit;
-  const isLocked = lockedByVerification || lockedBySubscription;
   const filteredRecruiters = recruiters.filter((r) => {
     const query = search.trim().toLowerCase();
     const matchesSearch =
@@ -151,34 +139,6 @@ export default function RecruiterList() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-4 py-4">
       <div className="max-w-7xl mx-auto">
-        {/* 🔒 STATUS MESSAGE */}
-        <AnimatePresence>
-          {(isLocked || seatLimitReached) && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="mb-6"
-            >
-              <UnderReviewAlert
-                message={
-                  lockedByVerification
-                    ? "Your company profile is under admin review."
-                    : seatLimitReached
-                    ? "Recruiter seat limit reached."
-                    : "Subscription access is currently locked."
-                }
-                subMessage={
-                  lockedByVerification
-                    ? "Add recruiters will be enabled after approval."
-                    : seatLimitReached
-                    ? `Used ${usedSeats} of ${seatLimit} seats. Upgrade plan to add more recruiters.`
-                    : "Approve company and keep trial/active subscription to continue."
-                }
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
 
 
         {/* Search + Filter */}
@@ -215,10 +175,10 @@ export default function RecruiterList() {
 
             <motion.button
               onClick={() => navigate("/company/dashboard/recruiters/add")}
-              disabled={isLocked || seatLimitReached}
+              
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer font-semibold shadow-md transition whitespace-nowrap"
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2 rounded-lg hover:from-blue-700 hover:to-indigo-700 cursor-pointer font-semibold shadow-md transition whitespace-nowrap"
             >
               <Plus size={20} />
               Add Recruiter
@@ -279,7 +239,7 @@ export default function RecruiterList() {
         className="hidden md:block bg-white rounded-lg shadow-lg overflow-hidden border border-blue-200"
       >
         <div className="overflow-x-auto">
-          <table className={`w-full ${isLocked ? "opacity-60" : ""}`}>
+          <table className="w-full">
             <thead className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
               <tr>
                 <th className="px-5 py-3 text-left font-semibold">Recruiter</th>
@@ -491,3 +451,4 @@ function ActionButtons({ r, navigate, onConfirm }){
     </div>
   );
 }
+

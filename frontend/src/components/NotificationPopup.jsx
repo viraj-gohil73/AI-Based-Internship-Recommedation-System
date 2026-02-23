@@ -107,11 +107,16 @@ export default function NotificationPopup({ onClose, updateCount }) {
   // Clear all notifications
   const clearAll = () => {
     setList([]);
-    fetch("http://localhost:5000/api/notifications/read-all", {
-      method: "PATCH",
+    const token =
+      localStorage.getItem("token") ||
+      localStorage.getItem("recruiterToken") ||
+      localStorage.getItem("adminToken");
+
+    fetch("http://localhost:5000/api/notifications/clear-all", {
+      method: "DELETE",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
 
-    setList(prev => prev.map(n => ({ ...n, read: true })));
     updateCount(0);
     setActive(null);
   };

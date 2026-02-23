@@ -23,8 +23,18 @@ export default function Recruiters() {
   const [loading, setLoading] = useState(true);
   const [selectedRecruiter, setSelectedRecruiter] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [profileLoadingId, setProfileLoadingId] = useState(null);
 
   const token = localStorage.getItem("adminToken");
+
+  const normalizeRecruiter = (r) => ({
+    ...r,
+    _id: r?._id || r?.id,
+    isActive:
+      r?.isActive ??
+      r?.isactive ??
+      (typeof r?.status === "string" ? r.status.toUpperCase() === "ACTIVE" : true),
+  });
 
   useEffect(() => {
     fetchRecruiters();
@@ -41,18 +51,11 @@ export default function Recruiters() {
       );
 
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.message || "Failed to load recruiters");
+      }
 
-      const normalized = (Array.isArray(data) ? data : data.data || []).map(
-        (r) => ({
-          ...r,
-          isActive:
-            r.isActive ??
-            r.isactive ??
-            (typeof r.status === "string"
-              ? r.status.toUpperCase() === "ACTIVE"
-              : true),
-        })
-      );
+      const normalized = (Array.isArray(data) ? data : data.data || []).map(normalizeRecruiter);
 
       setRecruiters(normalized);
     } catch {
@@ -64,7 +67,7 @@ export default function Recruiters() {
 
   const toggleBlock = async (id, isActive) => {
     try {
-      await fetch(
+      const res = await fetch(
         `http://localhost:5000/api/admin/recruiter/${id}/block`,
         {
           method: "PATCH",
@@ -75,20 +78,38 @@ export default function Recruiters() {
           body: JSON.stringify({ isActive: !isActive }),
         }
       );
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(result?.message || "Action failed");
+      }
 
-      toast.success(isActive ? "Recruiter blocked" : "Recruiter unblocked");
+      toast.success(result?.message || (isActive ? "Recruiter blocked" : "Recruiter unblocked"));
       fetchRecruiters();
-    } catch {
-      toast.error("Action failed");
+    } catch (error) {
+      toast.error(error.message || "Action failed");
     }
+  };
+
+  const getCompanyLabel = (r) => {
+    const value = r.companyName || r.company?.companyName || r.companyId || "-";
+    return typeof value === "string" ? value : value?.companyName || "-";
+  };
+
+  const getCompanyRef = (r) => {
+    const value = r?.companyId;
+    if (!value) return "-";
+    if (typeof value === "string") return value;
+    if (typeof value === "object") return value?._id || value?.id || value?.companyName || "-";
+    return "-";
   };
 
   const filteredRecruiters = useMemo(() => {
     return recruiters.filter((r) => {
+      const searchText = search.toLowerCase();
       const matchSearch =
-        r.name?.toLowerCase().includes(search.toLowerCase()) ||
-        r.email?.toLowerCase().includes(search.toLowerCase()) ||
-        r.companyName?.toLowerCase().includes(search.toLowerCase());
+        (r.name || "").toLowerCase().includes(searchText) ||
+        (r.email || "").toLowerCase().includes(searchText) ||
+        getCompanyLabel(r).toLowerCase().includes(searchText);
 
       const matchFilter =
         filter === "ALL"
@@ -110,9 +131,9 @@ export default function Recruiters() {
 
   const requestBlockChange = (recruiter) => {
     setConfirmAction({
-      id: recruiter._id,
+      id: recruiter._id || recruiter.id,
       isActive: recruiter.isActive,
-      name: recruiter.name,
+      name: recruiter.name || recruiter.email || "Recruiter",
     });
   };
 
@@ -124,8 +145,34 @@ export default function Recruiters() {
     closeConfirm();
   };
 
-  const getCompanyLabel = (r) =>
-    r.companyName || r.company?.companyName || r.companyId || "-";
+  const openRecruiterProfile = async (recruiter) => {
+    const recruiterId = recruiter?._id || recruiter?.id;
+    if (!recruiterId) {
+      toast.error("Recruiter id is missing");
+      return;
+    }
+
+    setSelectedRecruiter(recruiter);
+
+    try {
+      setProfileLoadingId(recruiterId);
+      const res = await fetch(`http://localhost:5000/api/admin/recruiter/${recruiterId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = await res.json();
+
+      if (!res.ok || !result?.success) {
+        throw new Error(result?.message || "Failed to load recruiter profile");
+      }
+
+      setSelectedRecruiter(normalizeRecruiter(result.data || recruiter));
+    } catch (error) {
+      console.error("Recruiter profile fetch failed:", error);
+      // Keep modal open with list data if detail API is unavailable.
+    } finally {
+      setProfileLoadingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -190,6 +237,7 @@ export default function Recruiters() {
             </div>
 
             <button
+              type="button"
               onClick={fetchRecruiters}
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
             >
@@ -270,12 +318,16 @@ export default function Recruiters() {
                   <td className="p-4 text-right">
                     <div className="inline-flex gap-2">
                       <button
-                        onClick={() => setSelectedRecruiter(r)}
-                        className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+                        type="button"
+                        onClick={() => openRecruiterProfile(r)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-xs font-medium"
+                        disabled={profileLoadingId === (r._id || r.id)}
                       >
-                        <Eye size={16} />
+                        <Eye size={15} />
+                        {profileLoadingId === (r._id || r.id) ? "Loading..." : "View Profile"}
                       </button>
                       <button
+                        type="button"
                         onClick={() => requestBlockChange(r)}
                         className={`p-2 rounded-lg text-white transition ${
                           r.isActive
@@ -324,12 +376,16 @@ export default function Recruiters() {
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => setSelectedRecruiter(r)}
-                  className="p-2 border border-slate-200 rounded-lg"
+                  type="button"
+                  onClick={() => openRecruiterProfile(r)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-2 border border-slate-200 rounded-lg text-xs"
+                  disabled={profileLoadingId === (r._id || r.id)}
                 >
                   <Eye size={16} />
+                  {profileLoadingId === (r._id || r.id) ? "..." : "View"}
                 </button>
                 <button
+                  type="button"
                   onClick={() => requestBlockChange(r)}
                   className={`p-2 rounded-lg text-white ${
                     r.isActive ? "bg-red-600" : "bg-green-600"
@@ -367,7 +423,7 @@ export default function Recruiters() {
                     </div>
                   )}
                   <div>
-                    <h3 className="text-xl font-semibold">{selectedRecruiter.name}</h3>
+                    <h3 className="text-xl font-semibold">{selectedRecruiter.name || selectedRecruiter.email || "Recruiter"}</h3>
                     <p className="text-sm text-white/80">
                       {selectedRecruiter.role || "Recruiter"}
                     </p>
@@ -384,10 +440,14 @@ export default function Recruiters() {
                       <span className="rounded-full bg-white/15 px-2.5 py-1 text-white/90">
                         Can post: {selectedRecruiter.canpost ? "Yes" : "No"}
                       </span>
+                      <span className="rounded-full bg-white/15 px-2.5 py-1 text-white/90">
+                        Gender: {selectedRecruiter.gender || "-"}
+                      </span>
                     </div>
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setSelectedRecruiter(null)}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white"
                 >
@@ -410,6 +470,13 @@ export default function Recruiters() {
                     <Phone size={14} className="text-slate-400" />
                     {selectedRecruiter.mobile || "-"}
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="text-slate-400" />
+                    Joined:{" "}
+                    {selectedRecruiter.createdAt
+                      ? new Date(selectedRecruiter.createdAt).toLocaleDateString()
+                      : "-"}
+                  </div>
                 </div>
               </div>
 
@@ -422,6 +489,12 @@ export default function Recruiters() {
                     <Building2 size={14} className="text-slate-400" />
                     {getCompanyLabel(selectedRecruiter)}
                   </div>
+                  {selectedRecruiter.companyEmail && (
+                    <div className="flex items-center gap-2">
+                      <Mail size={14} className="text-slate-400" />
+                      <span className="truncate">{selectedRecruiter.companyEmail}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <Calendar size={14} className="text-slate-400" />
                     {selectedRecruiter.last_login
@@ -437,7 +510,7 @@ export default function Recruiters() {
                 Recruiter ID: {selectedRecruiter._id || "-"}
               </span>
               <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                Company Ref: {selectedRecruiter.companyId || "-"}
+                Company Ref: {getCompanyRef(selectedRecruiter)}
               </span>
             </div>
           </div>
@@ -466,12 +539,14 @@ export default function Recruiters() {
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <button
+                type="button"
                 onClick={closeConfirm}
                 className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={confirmBlockChange}
                 className={`rounded-lg px-4 py-2 text-sm text-white ${
                   confirmAction.isActive

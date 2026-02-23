@@ -81,8 +81,8 @@ const subscriptionSchema = new mongoose.Schema(
     },
     provider: {
       type: String,
-      enum: ["razorpay"],
-      default: "razorpay",
+      enum: ["manual"],
+      default: "manual",
     },
     providerPlanId: {
       type: String,

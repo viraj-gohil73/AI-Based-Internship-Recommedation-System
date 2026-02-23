@@ -6,19 +6,21 @@ import {
   RotateCcw,
   Building2,
   Clock,
+  Inbox,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 /* ================= STATUS STYLES ================= */
 const statusStyle = {
-  SUBMITTED: "bg-amber-100 text-amber-700",
-  RESUBMISSION: "bg-blue-100 text-blue-700",
-  REJECTED: "bg-red-100 text-red-700",
+  SUBMITTED: "bg-amber-50 text-amber-700 border border-amber-200",
+  RESUBMISSION: "bg-blue-50 text-blue-700 border border-blue-200",
+  REJECTED: "bg-rose-50 text-rose-700 border border-rose-200",
 };
 
 export default function CompanyApprovals() {
   const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(false);
   const token = localStorage.getItem("adminToken");
   const navigate = useNavigate();
 
@@ -29,6 +31,7 @@ export default function CompanyApprovals() {
   /* ================= FETCH ================= */
   const fetchSubmittedCompanies = async () => {
     try {
+      setLoading(true);
       const res = await fetch(
         "http://localhost:5000/api/admin/companies/approvals",
         {
@@ -48,6 +51,8 @@ export default function CompanyApprovals() {
       setCompanies(result.data);
     } catch {
       toast.error("Failed to load approvals");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -82,26 +87,28 @@ export default function CompanyApprovals() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       {/* ================= HEADER ================= */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
-            <Building2 className="h-5 w-5" />
+      <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-indigo-50 via-sky-50 to-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+              <Building2 className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">
+                Company Approval Requests
+              </h1>
+              <p className="text-sm text-slate-600">
+                Review submissions and take quick decisions.
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">
-              Company Approval Requests
-            </h1>
-            <p className="text-sm text-slate-500">
-              Review, approve, or request changes from companies.
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-700">
-          <Clock className="h-4 w-4" />
-          Pending: {companies.length}
+          <div className="flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700">
+            <Clock className="h-4 w-4" />
+            Pending: {companies.length}
+          </div>
         </div>
       </div>
 
@@ -118,23 +125,30 @@ export default function CompanyApprovals() {
           </thead>
 
           <tbody>
-            {companies.map((c) => (
+            {!loading &&
+              companies.map((c) => (
               <tr
                 key={c._id}
                 className="border-t border-slate-200 hover:bg-slate-50"
               >
                 <td className="p-4">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={c.logo}
-                      alt="logo"
-                      className="w-10 h-10 rounded-full border border-slate-200 object-cover"
-                    />
+                    {c.logo ? (
+                      <img
+                        src={c.logo}
+                        alt="logo"
+                        className="w-10 h-10 rounded-full border border-slate-200 object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full border border-slate-200 bg-slate-100 text-slate-600 text-xs font-semibold flex items-center justify-center">
+                        {c.companyName?.slice(0, 2)?.toUpperCase() || "CO"}
+                      </div>
+                    )}
                     <div>
                       <p className="font-medium text-slate-900">
                         {c.companyName}
                       </p>
-                      <p className="text-xs text-slate-500">{c.industry}</p>
+                      <p className="text-xs text-slate-500">{c.industry || "Not specified"}</p>
                     </div>
                   </div>
                 </td>
@@ -179,10 +193,21 @@ export default function CompanyApprovals() {
               </tr>
             ))}
 
-            {companies.length === 0 && (
+            {loading && (
               <tr>
                 <td colSpan="4" className="p-10 text-center text-slate-500">
-                  No pending approvals
+                  Loading approval requests...
+                </td>
+              </tr>
+            )}
+
+            {!loading && companies.length === 0 && (
+              <tr>
+                <td colSpan="4" className="p-10">
+                  <div className="flex flex-col items-center justify-center gap-2 text-slate-500">
+                    <Inbox className="h-5 w-5" />
+                    <p>No pending approvals</p>
+                  </div>
                 </td>
               </tr>
             )}
@@ -192,17 +217,24 @@ export default function CompanyApprovals() {
 
       {/* ================= MOBILE CARDS ================= */}
       <div className="grid gap-4 md:hidden">
-        {companies.map((c) => (
+        {!loading &&
+          companies.map((c) => (
           <div
             key={c._id}
-            className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 space-y-4"
+            className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 space-y-4 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center gap-3">
-              <img
-                src={c.logo}
-                alt="logo"
-                className="w-11 h-11 rounded-full border border-slate-200 object-cover"
-              />
+              {c.logo ? (
+                <img
+                  src={c.logo}
+                  alt="logo"
+                  className="w-11 h-11 rounded-full border border-slate-200 object-cover"
+                />
+              ) : (
+                <div className="w-11 h-11 rounded-full border border-slate-200 bg-slate-100 text-slate-600 text-xs font-semibold flex items-center justify-center">
+                  {c.companyName?.slice(0, 2)?.toUpperCase() || "CO"}
+                </div>
+              )}
               <div className="flex-1">
                 <p className="font-semibold text-slate-900">
                   {c.companyName}
@@ -247,9 +279,18 @@ export default function CompanyApprovals() {
           </div>
         ))}
 
-        {companies.length === 0 && (
+        {loading && (
           <div className="text-center text-slate-500 py-8">
-            No pending approvals
+            Loading approval requests...
+          </div>
+        )}
+
+        {!loading && companies.length === 0 && (
+          <div className="rounded-2xl border border-slate-200 bg-white py-10 px-4">
+            <div className="text-center text-slate-500 flex flex-col items-center gap-2">
+              <Inbox className="h-5 w-5" />
+              No pending approvals
+            </div>
           </div>
         )}
       </div>
@@ -261,15 +302,15 @@ export default function CompanyApprovals() {
 
 function ActionBtn({ icon, label, onClick, color }) {
   const map = {
-    green: "bg-green-600 hover:bg-green-700",
+    green: "bg-emerald-600 hover:bg-emerald-700",
     blue: "bg-blue-600 hover:bg-blue-700",
-    red: "bg-red-600 hover:bg-red-700",
+    red: "bg-rose-600 hover:bg-rose-700",
   };
 
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1 cursor-pointer px-3 py-2 rounded-lg text-xs transition ${
+      className={`inline-flex items-center gap-1 cursor-pointer px-3 py-2 rounded-lg text-xs font-medium transition ${
         color
           ? `text-white ${map[color]}`
           : "border border-slate-200 text-slate-700 hover:bg-slate-50"
@@ -283,15 +324,15 @@ function ActionBtn({ icon, label, onClick, color }) {
 
 function MobileBtn({ label, onClick, color }) {
   const map = {
-    green: "bg-green-600",
+    green: "bg-emerald-600",
     blue: "bg-blue-600",
-    red: "bg-red-600",
+    red: "bg-rose-600",
   };
 
   return (
     <button
       onClick={onClick}
-      className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs text-white ${map[color]}`}
+      className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-white ${map[color]}`}
     >
       {label}
     </button>

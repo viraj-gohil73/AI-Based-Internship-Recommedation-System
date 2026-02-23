@@ -3,6 +3,11 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import fetch from "node-fetch";
 import { ensureTrialSubscription } from "../services/subscriptionService.js";
+import {
+  createNotification,
+  notifyAdmins,
+  runNotificationTask,
+} from "../services/notificationService.js";
 // ✅ REGISTER COMPANY
 export const registerCompany = async (req, res) => {
   try {
@@ -20,6 +25,25 @@ export const registerCompany = async (req, res) => {
     // Create company
     const newCompany = await Company.create({ email, password, companyName });
     await ensureTrialSubscription(newCompany._id);
+    await runNotificationTask("company-register", async () => {
+      await createNotification({
+        recipientModel: "Company",
+        recipientId: newCompany._id,
+        type: "COMPANY_REGISTERED",
+        title: "Registration successful",
+        message: "Your company account has been created successfully.",
+        entityType: "Company",
+        entityId: newCompany._id,
+      });
+
+      await notifyAdmins({
+        type: "COMPANY_REGISTERED",
+        title: "New company registered",
+        message: `${newCompany.companyName || newCompany.email} registered on the platform.`,
+        entityType: "Company",
+        entityId: newCompany._id,
+      });
+    });
     // Create JWT Token
     const token = jwt.sign(
       { id: newCompany._id, role: "company" },

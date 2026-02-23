@@ -8,7 +8,6 @@ export function SubscriptionProvider({ children }) {
   const [current, setCurrent] = useState(null);
   const [entitlements, setEntitlements] = useState(null);
   const [usage, setUsage] = useState(null);
-  const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -38,65 +37,21 @@ export function SubscriptionProvider({ children }) {
     return data;
   }, []);
 
-  const fetchPayments = useCallback(async () => {
-    const token = getToken();
-    const res = await fetch(`${API_BASE}/payments`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Failed to fetch payments");
-    setPayments(data.data || []);
-    return data.data || [];
-  }, []);
-
   const refreshAll = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
-      await Promise.all([fetchPlans(), fetchCurrent(), fetchPayments()]);
+      await Promise.all([fetchPlans(), fetchCurrent()]);
     } catch (err) {
       setError(err.message || "Failed to refresh subscription");
     } finally {
       setLoading(false);
     }
-  }, [fetchCurrent, fetchPayments, fetchPlans]);
+  }, [fetchCurrent, fetchPlans]);
 
   useEffect(() => {
     refreshAll();
   }, [refreshAll]);
-
-  const createCheckoutIntent = useCallback(async (payload) => {
-    const token = getToken();
-    const res = await fetch(`${API_BASE}/checkout-intent`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Failed to create checkout intent");
-    return data.data;
-  }, []);
-
-  const confirmCheckout = useCallback(async (payload) => {
-    const token = getToken();
-    const res = await fetch(`${API_BASE}/confirm`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Failed to confirm payment");
-    setCurrent(data.data || null);
-    setEntitlements(data.entitlements || null);
-    setUsage(data.usage || null);
-    return data;
-  }, []);
 
   const value = useMemo(
     () => ({
@@ -104,30 +59,22 @@ export function SubscriptionProvider({ children }) {
       current,
       entitlements,
       usage,
-      payments,
       loading,
       error,
       refreshAll,
       fetchCurrent,
       fetchPlans,
-      fetchPayments,
-      createCheckoutIntent,
-      confirmCheckout,
     }),
     [
       plans,
       current,
       entitlements,
       usage,
-      payments,
       loading,
       error,
       refreshAll,
       fetchCurrent,
       fetchPlans,
-      fetchPayments,
-      createCheckoutIntent,
-      confirmCheckout,
     ]
   );
 

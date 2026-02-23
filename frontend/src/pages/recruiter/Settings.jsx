@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import {
   Bell,
+  CheckCircle2,
   Eye,
   EyeOff,
   Lock,
@@ -16,21 +17,55 @@ function Toggle({ enabled, onChange }) {
     <button
       type="button"
       onClick={onChange}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 ${
+      className={`relative inline-flex h-7 w-12 items-center rounded-full border transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
         enabled
-          ? "bg-gradient-to-r from-blue-600 to-indigo-600"
-          : "bg-slate-300"
+          ? "border-blue-600 bg-gradient-to-r from-blue-600 to-indigo-600"
+          : "border-slate-300 bg-slate-200"
       }`}
       aria-checked={enabled}
       role="switch"
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition ${
           enabled ? "translate-x-6" : "translate-x-1"
         }`}
       />
     </button>
   );
+}
+
+function SectionShell({ icon: Icon, title, subtitle, children, className = "" }) {
+  return (
+    <section
+      className={`rounded-3xl border border-blue-100 bg-white/95 p-6 shadow-sm backdrop-blur ${className}`}
+    >
+      <div className="mb-5 flex items-start gap-3">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-700">
+          <Icon size={18} />
+        </span>
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+          <p className="text-sm text-slate-500">{subtitle}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function passwordStrength(value) {
+  if (!value) return { label: "Not set", score: 0, tone: "bg-slate-200" };
+
+  let score = 0;
+  if (value.length >= 8) score += 1;
+  if (/[A-Z]/.test(value)) score += 1;
+  if (/[a-z]/.test(value)) score += 1;
+  if (/\d/.test(value)) score += 1;
+  if (/[^A-Za-z0-9]/.test(value)) score += 1;
+
+  if (score <= 2) return { label: "Weak", score, tone: "bg-rose-500" };
+  if (score <= 4) return { label: "Medium", score, tone: "bg-amber-500" };
+  return { label: "Strong", score, tone: "bg-emerald-500" };
 }
 
 export default function RecruiterSettings() {
@@ -86,6 +121,19 @@ export default function RecruiterSettings() {
       localStorage.removeItem("recruiterSettingsNotifications");
     }
   }, []);
+
+  const enabledNotifications = useMemo(
+    () => Object.values(notifications).filter(Boolean).length,
+    [notifications]
+  );
+
+  const profileCompletion = useMemo(() => {
+    const fields = [profile.name, profile.email, profile.mobile, profile.designation];
+    const filled = fields.filter((item) => String(item || "").trim()).length;
+    return Math.round((filled / fields.length) * 100);
+  }, [profile]);
+
+  const strength = useMemo(() => passwordStrength(passwords.next), [passwords.next]);
 
   const handleProfileSave = async (e) => {
     e.preventDefault();
@@ -145,57 +193,47 @@ export default function RecruiterSettings() {
   };
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 sm:p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="bg-white border border-blue-100 rounded-2xl p-5 shadow-sm">
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
-            Recruiter Settings
-          </h1>
-          <p className="text-sm text-slate-600 mt-1">
-            Manage your account profile, alerts, and security preferences.
-          </p>
-        </div>
+    <div className="min-h-full bg-[radial-gradient(circle_at_top_right,_#dbeafe,_transparent_45%),radial-gradient(circle_at_bottom_left,_#e0e7ff,_transparent_42%),linear-gradient(to_bottom,_#f8fafc,_#eff6ff)] p-4 sm:p-6">
+      <div className="mx-auto max-w-6xl space-y-6">
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <section className="bg-white border border-blue-100 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-5">
-              <UserCog className="w-5 h-5 text-blue-600" />
-              <h2 className="text-lg font-semibold text-slate-900">
-                Profile Details
-              </h2>
-            </div>
-
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <SectionShell
+            icon={UserCog}
+            title="Profile Details"
+            subtitle="Keep your recruiter identity and contact details current."
+          >
             <form onSubmit={handleProfileSave} className="space-y-4">
               <div>
-                <label className="block text-sm text-slate-700 mb-1">Name</label>
+                <label className="mb-1 block text-sm text-slate-700">Name</label>
                 <input
                   type="text"
                   value={profile.name}
                   onChange={(e) =>
                     setProfile((prev) => ({ ...prev, name: e.target.value }))
                   }
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-slate-700 mb-1">
-                  Official Email
-                </label>
-                <input
-                  type="email"
-                  value={profile.email}
-                  disabled
-                  className="w-full border border-slate-200 bg-slate-100 text-slate-500 rounded-lg px-3 py-2 outline-none cursor-not-allowed"
-                />
+                <label className="mb-1 block text-sm text-slate-700">Official Email</label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={profile.email}
+                    disabled
+                    className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-slate-500 outline-none"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500">
+                    Locked
+                  </span>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm text-slate-700 mb-1">
-                    Mobile
-                  </label>
+                  <label className="mb-1 block text-sm text-slate-700">Mobile</label>
                   <input
                     type="text"
                     value={profile.mobile}
@@ -205,15 +243,13 @@ export default function RecruiterSettings() {
                         mobile: e.target.value.replace(/[^\d+]/g, ""),
                       }))
                     }
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
                     placeholder="Enter mobile number"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm text-slate-700 mb-1">
-                    Designation
-                  </label>
+                  <label className="mb-1 block text-sm text-slate-700">Designation</label>
                   <input
                     type="text"
                     value={profile.designation}
@@ -223,7 +259,7 @@ export default function RecruiterSettings() {
                         designation: e.target.value,
                       }))
                     }
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
                     placeholder="e.g. Talent Acquisition"
                   />
                 </div>
@@ -232,24 +268,21 @@ export default function RecruiterSettings() {
               <button
                 type="submit"
                 disabled={savingProfile}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-white font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 font-semibold text-white transition hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60 sm:w-auto"
               >
                 <Save size={16} />
                 {savingProfile ? "Saving..." : "Save Profile"}
               </button>
             </form>
-          </section>
+          </SectionShell>
 
-          <section className="bg-white border border-blue-100 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-5">
-              <Bell className="w-5 h-5 text-blue-600" />
-              <h2 className="text-lg font-semibold text-slate-900">
-                Notifications
-              </h2>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border border-slate-200 rounded-xl p-4">
+          <SectionShell
+            icon={Bell}
+            title="Notifications"
+            subtitle="Control where and how you receive recruiter updates."
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                 <div>
                   <p className="font-medium text-slate-800">Email Alerts</p>
                   <p className="text-xs text-slate-500">
@@ -264,7 +297,7 @@ export default function RecruiterSettings() {
                 />
               </div>
 
-              <div className="flex items-center justify-between border border-slate-200 rounded-xl p-4">
+              <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                 <div>
                   <p className="font-medium text-slate-800">Browser Alerts</p>
                   <p className="text-xs text-slate-500">
@@ -282,11 +315,9 @@ export default function RecruiterSettings() {
                 />
               </div>
 
-              <div className="flex items-center justify-between border border-slate-200 rounded-xl p-4">
+              <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                 <div>
-                  <p className="font-medium text-slate-800">
-                    New Internship Suggestions
-                  </p>
+                  <p className="font-medium text-slate-800">New Internship Suggestions</p>
                   <p className="text-xs text-slate-500">
                     Receive recommendations based on your postings.
                   </p>
@@ -307,24 +338,22 @@ export default function RecruiterSettings() {
               type="button"
               onClick={handleNotificationSave}
               disabled={savingNotifications}
-              className="mt-5 w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-white font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60"
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 font-semibold text-white transition hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60 sm:w-auto"
             >
               <Save size={16} />
               {savingNotifications ? "Saving..." : "Save Notifications"}
             </button>
-          </section>
+          </SectionShell>
 
-          <section className="xl:col-span-2 bg-white border border-blue-100 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-5">
-              <Shield className="w-5 h-5 text-blue-600" />
-              <h2 className="text-lg font-semibold text-slate-900">
-                Security
-              </h2>
-            </div>
-
+          <SectionShell
+            icon={Shield}
+            title="Security"
+            subtitle="Update account password and maintain a stronger login posture."
+            className="xl:col-span-2"
+          >
             <form
               onSubmit={handlePasswordSubmit}
-              className="grid grid-cols-1 md:grid-cols-3 gap-4"
+              className="grid grid-cols-1 gap-4 md:grid-cols-3"
             >
               {[
                 {
@@ -347,9 +376,7 @@ export default function RecruiterSettings() {
                 },
               ].map((item) => (
                 <div key={item.key}>
-                  <label className="block text-sm text-slate-700 mb-1">
-                    {item.label}
-                  </label>
+                  <label className="mb-1 block text-sm text-slate-700">{item.label}</label>
                   <div className="relative">
                     <input
                       type={item.visible ? "text" : "password"}
@@ -360,7 +387,7 @@ export default function RecruiterSettings() {
                           [item.key]: e.target.value,
                         }))
                       }
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-full rounded-xl border border-slate-300 px-3 py-2.5 pr-10 text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
                       placeholder="Enter password"
                       required
                     />
@@ -380,17 +407,36 @@ export default function RecruiterSettings() {
                 </div>
               ))}
 
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 md:col-span-3">
+                <div className="flex items-center justify-between text-sm">
+                  <p className="font-medium text-slate-700">Password strength</p>
+                  <p className="inline-flex items-center gap-1 font-semibold text-slate-700">
+                    <CheckCircle2 size={14} />
+                    {strength.label}
+                  </p>
+                </div>
+                <div className="mt-2 h-2 rounded-full bg-slate-200">
+                  <div
+                    className={`h-2 rounded-full transition-all ${strength.tone}`}
+                    style={{ width: `${Math.min(100, strength.score * 20)}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  Use at least 8 characters with uppercase, lowercase, number, and symbol.
+                </p>
+              </div>
+
               <div className="md:col-span-3">
                 <button
                   type="submit"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-white font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 font-semibold text-white transition hover:from-blue-700 hover:to-indigo-700 sm:w-auto"
                 >
                   <Lock size={16} />
                   Update Password
                 </button>
               </div>
             </form>
-          </section>
+          </SectionShell>
         </div>
       </div>
     </div>

@@ -1,7 +1,6 @@
 import Internship from "../models/Internship.js";
 import {
   createNotification,
-  notifyAdmins,
   runNotificationTask,
 } from "../services/notificationService.js";
 
@@ -133,31 +132,6 @@ export const createInternship = async (req, res) => {
         message: `${internshipTitle} has been created successfully.`,
         entityType: "Internship",
         entityId: internship._id,
-      });
-
-      if (req.recruiter.companyId) {
-        await createNotification({
-          recipientModel: "Company",
-          recipientId: req.recruiter.companyId,
-          type: "INTERNSHIP_CREATED",
-          title: "New internship posted",
-          message: `${internshipTitle} has been posted by your recruiter team.`,
-          entityType: "Internship",
-          entityId: internship._id,
-          metadata: { recruiterId: req.recruiter._id },
-        });
-      }
-
-      await notifyAdmins({
-        type: "INTERNSHIP_CREATED",
-        title: "New internship posted",
-        message: `${internshipTitle} has been posted.`,
-        entityType: "Internship",
-        entityId: internship._id,
-        metadata: {
-          recruiterId: req.recruiter._id,
-          companyId: req.recruiter.companyId || null,
-        },
       });
     });
 

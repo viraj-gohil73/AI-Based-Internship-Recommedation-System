@@ -16,9 +16,10 @@ import { useCompany } from "../context/CompanyContext";
 export default function Sidebar_company({ open, onClose }) {
   const { company, loading } = useCompany();
   const navigate = useNavigate();
+  const companyName = company?.companyName?.trim() || "Company";
 
   const menu = [
-    { name: "Overview", icon: LayoutDashboard, path: "/company/dashboard/overview" },
+    { name: "Dashboard", icon: LayoutDashboard, path: "/company/dashboard/dashboard" },
     { name: "Recruiters", icon: Users, path: "/company/dashboard/recruiters" },
     { name: "Internships", icon: Briefcase, path: "/company/dashboard/internships" },
     { name: "Analytics", icon: BarChart3, path: "/company/dashboard/analytics" },
@@ -55,13 +56,20 @@ export default function Sidebar_company({ open, onClose }) {
         ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5">
-          <span className="text-lg font-bold text-blue-600">
-            {company?.companyName || "Company"}
-          </span>
-          <button onClick={onClose} className="lg:hidden">
-            <X size={20} />
-          </button>
+        <div className="border-b border-blue-100 bg-gradient-to-r from-blue-50 to-white p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+                Company Panel
+              </p>
+              <p className="truncate text-lg font-bold text-slate-900">
+                Welcome, {companyName}
+              </p>
+            </div>
+            <button onClick={onClose} className="rounded-md p-1 text-slate-500 transition hover:bg-white lg:hidden">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Menu */}

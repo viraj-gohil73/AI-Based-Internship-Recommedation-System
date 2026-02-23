@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 import Internship from "../models/Internship.js";
 import Student from "../models/Student.js";
+import InternshipFeedback from "../models/InternshipFeedback.js";
 import {
   createNotification,
-  notifyAdmins,
   runNotificationTask,
 } from "../services/notificationService.js";
 
@@ -30,6 +30,28 @@ const getMonthlyAppliedCount = (entries = [], date = new Date()) => {
   }).length;
 };
 
+const isInternshipCompleted = (internshipDoc) => {
+  if (!internshipDoc) return false;
+  if (internshipDoc.intern_status === "CLOSED") return true;
+
+  const now = new Date();
+
+  if (internshipDoc.deadline_at) {
+    const deadline = new Date(internshipDoc.deadline_at);
+    if (!Number.isNaN(deadline.getTime()) && deadline < now) return true;
+  }
+
+  if (internshipDoc.starting_date && Number(internshipDoc.duration) > 0) {
+    const endDate = new Date(internshipDoc.starting_date);
+    if (!Number.isNaN(endDate.getTime())) {
+      endDate.setMonth(endDate.getMonth() + Number(internshipDoc.duration));
+      if (endDate < now) return true;
+    }
+  }
+
+  return false;
+};
+
 const toClientInternship = (internshipDoc) => {
   if (!internshipDoc) return null;
 
@@ -54,6 +76,7 @@ const toClientInternship = (internshipDoc) => {
     perks: Array.isArray(internshipDoc.perks) ? internshipDoc.perks : [],
     about_work: internshipDoc.about_work || "",
     who_can_apply: internshipDoc.who_can_apply || "",
+    starting_date: internshipDoc.starting_date || null,
     deadline_at: internshipDoc.deadline_at || null,
     createdAt: internshipDoc.createdAt || null,
     intern_status: internshipDoc.intern_status || "",
@@ -136,13 +159,49 @@ export const getAppliedInternships = async (req, res) => {
       return res.status(404).json({ success: false, message: "Student not found" });
     }
 
+    const internshipIds = (student.appliedInternships || [])
+      .map((entry) => entry?.internship?._id || entry?.internship)
+      .filter(Boolean);
+
+    const feedbackRows = internshipIds.length
+      ? await InternshipFeedback.find({
+          studentId: req.studentId,
+          internshipId: { $in: internshipIds },
+        })
+          .select("internshipId rating")
+          .lean()
+      : [];
+
+    const feedbackMap = new Map(
+      feedbackRows.map((row) => [
+        String(row.internshipId),
+        { hasFeedback: true, rating: Number(row.rating || 0) },
+      ])
+    );
+
     const appliedInternships = (student.appliedInternships || [])
       .filter((entry) => entry?.internship)
-      .map((entry) => ({
-        ...toClientInternship(entry.internship),
-        applicationStatus: entry.status || "APPLIED",
-        appliedAt: entry.appliedAt || null,
-      }));
+      .map((entry) => {
+        const internship = toClientInternship(entry.internship);
+        const internshipId = String(internship?._id || "");
+        const feedbackInfo = feedbackMap.get(internshipId) || {
+          hasFeedback: false,
+          rating: 0,
+        };
+        const internshipCompleted = isInternshipCompleted(entry.internship);
+        const canGiveFeedback =
+          (entry.status || "APPLIED") === "SELECTED" && internshipCompleted;
+
+        return {
+          ...internship,
+          applicationStatus: entry.status || "APPLIED",
+          appliedAt: entry.appliedAt || null,
+          internshipCompleted,
+          canGiveFeedback,
+          hasFeedback: feedbackInfo.hasFeedback,
+          feedbackRating: feedbackInfo.rating,
+        };
+      });
 
     return res.status(200).json({
       success: true,
@@ -320,32 +379,6 @@ export const applyInternship = async (req, res) => {
           metadata: { studentId: student._id },
         });
       }
-
-      if (internship.company_id) {
-        await createNotification({
-          recipientModel: "Company",
-          recipientId: internship.company_id,
-          type: "NEW_APPLICATION",
-          title: "New internship application",
-          message: `${studentName} applied for ${internshipTitle}.`,
-          entityType: "Internship",
-          entityId: internship._id,
-          metadata: { studentId: student._id },
-        });
-      }
-
-      await notifyAdmins({
-        type: "APPLICATION_SUBMITTED",
-        title: "New internship application",
-        message: `${studentName} applied for ${internshipTitle}.`,
-        entityType: "Internship",
-        entityId: internship._id,
-        metadata: {
-          studentId: student._id,
-          recruiterId: internship.recruiter_id || null,
-          companyId: internship.company_id || null,
-        },
-      });
     });
 
     return res.status(201).json({

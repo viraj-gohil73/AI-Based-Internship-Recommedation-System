@@ -1,5 +1,10 @@
 import Company from "../models/Company.js";
 import { ensureTrialSubscription } from "../services/subscriptionService.js";
+import {
+  createNotification,
+  notifyAdmins,
+  runNotificationTask,
+} from "../services/notificationService.js";
 export const createCompany = async (req, res) => {
   try {
     const company = new Company(req.body);
@@ -71,6 +76,25 @@ export const submitVerification = async (req, res) => {
     // ✅ Submit for verification
     company.verificationStatus = "SUBMITTED";
     await company.save();
+    await runNotificationTask("company-submit-verification", async () => {
+      await createNotification({
+        recipientModel: "Company",
+        recipientId: company._id,
+        type: "COMPANY_VERIFICATION_SUBMITTED",
+        title: "Verification submitted",
+        message: "Your profile has been submitted for admin verification.",
+        entityType: "Company",
+        entityId: company._id,
+      });
+
+      await notifyAdmins({
+        type: "COMPANY_VERIFICATION_SUBMITTED",
+        title: "Company verification submitted",
+        message: `${company.companyName || company.email} submitted verification documents.`,
+        entityType: "Company",
+        entityId: company._id,
+      });
+    });
 
     res.status(200).json({
       success: true,

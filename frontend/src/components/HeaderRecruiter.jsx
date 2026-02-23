@@ -1,4 +1,4 @@
-import { Bell, CheckCheck, Menu } from "lucide-react";
+import { Bell, CheckCheck, Menu, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRecruiter } from "../context/RecruiterContext";
 
@@ -67,6 +67,22 @@ export default function RecruiterHeader({ title, onMenuClick }) {
     }
   };
 
+  const clearAllNotifications = async () => {
+    const token = localStorage.getItem("recruiterToken");
+    if (!token) return;
+
+    setNotifications([]);
+
+    try {
+      await fetch("http://localhost:5000/api/notifications/clear-all", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (error) {
+      console.error("Failed to clear recruiter notifications:", error);
+    }
+  };
+
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
@@ -100,7 +116,7 @@ export default function RecruiterHeader({ title, onMenuClick }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white border-b-2 border-slate-200 px-4 py-3">
+    <header className="sticky top-0 z-30 bg-white border-b-2 border-slate-200 px-4 py-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
@@ -132,14 +148,24 @@ export default function RecruiterHeader({ title, onMenuClick }) {
               <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-slate-800">Notifications</h3>
                 {notifications.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={markAllRead}
-                    className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500"
-                    title="Mark all as read"
-                  >
-                    <CheckCheck size={16} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={markAllRead}
+                      className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500"
+                      title="Mark all as read"
+                    >
+                      <CheckCheck size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearAllNotifications}
+                      className="p-1.5 rounded-md hover:bg-slate-100 text-red-500"
+                      title="Clear all notifications"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 )}
               </div>
 

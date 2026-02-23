@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Download, Eye, FileText, Trash2, Upload } from "lucide-react";
 import toast from "react-hot-toast";
 import StudentLayout from "../../layout/StudentLayout";
+import { supabase } from "../../utils/supabaseClient";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 const ACCEPT_ATTR = ".pdf,.doc,.docx";
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 const ACCEPTED_TYPES = [
@@ -11,8 +12,7 @@ const ACCEPTED_TYPES = [
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
-const UPLOADCARE_PUBLIC_KEY =
-  import.meta.env.VITE_UPLOADCARE_PUBLIC_KEY || window.UPLOADCARE_PUBLIC_KEY || "";
+const SUPABASE_RESUME_BUCKET = import.meta.env.VITE_SUPABASE_RESUME_BUCKET || "resumes";
 
 const getFileNameFromUrl = (url = "") => {
   if (!url) return "resume";
@@ -109,27 +109,34 @@ export default function MyResume() {
     return true;
   };
 
-  const uploadResumeToUploadcare = async (file) => {
-    if (!UPLOADCARE_PUBLIC_KEY) {
-      throw new Error("Upload service key missing. Set VITE_UPLOADCARE_PUBLIC_KEY.");
+  const uploadResumeToSupabase = async (file) => {
+    if (!supabase) {
+      throw new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
     }
 
-    const formData = new FormData();
-    formData.append("UPLOADCARE_PUB_KEY", UPLOADCARE_PUBLIC_KEY);
-    formData.append("UPLOADCARE_STORE", "1");
-    formData.append("file", file);
+    const normalizedName = (file.name || "resume")
+      .replace(/\s+/g, "-")
+      .replace(/[^a-zA-Z0-9._-]/g, "");
+    const filePath = `student-resumes/${Date.now()}-${normalizedName}`;
 
-    const uploadResponse = await fetch("https://upload.uploadcare.com/base/", {
-      method: "POST",
-      body: formData,
-    });
+    const { error: uploadError } = await supabase.storage
+      .from(SUPABASE_RESUME_BUCKET)
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        contentType: file.type || undefined,
+        upsert: false,
+      });
 
-    const uploadData = await uploadResponse.json();
-    if (!uploadResponse.ok || !uploadData?.file) {
-      throw new Error(uploadData?.error?.content || "Upload failed");
+    if (uploadError) {
+      throw new Error(uploadError.message || "Upload failed");
     }
 
-    return `https://ucarecdn.com/${uploadData.file}/`;
+    const { data } = supabase.storage.from(SUPABASE_RESUME_BUCKET).getPublicUrl(filePath);
+    if (!data?.publicUrl) {
+      throw new Error("Upload succeeded but public URL is not available.");
+    }
+
+    return data.publicUrl;
   };
 
   const handleSelectFile = async (event) => {
@@ -141,7 +148,7 @@ export default function MyResume() {
       setUploading(true);
       setSaving(true);
 
-      const cdnUrl = await uploadResumeToUploadcare(file);
+      const cdnUrl = await uploadResumeToSupabase(file);
       if (!cdnUrl) {
         throw new Error("Upload failed. No file URL returned.");
       }
@@ -198,7 +205,7 @@ export default function MyResume() {
           <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
             <h1 className="text-lg font-semibold text-slate-900">Resume Manager</h1>
             <p className="mt-1 text-sm text-slate-500">
-              Upload your resume to Uploadcare and save its link to your profile.
+              Upload your resume to Supabase Storage and save its link to your profile.
             </p>
           </div>
 
@@ -244,7 +251,7 @@ export default function MyResume() {
                         {resumeName || getFileNameFromUrl(resumeUrl)}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {formatFileSize(resumeSize) || "Uploaded to Uploadcare"}
+                        {formatFileSize(resumeSize) || "Uploaded to Supabase Storage"}
                       </p>
                     </div>
                   </div>

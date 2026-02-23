@@ -20,6 +20,7 @@
     "react-hook-form": "^7.65.0",
     "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.9.4",
+    "@supabase/supabase-js": "^2.57.4",
     "tailwindcss": "^4.1.16",
     "zod": "^4.1.12"
   },

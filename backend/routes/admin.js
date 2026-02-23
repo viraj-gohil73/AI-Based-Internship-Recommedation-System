@@ -6,6 +6,7 @@ import {
   getApprovedCompanies,
   toggleCompanyActive,
   getRecruiters,
+  getRecruiterDetails,
   toggleRecruiterActive,
   getStudents,
   toggleStudentActive,
@@ -66,6 +67,7 @@ router.get(
    RECRUITERS (ADMIN)
 ========================================= */
 router.get("/recruiters", getRecruiters);
+router.get("/recruiter/:id", getRecruiterDetails);
 router.patch("/recruiter/:id/block", toggleRecruiterActive);
 
 /* =========================================

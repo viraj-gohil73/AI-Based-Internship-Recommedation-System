@@ -45,6 +45,10 @@ export default function ExploreInternships() {
   const [location, setLocation] = useState("");
   const [mode, setMode] = useState("all");
   const [type, setType] = useState("all");
+  const [minStipend, setMinStipend] = useState("0");
+  const [maxDuration, setMaxDuration] = useState("all");
+  const [minOpenings, setMinOpenings] = useState("0");
+  const [skillFilter, setSkillFilter] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [page, setPage] = useState(1);
 
@@ -111,13 +115,21 @@ export default function ExploreInternships() {
 
   useEffect(() => {
     setPage(1);
-  }, [query, location, mode, type, sortBy]);
+  }, [query, location, mode, type, minStipend, maxDuration, minOpenings, skillFilter, sortBy]);
+
+  const locationSuggestions = useMemo(
+    () =>
+      [...new Set(internships.map((i) => i.location).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b)),
+    [internships]
+  );
 
   const filtered = useMemo(() => {
     let list = [...internships];
+    const normalize = (value) => String(value || "").trim().toLowerCase();
 
     if (query.trim()) {
-      const q = query.toLowerCase();
+      const q = query.trim().toLowerCase();
       list = list.filter((i) =>
         i.title.toLowerCase().includes(q) ||
         i.company.toLowerCase().includes(q) ||
@@ -127,23 +139,51 @@ export default function ExploreInternships() {
     }
 
     if (location.trim()) {
-      const l = location.toLowerCase();
+      const l = location.trim().toLowerCase();
       list = list.filter((i) => i.location.toLowerCase().includes(l));
     }
 
-    if (mode !== "all") list = list.filter((i) => i.workmode === mode);
-    if (type !== "all") list = list.filter((i) => i.employmentType === type);
+    if (mode !== "all") list = list.filter((i) => normalize(i.workmode) === normalize(mode));
+    if (type !== "all") list = list.filter((i) => normalize(i.employmentType) === normalize(type));
+
+    const minStipendValue = Number(minStipend || 0);
+    if (minStipendValue > 0) {
+      list = list.filter((i) => Math.max(i.stipendMin || 0, i.stipendMax || 0) >= minStipendValue);
+    }
+
+    if (maxDuration !== "all") {
+      const durationValue = Number(maxDuration);
+      list = list.filter((i) => i.duration > 0 && i.duration <= durationValue);
+    }
+
+    const minOpeningsValue = Number(minOpenings || 0);
+    if (minOpeningsValue > 0) {
+      list = list.filter((i) => (i.openings || 0) >= minOpeningsValue);
+    }
+
+    if (skillFilter.trim()) {
+      const skill = skillFilter.trim().toLowerCase();
+      list = list.filter((i) => i.skills.some((s) => s.toLowerCase().includes(skill)));
+    }
 
     if (sortBy === "newest") list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     if (sortBy === "deadline") list.sort((a, b) => new Date(a.deadlineAt) - new Date(b.deadlineAt));
     if (sortBy === "stipend") list.sort((a, b) => b.stipendMax - a.stipendMax);
 
     return list;
-  }, [internships, query, location, mode, type, sortBy]);
+  }, [internships, query, location, mode, type, minStipend, maxDuration, minOpenings, skillFilter, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const activeFiltersCount = [location.trim(), mode !== "all", type !== "all"].filter(Boolean).length;
+  const activeFiltersCount = [
+    location.trim(),
+    mode !== "all",
+    type !== "all",
+    Number(minStipend) > 0,
+    maxDuration !== "all",
+    Number(minOpenings) > 0,
+    skillFilter.trim(),
+  ].filter(Boolean).length;
   const isMonthlyLimitReached =
     applyLimit.monthlyApplicationLimit > 0 &&
     applyLimit.appliedThisMonth >= applyLimit.monthlyApplicationLimit;
@@ -222,45 +262,51 @@ export default function ExploreInternships() {
 
   return (
     <StudentLayout title="Explore Internships">
-      <div className="min-h-full bg-slate-50 p-4 md:p-6">
+      <div className="min-h-full bg-gradient-to-b from-blue-50 via-indigo-50 to-slate-100 p-4 md:p-6">
         {error ? (
           <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
         ) : null}
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">Find Your Next Internship</h2>
-              <p className="text-sm text-slate-600">Browse active roles and apply quickly.</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">{filtered.length} results</span>
-              <span className="rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700">{activeFiltersCount} active filters</span>
-              {applyLimit.monthlyApplicationLimit > 0 ? (
-                <span className="rounded-full bg-amber-50 px-3 py-1 font-medium text-amber-700">
-                  {applyLimit.remainingThisMonth} / {applyLimit.monthlyApplicationLimit} applications left this month
-                </span>
-              ) : null}
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery("");
-                  setLocation("");
-                  setMode("all");
-                  setType("all");
-                  setSortBy("newest");
-                }}
-                className="rounded-xl border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Reset
-              </button>
+        <section className="overflow-hidden rounded-2xl border border-indigo-200 bg-white shadow-md">
+          <div className="bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-600 p-4 text-white md:p-5">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold md:text-xl">Find Your Next Internship</h2>
+                <p className="text-sm text-indigo-50">Browse active roles and apply quickly.</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="rounded-full bg-white/20 px-3 py-1 font-medium text-white backdrop-blur">{filtered.length} results</span>
+                <span className="rounded-full bg-white/20 px-3 py-1 font-medium text-white backdrop-blur">{activeFiltersCount} active filters</span>
+                {applyLimit.monthlyApplicationLimit > 0 ? (
+                  <span className="rounded-full bg-white/20 px-3 py-1 font-medium text-white backdrop-blur">
+                    {applyLimit.remainingThisMonth} / {applyLimit.monthlyApplicationLimit} applications left this month
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery("");
+                    setLocation("");
+                    setMode("all");
+                    setType("all");
+                    setMinStipend("0");
+                    setMaxDuration("all");
+                    setMinOpenings("0");
+                    setSkillFilter("");
+                    setSortBy("newest");
+                  }}
+                  className="rounded-xl border border-white/40 bg-white/20 px-3 py-1.5 font-medium text-white transition hover:bg-white/30"
+                >
+                  Reset
+                </button>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="sticky top-0 z-20 mt-4 rounded-2xl border border-slate-200 bg-white/95 p-4 shadow-sm backdrop-blur">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
-            <label className="lg:col-span-2 flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2">
+        <section className="sticky top-0 z-20 mt-4 rounded-2xl border border-blue-200 bg-white/90 p-4 shadow-md backdrop-blur">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-7">
+            <label className="lg:col-span-2 flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200">
               <Search size={16} className="text-slate-500" />
               <input
                 value={query}
@@ -273,27 +319,60 @@ export default function ExploreInternships() {
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Location"
-              className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none"
+              list="location-suggestions"
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
             />
-            <select value={mode} onChange={(e) => setMode(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none">
+            <datalist id="location-suggestions">
+              {locationSuggestions.map((loc) => (
+                <option key={loc} value={loc} />
+              ))}
+            </datalist>
+            <select value={mode} onChange={(e) => setMode(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
               <option value="all">All modes</option>
               <option value="Remote">Remote</option>
               <option value="Hybrid">Hybrid</option>
               <option value="Onsite">Onsite</option>
             </select>
-            <select value={type} onChange={(e) => setType(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none">
+            <select value={type} onChange={(e) => setType(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
               <option value="all">All types</option>
               <option value="Full Time">Full Time</option>
               <option value="Part Time">Part Time</option>
             </select>
+            <select value={minStipend} onChange={(e) => setMinStipend(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
+              <option value="0">Any stipend</option>
+              <option value="5000">INR 5,000+</option>
+              <option value="10000">INR 10,000+</option>
+              <option value="15000">INR 15,000+</option>
+              <option value="20000">INR 20,000+</option>
+            </select>
+            <select value={maxDuration} onChange={(e) => setMaxDuration(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
+              <option value="all">Any duration</option>
+              <option value="3">Up to 3 months</option>
+              <option value="6">Up to 6 months</option>
+              <option value="12">Up to 12 months</option>
+            </select>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm text-slate-600">Sorted by</p>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none">
-              <option value="newest">Newest</option>
-              <option value="deadline">Closest deadline</option>
-              <option value="stipend">Highest stipend</option>
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <label className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200">
+              <Search size={16} className="text-slate-500" />
+              <input
+                value={skillFilter}
+                onChange={(e) => setSkillFilter(e.target.value)}
+                placeholder="Filter by skill (React, Java...)"
+                className="w-full bg-transparent text-sm outline-none"
+              />
+            </label>
+            <select value={minOpenings} onChange={(e) => setMinOpenings(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
+              <option value="0">Any openings</option>
+              <option value="1">1+ openings</option>
+              <option value="3">3+ openings</option>
+              <option value="5">5+ openings</option>
+            </select>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
+              <option value="newest">Sort: Newest</option>
+              <option value="deadline">Sort: Closest deadline</option>
+              <option value="stipend">Sort: Highest stipend</option>
             </select>
           </div>
         </section>
@@ -312,12 +391,16 @@ export default function ExploreInternships() {
                 const applyKey = `apply:${item.id}`;
                 const saveBusy = busyIds.has(saveKey);
                 const applyBusy = busyIds.has(applyKey);
+                const isApplied = appliedIds.has(item.id);
+                const cardTone = isApplied
+                  ? "border-blue-200 bg-gradient-to-br from-blue-50 via-white to-indigo-50"
+                  : "border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-blue-50";
 
                 return (
-                  <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+                  <article key={item.id} className={`rounded-2xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${cardTone}`}>
                     <div className="flex flex-col gap-4">
                       <div className="flex items-start gap-3">
-                        <div className="h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+                        <div className="h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200">
                           {item.companyLogo ? (
                             <img src={item.companyLogo} alt={`${item.company} logo`} className="h-full w-full object-cover" />
                           ) : (
@@ -331,11 +414,11 @@ export default function ExploreInternships() {
                           <h3 className="truncate text-lg font-semibold text-slate-900">{item.title}</h3>
                           <p className="truncate text-sm text-slate-600">{item.company}</p>
                           <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-700">
-                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1"><MapPin size={14} /> {item.location}</span>
-                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1"><Briefcase size={14} /> {item.workmode} / {item.employmentType}</span>
-                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1"><Wallet size={14} /> {formatStipend(item.stipendMin, item.stipendMax)}</span>
-                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1"><Clock3 size={14} /> {item.duration || 0} months</span>
-                            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1"><Users size={14} /> {item.openings || 0} openings</span>
+                            <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800"><MapPin size={14} /> {item.location}</span>
+                            <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800"><Briefcase size={14} /> {item.workmode} / {item.employmentType}</span>
+                            <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800"><Wallet size={14} /> {formatStipend(item.stipendMin, item.stipendMax)}</span>
+                            <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800"><Clock3 size={14} /> {item.duration || 0} months</span>
+                            <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800"><Users size={14} /> {item.openings || 0} openings</span>
                           </div>
                         </div>
                       </div>
@@ -345,12 +428,12 @@ export default function ExploreInternships() {
                       {item.skills.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                           {item.skills.slice(0, 5).map((skill, index) => (
-                            <span key={`${item.id}-skill-${index}`} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                            <span key={`${item.id}-skill-${index}`} className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
                               {skill}
                             </span>
                           ))}
                           {item.skills.length > 5 ? (
-                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                            <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
                               +{item.skills.length - 5} more
                             </span>
                           ) : null}
@@ -361,7 +444,7 @@ export default function ExploreInternships() {
                         <Link
                           to={`/student/explore/${item.id}`}
                           state={{ internship: item }}
-                          className="inline-flex items-center gap-1 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          className="inline-flex items-center gap-1 rounded-xl border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100"
                         >
                           <Eye size={15} />
                           View Details
@@ -369,18 +452,18 @@ export default function ExploreInternships() {
                         <button
                           type="button"
                           onClick={() => applyInternship(item.id)}
-                          disabled={appliedIds.has(item.id) || applyBusy || isMonthlyLimitReached}
+                          disabled={isApplied || applyBusy || isMonthlyLimitReached}
                           className={`rounded-xl px-3 py-2 text-sm font-medium ${
-                            appliedIds.has(item.id) ? "bg-emerald-100 text-emerald-700" : "bg-emerald-600 text-white hover:bg-emerald-700"
+                            isApplied ? "border border-blue-300 bg-blue-100 text-blue-700" : "bg-blue-600 text-white hover:bg-blue-700"
                           }`}
                         >
-                          {applyBusy ? "Applying..." : appliedIds.has(item.id) ? "Applied" : "Apply"}
+                          {applyBusy ? "Applying..." : isApplied ? "Applied" : "Apply"}
                         </button>
                         <button
                           type="button"
                           onClick={() => toggleSave(item.id)}
                           disabled={saveBusy}
-                          className="inline-flex items-center gap-1 rounded-xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                          className="inline-flex items-center gap-1 rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100"
                         >
                           {savedIds.has(item.id) ? <BookmarkCheck size={15} className="text-blue-600" /> : <BookmarkPlus size={15} />}
                           {saveBusy ? "Saving..." : savedIds.has(item.id) ? "Saved" : "Save"}
@@ -395,14 +478,14 @@ export default function ExploreInternships() {
         </div>
 
         {!loading ? (
-          <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm">
+          <div className="mt-4 flex items-center justify-between rounded-2xl border border-indigo-200 bg-white px-4 py-3 text-sm shadow-sm">
             <p className="text-slate-600">Page {page} of {totalPages}</p>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium disabled:opacity-50"
+                className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 font-medium text-indigo-700 disabled:opacity-50"
               >
                 Prev
               </button>
@@ -410,7 +493,7 @@ export default function ExploreInternships() {
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium disabled:opacity-50"
+                className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 font-medium text-indigo-700 disabled:opacity-50"
               >
                 Next
               </button>

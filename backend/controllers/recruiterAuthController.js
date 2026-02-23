@@ -7,7 +7,6 @@ import Student from "../models/Student.js";
 import Interview from "../models/Interview.js";
 import {
   createNotification,
-  notifyAdmins,
   runNotificationTask,
 } from "../services/notificationService.js";
 
@@ -270,31 +269,15 @@ export const updateApplicationStatus = async (req, res) => {
         metadata: { status, recruiterId: req.recruiter?._id || null },
       });
 
-      if (internship.company_id) {
-        await createNotification({
-          recipientModel: "Company",
-          recipientId: internship.company_id,
-          type: "APPLICATION_STATUS_UPDATED",
-          title: "Candidate status updated",
-          message: `Application status changed to ${status} for ${internshipTitle}.`,
-          entityType: "Internship",
-          entityId: internship._id,
-          metadata: { status, studentId },
-        });
-      }
-
-      await notifyAdmins({
+      await createNotification({
+        recipientModel: "Recruiter",
+        recipientId: req.recruiter?._id,
         type: "APPLICATION_STATUS_UPDATED",
-        title: "Application status changed",
-        message: `Status updated to ${status} for ${internshipTitle}.`,
+        title: "Application status updated",
+        message: `You updated ${internshipTitle} application status to ${status}.`,
         entityType: "Internship",
         entityId: internship._id,
-        metadata: {
-          status,
-          studentId,
-          recruiterId: req.recruiter?._id || null,
-          companyId: internship.company_id || null,
-        },
+        metadata: { status, studentId },
       });
     });
 
@@ -504,6 +487,22 @@ export const createRecruiterInterview = async (req, res) => {
     );
 
     await runNotificationTask("schedule-interview", async () => {
+      await createNotification({
+        recipientModel: "Recruiter",
+        recipientId: req.recruiter?._id,
+        type: "INTERVIEW_SCHEDULED",
+        title: "Interview scheduled",
+        message: `Interview scheduled for ${internship.title || "an application"}.`,
+        entityType: "Internship",
+        entityId: internship._id,
+        metadata: {
+          interviewId: interview._id,
+          scheduledAt: interview.scheduledAt,
+          mode: interview.mode,
+          studentId,
+        },
+      });
+
       await createNotification({
         recipientModel: "Student",
         recipientId: studentId,

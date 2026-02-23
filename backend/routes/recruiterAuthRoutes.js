@@ -17,7 +17,6 @@ import { getRecruiterCurrentSubscription } from "../controllers/subscriptionCont
 import Internship from "../models/Internship.js";
 import {
   createNotification,
-  notifyAdmins,
   runNotificationTask,
 } from "../services/notificationService.js";
 
@@ -186,32 +185,6 @@ router.patch("/internships/:id/status", recruiterAuth, async (req, res) => {
         message: `${internshipTitle} is now ${intern_status}.`,
         entityType: "Internship",
         entityId: updated._id,
-      });
-
-      if (req.recruiter.companyId) {
-        await createNotification({
-          recipientModel: "Company",
-          recipientId: req.recruiter.companyId,
-          type: "INTERNSHIP_STATUS_UPDATED",
-          title: "Internship status changed",
-          message: `${internshipTitle} status changed to ${intern_status}.`,
-          entityType: "Internship",
-          entityId: updated._id,
-          metadata: { recruiterId: req.recruiter._id },
-        });
-      }
-
-      await notifyAdmins({
-        type: "INTERNSHIP_STATUS_UPDATED",
-        title: "Internship status changed",
-        message: `${internshipTitle} status is now ${intern_status}.`,
-        entityType: "Internship",
-        entityId: updated._id,
-        metadata: {
-          recruiterId: req.recruiter._id,
-          companyId: req.recruiter.companyId || null,
-          status: intern_status,
-        },
       });
     });
 

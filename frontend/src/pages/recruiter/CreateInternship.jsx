@@ -29,15 +29,13 @@ export default function RecruiterInternshipForm() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
-  const [subscriptionState, setSubscriptionState] = useState({
-    loading: true,
-    entitlements: null,
-    usage: null,
-    status: null,
+  const [postingLimits, setPostingLimits] = useState({
+    maxActivePostings: null,
+    activePostingsCount: 0,
   });
 
   useEffect(() => {
-    const fetchSubscription = async () => {
+    const fetchPostingLimits = async () => {
       try {
         const token = localStorage.getItem("recruiterToken");
         const res = await fetch("http://localhost:5000/api/recruiter/subscription/current", {
@@ -46,37 +44,26 @@ export default function RecruiterInternshipForm() {
           },
         });
         const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || "Failed to fetch subscription access");
-        }
-        setSubscriptionState({
-          loading: false,
-          entitlements: data.entitlements || null,
-          usage: data.usage || null,
-          status: data.data?.status || null,
+        if (!res.ok) return;
+        setPostingLimits({
+          maxActivePostings: data?.entitlements?.limits?.maxActivePostings ?? null,
+          activePostingsCount: data?.usage?.activePostingsCount ?? 0,
         });
       } catch (err) {
-        setSubscriptionState({
-          loading: false,
-          entitlements: null,
-          usage: null,
-          status: null,
+        setPostingLimits({
+          maxActivePostings: null,
+          activePostingsCount: 0,
         });
       }
     };
 
-    fetchSubscription();
+    fetchPostingLimits();
   }, []);
 
-  const maxActivePostings = subscriptionState.entitlements?.limits?.maxActivePostings;
-  const activePostingsCount = subscriptionState.usage?.activePostingsCount || 0;
   const postingLimitReached =
-    subscriptionState.entitlements?.accessAllowed &&
-    maxActivePostings !== null &&
-    maxActivePostings !== undefined &&
-    activePostingsCount >= maxActivePostings;
-  const canCreateInternship =
-    subscriptionState.entitlements?.accessAllowed && !postingLimitReached;
+    postingLimits.maxActivePostings !== null &&
+    postingLimits.maxActivePostings !== undefined &&
+    postingLimits.activePostingsCount >= postingLimits.maxActivePostings;
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -111,11 +98,9 @@ export default function RecruiterInternshipForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!canCreateInternship) {
+    if (postingLimitReached) {
       setError(
-        postingLimitReached
-          ? "Active posting limit reached. Upgrade your plan to post more internships."
-          : "Subscription access is blocked. Company approval + active trial/plan is required."
+        `Active posting limit reached (${postingLimits.activePostingsCount}/${postingLimits.maxActivePostings}).`
       );
       return;
     }
@@ -177,11 +162,9 @@ export default function RecruiterInternshipForm() {
             Post Internship
           </h1>
           <p className="text-gray-600 mt-2">Create and publish a new internship opportunity</p>
-          {!subscriptionState.loading && !canCreateInternship && (
+          {postingLimitReached && (
             <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              {postingLimitReached
-                ? `Posting limit reached (${activePostingsCount}/${maxActivePostings}).`
-                : `Posting is blocked (subscription status: ${subscriptionState.status || "UNKNOWN"}).`}
+              Posting limit reached ({postingLimits.activePostingsCount}/{postingLimits.maxActivePostings}).
             </div>
           )}
         </motion.div>
@@ -448,7 +431,7 @@ export default function RecruiterInternshipForm() {
           >
             <motion.button
               type="submit"
-              disabled={loading || subscriptionState.loading || !canCreateInternship}
+              disabled={loading || postingLimitReached}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={`relative px-10 py-3 rounded-xl font-bold text-md text-white transition overflow-hidden shadow-lg ${

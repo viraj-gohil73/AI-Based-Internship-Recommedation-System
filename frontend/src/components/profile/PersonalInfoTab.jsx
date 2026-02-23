@@ -333,7 +333,7 @@ export default function PersonalInfoTab() {
                 placeholder="Enter Email Address"
                 value={profile.email}
                 error={errors.email}
-                onChange={(e) => handleChange("email", e.target.value)}
+                disabled
               />
             </div>
           </div>

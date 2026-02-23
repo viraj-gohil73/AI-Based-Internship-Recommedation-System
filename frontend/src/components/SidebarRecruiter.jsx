@@ -14,13 +14,14 @@ import { useRecruiter } from "../context/RecruiterContext";
 export default function SidebarRecruiter({ open, onClose }) {
   const navigate = useNavigate();
   const { recruiter, loading } = useRecruiter();
+  const recruiterName = recruiter?.name?.trim() || "Recruiter";
 
   const menu = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/recruiter/dashboard" },
     { name: "Internships", icon: Briefcase, path: "/recruiter/internships" },
     { name: "Applicants", icon: Users, path: "/recruiter/applicants" },
     { name: "Interviews", icon: CalendarClock, path: "/recruiter/interviews" },
-    { name: "Analytics", icon: BarChart3, path: "/recruiter/analytics" },
+    { name: "Analytics & Reports", icon: BarChart3, path: "/recruiter/analytics" },
     { name: "Settings", icon: Settings, path: "/recruiter/settings" },
   ];
 
@@ -47,13 +48,20 @@ export default function SidebarRecruiter({ open, onClose }) {
         ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5">
-          <span className="text-lg font-bold text-blue-600">
-            {recruiter?.name || "Recruiter"}
-          </span>
-          <button onClick={onClose} className="lg:hidden">
-            <X size={20} />
-          </button>
+        <div className="border-b border-blue-100 bg-gradient-to-r from-blue-50 to-white p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+                Recruiter Panel
+              </p>
+              <p className="truncate text-lg font-bold text-slate-900">
+                Welcome, {recruiterName}
+              </p>
+            </div>
+            <button onClick={onClose} className="rounded-md p-1 text-slate-500 transition hover:bg-white lg:hidden">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Menu */}
@@ -126,3 +134,4 @@ export default function SidebarRecruiter({ open, onClose }) {
     </>
   );
 }
+

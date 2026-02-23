@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import {
   Bell,
-  Building2,
   Eye,
   EyeOff,
   Lock,
   Save,
   Shield,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import UnderReviewAlert from "../../../components/UnderReviewAlert";
 import { useCompany } from "../../../context/CompanyContext";
 
@@ -36,16 +36,8 @@ function Toggle({ enabled, onChange, disabled }) {
 }
 
 export default function CompanySettings() {
-  const { company, updateCompany } = useCompany();
+  const { company } = useCompany();
   const isLocked = company?.verificationStatus !== "APPROVED";
-
-  const [profile, setProfile] = useState({
-    companyName: "",
-    email: "",
-    mobile: "",
-    website: "",
-    industry: "",
-  });
 
   const [passwords, setPasswords] = useState({
     current: "",
@@ -66,19 +58,7 @@ export default function CompanySettings() {
   });
 
   const [loadingPassword, setLoadingPassword] = useState(false);
-  const [savingProfile, setSavingProfile] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
-
-  useEffect(() => {
-    if (!company) return;
-    setProfile({
-      companyName: company.companyName || "",
-      email: company.email || "",
-      mobile: company.mobile || "",
-      website: company.website || "",
-      industry: company.industry || "",
-    });
-  }, [company]);
 
   useEffect(() => {
     const saved = localStorage.getItem("companySettingsNotifications");
@@ -91,31 +71,6 @@ export default function CompanySettings() {
       localStorage.removeItem("companySettingsNotifications");
     }
   }, []);
-
-  const handleProfileSave = async (e) => {
-    e.preventDefault();
-    if (isLocked) return;
-
-    if (!profile.companyName.trim()) {
-      toast.error("Company name is required");
-      return;
-    }
-
-    setSavingProfile(true);
-    try {
-      await updateCompany({
-        companyName: profile.companyName.trim(),
-        mobile: profile.mobile.trim(),
-        website: profile.website.trim(),
-        industry: profile.industry.trim(),
-      });
-      toast.success("Company profile updated");
-    } catch (err) {
-      toast.error(err.message || "Profile update failed");
-    } finally {
-      setSavingProfile(false);
-    }
-  };
 
   const handleNotificationsSave = () => {
     if (isLocked) return;
@@ -162,8 +117,6 @@ export default function CompanySettings() {
   return (
     <div className="min-h-full bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 sm:p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-       
-
         {isLocked && (
           <UnderReviewAlert
             message="Your company profile is under admin review."
@@ -171,117 +124,24 @@ export default function CompanySettings() {
           />
         )}
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          <section
-            className={`bg-white border border-blue-100 rounded-2xl p-6 shadow-sm ${
-              isLocked ? "opacity-60 pointer-events-none" : ""
-            }`}
-          >
-            <div className="flex items-center gap-2 mb-5">
-              <Building2 className="w-5 h-5 text-blue-600" />
-              <h2 className="text-lg font-semibold text-slate-900">
-                Company Profile
-              </h2>
+        <section className="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Company Profile</h2>
+              <p className="text-sm text-slate-600">
+                Company details are now managed from the dedicated profile page.
+              </p>
             </div>
+            <Link
+              to="/company/dashboard/profile"
+              className="inline-flex items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+            >
+              Open Company Profile
+            </Link>
+          </div>
+        </section>
 
-            <form onSubmit={handleProfileSave} className="space-y-4">
-              <div>
-                <label className="block text-sm text-slate-700 mb-1">
-                  Company Name
-                </label>
-                <input
-                  type="text"
-                  value={profile.companyName}
-                  onChange={(e) =>
-                    setProfile((prev) => ({
-                      ...prev,
-                      companyName: e.target.value,
-                    }))
-                  }
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-slate-700 mb-1">
-                  Official Email
-                </label>
-                <input
-                  type="email"
-                  value={profile.email}
-                  disabled
-                  className="w-full border border-slate-200 bg-slate-100 text-slate-500 rounded-lg px-3 py-2 outline-none cursor-not-allowed"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-slate-700 mb-1">
-                    Mobile
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.mobile}
-                    onChange={(e) =>
-                      setProfile((prev) => ({
-                        ...prev,
-                        mobile: e.target.value.replace(/[^\d+]/g, ""),
-                      }))
-                    }
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
-                    placeholder="Enter company mobile"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-slate-700 mb-1">
-                    Industry
-                  </label>
-                  <input
-                    type="text"
-                    value={profile.industry}
-                    onChange={(e) =>
-                      setProfile((prev) => ({
-                        ...prev,
-                        industry: e.target.value,
-                      }))
-                    }
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
-                    placeholder="e.g. SaaS, EdTech"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm text-slate-700 mb-1">
-                  Website
-                </label>
-                <input
-                  type="text"
-                  value={profile.website}
-                  onChange={(e) =>
-                    setProfile((prev) => ({
-                      ...prev,
-                      website: e.target.value,
-                    }))
-                  }
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
-                  placeholder="https://yourcompany.com"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={savingProfile || isLocked}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg text-white font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:opacity-60"
-              >
-                <Save size={16} />
-                {savingProfile ? "Saving..." : "Save Company Profile"}
-              </button>
-            </form>
-          </section>
-
+        <div className="grid grid-cols-1 gap-6">
           <section
             className={`bg-white border border-blue-100 rounded-2xl p-6 shadow-sm ${
               isLocked ? "opacity-60 pointer-events-none" : ""
@@ -367,7 +227,7 @@ export default function CompanySettings() {
           </section>
 
           <section
-            className={`xl:col-span-2 bg-white border border-blue-100 rounded-2xl p-6 shadow-sm ${
+            className={`bg-white border border-blue-100 rounded-2xl p-6 shadow-sm ${
               isLocked ? "opacity-60 pointer-events-none" : ""
             }`}
           >

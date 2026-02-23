@@ -34,16 +34,19 @@ import InternshipList from "./pages/company/Dashboard/InternshipList";
 import CompanyInternshipView from "./pages/company/Dashboard/CompanyInternshipView";
 import CompanyEditInternship from "./pages/company/Dashboard/EditInternship";
 import Recruiter from "./pages/company/Dashboard/RecruiterList";
+import CompanyReviews from "./pages/company/Dashboard/Reviews";
+import CompanyAnalytics from "./pages/company/Dashboard/Analytics";
 import CompanyLayoutWrapper from "./layout/CompanyLayoutWrapper";
 import CompanyApprovals from "./pages/admin/CompanyApprovals";
 import AddRecruiter from "./pages/company/Dashboard/AddRecruiter";
-import EditRecruiter from "./pages/company/Dashboard/EditRecruiter";  
+import EditRecruiter from "./pages/company/Dashboard/EditRecruiter";
 import Detail from "./pages/company/Dashboard/RecruiterProfile";
+
 /* ================= OTHER ================= */
 import LoginRecruiter from "./pages/recruiter/Recruiter_login";
 import LoginAdmin from "./pages/admin/LoginAdmin";
 import GoogleSuccess from "./pages/GoogleSuccess";
-import AdminLayout from "./layout/AdminLayout"
+import AdminLayout from "./layout/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Companies from "./pages/admin/Companies";
 import CompanyDetails from "./pages/admin/CompanyDetails";
@@ -70,40 +73,28 @@ import RecruiterInternshipView from "./pages/recruiter/InternshipView";
 import RecruiterEditInternship from "./pages/recruiter/EditInternship";
 import RecruiterApplicantDetail from "./pages/recruiter/ApplicantDetail";
 import RecruiterInterviews from "./pages/recruiter/Interviews";
-
-
+import RecruiterAnalytics from "./pages/recruiter/Analytics";
 
 function App() {
   return (
     <VerificationProvider>
       <BrowserRouter>
         <Routes>
-
           <Route element={<RecruiterLayoutWrapper />}>
-  <Route element={<RecruiterLayout />}>
-    <Route
-      path="/recruiter/dashboard"
-      element={<Recuiter_Dashboard />}
-    />
-<Route path="/recruiter/internships" element={<InternshipListr />} />
-<Route path="/recruiter/internships/create" element={<CreateInternship />} />
-<Route path="/recruiter/internships/post" element={<PostInternship />} />
-<Route path="/recruiter/internships/:id" element={<RecruiterInternshipView />} />
-<Route path="/recruiter/internships/edit/:id" element={<RecruiterEditInternship />} />
-<Route path="/recruiter/applicants" element={<RecruiterApplicants />} />
-<Route
-  path="/recruiter/applicants/:internshipId/:studentId"
-  element={<RecruiterApplicantDetail />}
-/>
-<Route path="/recruiter/interviews" element={<RecruiterInterviews />} />
-<Route path="/recruiter/settings" element={<RecruiterSettings />} />
-
-    {/* future routes */}
-    {/* <Route path="/recruiter/internships" element={<Internships />} /> */}
-  </Route>
-</Route>
-
-
+            <Route element={<RecruiterLayout />}>
+              <Route path="/recruiter/dashboard" element={<Recuiter_Dashboard />} />
+              <Route path="/recruiter/internships" element={<InternshipListr />} />
+              <Route path="/recruiter/internships/create" element={<CreateInternship />} />
+              <Route path="/recruiter/internships/post" element={<PostInternship />} />
+              <Route path="/recruiter/internships/:id" element={<RecruiterInternshipView />} />
+              <Route path="/recruiter/internships/edit/:id" element={<RecruiterEditInternship />} />
+              <Route path="/recruiter/applicants" element={<RecruiterApplicants />} />
+              <Route path="/recruiter/applicants/:internshipId/:studentId" element={<RecruiterApplicantDetail />} />
+              <Route path="/recruiter/interviews" element={<RecruiterInterviews />} />
+              <Route path="/recruiter/analytics" element={<RecruiterAnalytics />} />
+              <Route path="/recruiter/settings" element={<RecruiterSettings />} />
+            </Route>
+          </Route>
 
           {/* ========== PUBLIC ROUTES ========== */}
           <Route path="/" element={<Home />} />
@@ -116,116 +107,41 @@ function App() {
           {/* ========== STUDENT ROUTES ========== */}
           <Route path="/register-student" element={<RegisterStudent />} />
           <Route path="/login-student" element={<LoginStudent />} />
-          <Route
-            path="/student-dashboard"
-            element={
-              <StudentProfileRequiredRoute>
-                <Navigate to="/student/watchlist" replace />
-              </StudentProfileRequiredRoute>
-            }
-          />
-          <Route
-            path="/student/ai-recommend"
-            element={
-              <StudentProfileRequiredRoute>
-                <AIRecommend />
-              </StudentProfileRequiredRoute>
-            }
-          />
-          <Route
-            path="/student/explore"
-            element={
-              <StudentProfileRequiredRoute>
-                <ExploreInternships />
-              </StudentProfileRequiredRoute>
-            }
-          />
-          <Route
-            path="/student/explore/:id"
-            element={
-              <StudentProfileRequiredRoute>
-                <InternshipDetails />
-              </StudentProfileRequiredRoute>
-            }
-          />
-          <Route
-            path="/student/applied"
-            element={
-              <StudentProfileRequiredRoute>
-                <AppliedInternships />
-              </StudentProfileRequiredRoute>
-            }
-          />
-          <Route
-            path="/student/resume"
-            element={
-              <StudentProfileRequiredRoute>
-                <MyResume />
-              </StudentProfileRequiredRoute>
-            }
-          />
-          <Route
-            path="/student/watchlist"
-            element={
-              <StudentProfileRequiredRoute>
-                <SavedInternshipsPro />
-              </StudentProfileRequiredRoute>
-            }
-          />
-          <Route
-            path="/student/profile"
-            element={
-              <StudentProfileRequiredRoute requireCompletion={false}>
-                <StudentProfile />
-              </StudentProfileRequiredRoute>
-            }
-          />
-          <Route
-            path="/student/settings"
-            element={
-              <StudentProfileRequiredRoute>
-                <StudentSettings />
-              </StudentProfileRequiredRoute>
-            }
-          />
+          <Route path="/student-dashboard" element={<StudentProfileRequiredRoute><Navigate to="/student/watchlist" replace /></StudentProfileRequiredRoute>} />
+          <Route path="/student/ai-recommend" element={<StudentProfileRequiredRoute><AIRecommend /></StudentProfileRequiredRoute>} />
+          <Route path="/student/explore" element={<StudentProfileRequiredRoute><ExploreInternships /></StudentProfileRequiredRoute>} />
+          <Route path="/student/explore/:id" element={<StudentProfileRequiredRoute><InternshipDetails /></StudentProfileRequiredRoute>} />
+          <Route path="/student/applied" element={<StudentProfileRequiredRoute><AppliedInternships /></StudentProfileRequiredRoute>} />
+          <Route path="/student/resume" element={<StudentProfileRequiredRoute><MyResume /></StudentProfileRequiredRoute>} />
+          <Route path="/student/watchlist" element={<StudentProfileRequiredRoute><SavedInternshipsPro /></StudentProfileRequiredRoute>} />
+          <Route path="/student/profile" element={<StudentProfileRequiredRoute requireCompletion={false}><StudentProfile /></StudentProfileRequiredRoute>} />
+          <Route path="/student/settings" element={<StudentProfileRequiredRoute><StudentSettings /></StudentProfileRequiredRoute>} />
+
           {/* ========== COMPANY AUTH ROUTES ========== */}
           <Route path="/auth/company/register" element={<RegisterCompany />} />
           <Route path="/auth/company/login" element={<LoginComapny />} />
 
           {/* ========== COMPANY DASHBOARD (LOCKED LOGIC HERE) ========== */}
           <Route element={<CompanyLayoutWrapper />}>
-            <Route path="/company/dashboard/overview" element={<Overview />} />
+            <Route path="/company/dashboard/overview" element={<Navigate to="/company/dashboard/dashboard" replace />} />
+            <Route path="/company/dashboard/dashboard" element={<Overview />} />
             <Route path="/company/dashboard/profile" element={<Profile />} />
             <Route path="/company/dashboard/settings" element={<Settings />} />
             <Route path="/company/dashboard/subscription" element={<Subscription />} />
             <Route path="/company/dashboard/internships" element={<InternshipList />} />
-            
             <Route path="/company/dashboard/recruiters" element={<Recruiter />} />
+            <Route path="/company/dashboard/analytics" element={<CompanyAnalytics />} />
+            <Route path="/company/dashboard/reviews" element={<CompanyReviews />} />
             <Route path="/company/dashboard/recruiters/add" element={<AddRecruiter />} />
             <Route path="/company/dashboard/recruiters/:id/edit" element={<EditRecruiter />} />
             <Route path="/company/dashboard/recruiters/:id" element={<Detail />} />
-            <Route
-              path="/company/dashboard/internships/:id"
-              element={<CompanyInternshipView />}
-            />
-            <Route
-              path="/company/dashboard/internships/:id/edit"
-              element={<CompanyEditInternship />}
-            />
+            <Route path="/company/dashboard/internships/:id" element={<CompanyInternshipView />} />
+            <Route path="/company/dashboard/internships/:id/edit" element={<CompanyEditInternship />} />
           </Route>
 
           {/* ========== OTHER ========== */}
           <Route path="/auth/recruiter/login" element={<LoginRecruiter />} />
-
-
-          <Route
-  path="/login-admin"
-  element={
-    <AdminAuthRedirect>
-      <LoginAdmin />
-    </AdminAuthRedirect>
-  }
-/>
+          <Route path="/login-admin" element={<AdminAuthRedirect><LoginAdmin /></AdminAuthRedirect>} />
           <Route
             path="/admin"
             element={
@@ -235,7 +151,6 @@ function App() {
             }
           >
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
-
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="approvals" element={<CompanyApprovals />} />
             <Route path="companies" element={<Companies />} />
@@ -248,17 +163,9 @@ function App() {
             <Route path="reports" element={<ReportsAnalytics />} />
             <Route path="audit-logs" element={<AuditLogs />} />
             <Route path="settings" element={<AdminSettings />} />
-            {/* <Route path="recruiters" element={<Recruiters />}/> */}
-            {/* 
-            <Route path="students" element={<Students />} />
-             
-             />
-            <Route path="settings" element={<Settings />} /> */}
           </Route>
 
-
           <Route path="/company/google-success" element={<GoogleSuccess />} />
-
         </Routes>
       </BrowserRouter>
     </VerificationProvider>
@@ -266,3 +173,5 @@ function App() {
 }
 
 export default App;
+
+

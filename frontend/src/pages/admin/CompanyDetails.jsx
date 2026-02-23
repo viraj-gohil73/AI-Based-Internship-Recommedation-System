@@ -11,6 +11,7 @@ import {
   Users,
   FileText,
   BadgeCheck,
+  ExternalLink,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -44,14 +45,20 @@ export default function CompanyDetails() {
   };
 
   if (!company) {
-    return <div className="p-6 text-slate-500">Loading...</div>;
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm text-slate-600 shadow-sm">
+          Loading company details...
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6 pb-10">
       {/* ================= HEADER ================= */}
       <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="flex items-center gap-4 px-4 py-3 md:px-6">
+        <div className="mx-auto max-w-7xl flex items-center gap-4 px-4 py-3 md:px-6">
           <button
             onClick={() => navigate(-1)}
             className="h-9 w-9 flex items-center justify-center cursor-pointer rounded-full border border-slate-200 hover:bg-slate-50"
@@ -72,9 +79,7 @@ export default function CompanyDetails() {
               </div>
             )}
             <div>
-              <h1 className="text-lg font-semibold">
-                {company.companyName}
-              </h1>
+              <h1 className="text-lg font-semibold text-slate-900">{company.companyName}</h1>
               <StatusBadge status={company.verificationStatus} />
             </div>
           </div>
@@ -82,7 +87,28 @@ export default function CompanyDetails() {
       </div>
 
       {/* ================= CONTENT ================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-1 md:px-4">
+      <div className="mx-auto max-w-7xl space-y-6 px-1 md:px-4">
+        <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-indigo-50 via-sky-50 to-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Company Overview</p>
+              <h2 className="mt-1 text-xl font-semibold text-slate-900">
+                {company.companyName}
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                {company.industry || "Industry not provided"} |{" "}
+                {company.city || "City not provided"}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <StatChip label="Founded" value={company.foundedYear || "-"} />
+              <StatChip label="Team Size" value={company.companySize || "-"} />
+              <StatChip label="Status" value={company.verificationStatus || "-"} />
+            </div>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* LEFT */}
         <div className="lg:col-span-2 space-y-6">
           <Card title="Company Information" iconColor="indigo">
@@ -95,7 +121,18 @@ export default function CompanyDetails() {
             </InfoRow>
 
             <InfoRow icon={<Globe />} color="cyan" label="Website">
-              {company.website || "-"}
+              {company.website ? (
+                <a
+                  href={company.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-blue-700 hover:text-blue-800 hover:underline"
+                >
+                  {company.website} <ExternalLink size={14} />
+                </a>
+              ) : (
+                "-"
+              )}
             </InfoRow>
 
             <InfoRow icon={<BadgeCheck />} color="indigo" label="Industry">
@@ -148,20 +185,24 @@ export default function CompanyDetails() {
                 href={company.reg_doc}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-4 text-sm text-blue-600 hover:underline"
+                className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 hover:bg-amber-100"
               >
-                <IconCircle color="amber">
-                  <FileText size={16} />
-                </IconCircle>
-                Registration Document
+                <span className="inline-flex items-center gap-3">
+                  <IconCircle color="amber">
+                    <FileText size={16} />
+                  </IconCircle>
+                  Registration Document
+                </span>
+                <ExternalLink size={16} />
               </a>
             ) : (
-              <p className="text-sm text-slate-500">
+              <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500">
                 No document uploaded
               </p>
             )}
           </Card>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -171,8 +212,8 @@ export default function CompanyDetails() {
 
 function Card({ title, iconColor = "indigo", children }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 space-y-4">
-      <div className="flex items-center gap-3 font-semibold text-sm text-slate-800">
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 space-y-4 hover:shadow-md transition-shadow">
+      <div className="flex items-center gap-3 font-semibold text-sm text-slate-800 border-b border-slate-100 pb-3">
         <IconCircle color={iconColor}>
           <Building2 size={16} />
         </IconCircle>
@@ -225,7 +266,7 @@ function KeyValue({ icon, label, value, color = "slate" }) {
       {icon && <IconCircle color={color}>{icon}</IconCircle>}
       <div>
         <p className="text-xs text-slate-500">{label}</p>
-        <p className="font-medium">{value}</p>
+        <p className="font-medium text-slate-800">{value}</p>
       </div>
     </div>
   );
@@ -242,9 +283,18 @@ function StatusBadge({ status }) {
 
   return (
     <span
-      className={`inline-block mt-1 px-3 py-0.5 text-xs rounded-full ${map[status] || map.DRAFT}`}
+      className={`inline-block mt-1 px-3 py-1 text-xs rounded-full font-medium ${map[status] || map.DRAFT}`}
     >
       {status}
     </span>
+  );
+}
+
+function StatChip({ label, value }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white/70 px-3 py-2">
+      <p className="text-[11px] uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="text-sm font-semibold text-slate-800">{value}</p>
+    </div>
   );
 }

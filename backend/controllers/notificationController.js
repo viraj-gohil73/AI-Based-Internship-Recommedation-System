@@ -125,3 +125,17 @@ export const markAllNotificationsAsRead = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to mark notifications" });
   }
 };
+
+export const clearAllNotifications = async (req, res) => {
+  try {
+    const result = await Notification.deleteMany(getScope(req));
+
+    return res.status(200).json({
+      success: true,
+      message: "All notifications cleared",
+      deletedCount: result.deletedCount || 0,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to clear notifications" });
+  }
+};

@@ -27,7 +27,7 @@ const navigate = useNavigate();
 //   }
 
 //   if (token && user?.role === "company") {
-//     navigate("/company/dashboard/overview");
+//     navigate("/company/dashboard/dashboard");
 //   }
 // }, [navigate]);
 
@@ -74,7 +74,7 @@ const handleSubmit = async (e) => {
       toast.success("Login successful");
 
       // ✅ redirect ONLY ONCE
-      navigate("/company/dashboard/overview", { replace: true });
+      navigate("/company/dashboard/dashboard", { replace: true });
 
     } catch (err) {
       toast.dismiss(toastId);

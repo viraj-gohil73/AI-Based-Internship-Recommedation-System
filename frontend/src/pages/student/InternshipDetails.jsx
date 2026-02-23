@@ -100,8 +100,15 @@ export default function InternshipDetails() {
           : [];
 
         const found = list.find((item) => item.id === String(id)) || null;
-        setInternship(found);
-        if (!found) setError("Internship details not found.");
+        if (found) {
+          setInternship(found);
+        } else if (initialInternship) {
+          // Keep route state data when internship is no longer part of explore listings.
+          setInternship(initialInternship);
+        } else {
+          setInternship(null);
+          setError("Internship details not found.");
+        }
 
         setSavedIds(new Set((statusData?.savedIds || []).map(String)));
         setAppliedIds(new Set((statusData?.appliedIds || []).map(String)));

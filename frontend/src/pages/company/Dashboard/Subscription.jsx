@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { CreditCard, Lock, Receipt, Users, Briefcase } from "lucide-react";
-import toast from "react-hot-toast";
+import { Lock, Users, Briefcase } from "lucide-react";
 import UnderReviewAlert from "../../../components/UnderReviewAlert";
 import { useCompany } from "../../../context/CompanyContext";
 import { useSubscription } from "../../../context/SubscriptionContext";
@@ -13,26 +12,8 @@ const STATUS_BADGE = {
   EXPIRED: "bg-rose-100 text-rose-700",
 };
 
-const loadRazorpayScript = () =>
-  new Promise((resolve) => {
-    if (window.Razorpay) return resolve(true);
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-
 const formatCurrency = (amount) =>
   `INR ${new Intl.NumberFormat("en-IN").format(Number(amount || 0))}`;
-
-const formatDate = (date) => {
-  if (!date) return "-";
-  const d = new Date(date);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString();
-};
 
 const daysLeft = (date) => {
   if (!date) return null;
@@ -48,18 +29,12 @@ export default function Subscription() {
     current,
     entitlements,
     usage,
-    payments,
     loading,
-    refreshAll,
-    createCheckoutIntent,
-    confirmCheckout,
   } = useSubscription();
 
   const [billingCycle, setBillingCycle] = useState("monthly");
   const [selectedPlanCode, setSelectedPlanCode] = useState("Starter");
   const [extraSeats, setExtraSeats] = useState(0);
-  const [checkingOut, setCheckingOut] = useState(false);
-
   const selectedPlan = useMemo(
     () => plans.find((p) => p.code === selectedPlanCode) || null,
     [plans, selectedPlanCode]
@@ -85,55 +60,6 @@ export default function Subscription() {
   );
   const isAccessLocked = !isApproved || !entitlements?.accessAllowed;
   const trialLeft = current?.status === "TRIAL" ? daysLeft(current?.trialEndsAt) : null;
-
-  const startCheckout = async () => {
-    try {
-      setCheckingOut(true);
-      if (!selectedPlan) throw new Error("Please select a plan");
-      const sdkLoaded = await loadRazorpayScript();
-      if (!sdkLoaded) throw new Error("Razorpay SDK failed to load");
-
-      const intent = await createCheckoutIntent({
-        planCode: selectedPlan.code,
-        billingCycle,
-        extraRecruiterSeats: Number(extraSeats || 0),
-      });
-
-      if (!intent?.keyId || !intent?.razorpaySubscriptionId) {
-        throw new Error("Invalid checkout response");
-      }
-
-      const razorpay = new window.Razorpay({
-        key: intent.keyId,
-        subscription_id: intent.razorpaySubscriptionId,
-        name: "Internship Portal",
-        description: `${selectedPlan.name} (${billingCycle})`,
-        prefill: {
-          email: company?.email || "",
-        },
-        theme: { color: "#1d4ed8" },
-        handler: async (response) => {
-          await confirmCheckout(response);
-          toast.success("Subscription activated");
-          await refreshAll();
-        },
-      });
-
-      razorpay.on("payment.failed", (resp) => {
-        const message =
-          resp?.error?.description ||
-          resp?.error?.reason ||
-          "Payment failed, please retry";
-        toast.error(message);
-      });
-
-      razorpay.open();
-    } catch (error) {
-      toast.error(error.message || "Unable to start checkout");
-    } finally {
-      setCheckingOut(false);
-    }
-  };
 
   return (
     <div className="min-h-full bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 sm:p-6">
@@ -161,7 +87,7 @@ export default function Subscription() {
         {!isApproved && (
           <UnderReviewAlert
             message="Your company profile is under admin review."
-            subMessage="Payment and premium access are available after approval."
+            subMessage="Premium access is available after approval."
           />
         )}
 
@@ -257,84 +183,17 @@ export default function Subscription() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={startCheckout}
-            disabled={isAccessLocked || checkingOut || loading}
-            className={`w-full rounded-lg py-2.5 text-sm font-semibold inline-flex items-center justify-center gap-2 ${
+          <div
+            className={`w-full rounded-lg py-2.5 px-3 text-sm font-semibold inline-flex items-center justify-center gap-2 ${
               isAccessLocked || loading
-                ? "bg-slate-200 text-slate-500 cursor-not-allowed"
-                : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700"
+                ? "bg-slate-200 text-slate-500"
+                : "bg-amber-50 text-amber-700 border border-amber-200"
             }`}
           >
-            {isAccessLocked ? (
-              <>
-                <Lock size={14} /> Locked
-              </>
-            ) : (
-              <>
-                <CreditCard size={14} /> {checkingOut ? "Starting checkout..." : "Pay with Razorpay"}
-              </>
-            )}
-          </button>
-        </section>
-
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2 rounded-2xl border border-blue-100 bg-white shadow-sm p-4 sm:p-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4 inline-flex items-center gap-2">
-              <Receipt size={18} className="text-blue-600" /> Billing History
-            </h2>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-slate-500 border-b">
-                    <th className="text-left py-2">Payment Id</th>
-                    <th className="text-left py-2">Date</th>
-                    <th className="text-left py-2">Amount</th>
-                    <th className="text-left py-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(payments || []).length === 0 && (
-                    <tr>
-                      <td colSpan="4" className="py-4 text-slate-500 text-center">
-                        No payments yet.
-                      </td>
-                    </tr>
-                  )}
-                  {(payments || []).map((payment) => (
-                    <tr key={payment._id} className="border-b last:border-b-0">
-                      <td className="py-3 font-medium text-slate-800">
-                        {payment.providerPaymentId || payment.providerEventId || payment._id}
-                      </td>
-                      <td className="py-3 text-slate-600">
-                        {formatDate(payment.paidAt || payment.createdAt)}
-                      </td>
-                      <td className="py-3 text-slate-800">{formatCurrency(payment.amount)}</td>
-                      <td className="py-3">
-                        <span className="px-2.5 py-1 rounded-full text-xs bg-slate-100 text-slate-700">
-                          {payment.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-blue-100 bg-white shadow-sm p-4 sm:p-6">
-            <h2 className="text-lg font-semibold text-slate-900">Billing Summary</h2>
-            <div className="mt-4 space-y-3 text-sm">
-              <SummaryRow label="Current Plan" value={current?.planCodeSnapshot || "-"} />
-              <SummaryRow label="Cycle" value={current?.billingCycle || "-"} />
-              <SummaryRow
-                label="Next Billing"
-                value={formatDate(current?.currentPeriodEnd || current?.trialEndsAt)}
-              />
-              <SummaryRow label="Amount" value={formatCurrency(current?.totalAmount)} />
-            </div>
+            <Lock size={14} />
+            {isAccessLocked || loading
+              ? "Locked"
+              : "Online payment is disabled. Contact admin for plan changes."}
           </div>
         </section>
       </div>
@@ -354,15 +213,6 @@ function UsageCard({ icon: Icon, label, value }) {
           <Icon size={18} />
         </div>
       </div>
-    </div>
-  );
-}
-
-function SummaryRow({ label, value }) {
-  return (
-    <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-      <span className="text-slate-500">{label}</span>
-      <span className="font-medium text-slate-800">{value}</span>
     </div>
   );
 }

@@ -70,7 +70,7 @@ export const ensureTrialSubscription = async (companyId) => {
     addonAmount: 0,
     totalAmount: 0,
     currency: defaultPlan.currency || "INR",
-    provider: "razorpay",
+    provider: "manual",
     meta: { source: "trial-bootstrap" },
   });
 
@@ -279,4 +279,3 @@ export const applyPaidCycleToSubscription = async ({
 
   return subscription;
 };
-

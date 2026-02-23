@@ -252,6 +252,38 @@ export const getRecruiters = async (req, res) => {
   }
 };
 
+export const getRecruiterDetails = async (req, res) => {
+  try {
+    const recruiter = await Recruiter.findById(req.params.id).populate(
+      "companyId",
+      "companyName email"
+    );
+
+    if (!recruiter) {
+      return res.status(404).json({
+        success: false,
+        message: "Recruiter not found",
+      });
+    }
+
+    const payload = {
+      ...recruiter.toObject(),
+      companyName: recruiter.companyId?.companyName || null,
+      companyEmail: recruiter.companyId?.email || null,
+    };
+
+    return res.status(200).json({
+      success: true,
+      data: payload,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch recruiter details",
+    });
+  }
+};
+
 export const toggleRecruiterActive = async (req, res) => {
   const { id } = req.params;
   const { isActive } = req.body;

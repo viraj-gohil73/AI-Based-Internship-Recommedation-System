@@ -12,6 +12,7 @@ import {
   MapPin,
   Calendar,
   X,
+  Inbox,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import NotAvailable from "../../components/NotAvailable.jsx";
@@ -124,32 +125,32 @@ export default function Students() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="mx-auto max-w-7xl space-y-6">
+      <div className="rounded-2xl border border-slate-200 bg-gradient-to-r from-indigo-50 via-sky-50 to-white p-5 shadow-sm">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
                 <Users className="h-5 w-5" />
               </div>
               <div>
                 <h1 className="text-2xl font-semibold text-slate-900">
                   Students
                 </h1>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-600">
                   Review student profiles and control access.
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 text-xs font-semibold">
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+              <span className="rounded-full border border-slate-200 bg-white/70 px-3 py-1 text-slate-600">
                 Total: {summary.total}
               </span>
-              <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">
                 Active: {summary.active}
               </span>
-              <span className="rounded-full bg-rose-100 px-3 py-1 text-rose-700">
+              <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-rose-700">
                 Blocked: {summary.blocked}
               </span>
             </div>
@@ -210,8 +211,8 @@ export default function Students() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan="5" className="p-6 text-center text-slate-500">
-                  Loading...
+                <td colSpan="5" className="p-10 text-center text-slate-500">
+                  Loading students...
                 </td>
               </tr>
             )}
@@ -219,7 +220,10 @@ export default function Students() {
             {!loading && filteredStudents.length === 0 && (
               <tr>
                 <td colSpan="5" className="p-10">
-                  <NotAvailable text="No students found" />
+                  <div className="flex flex-col items-center gap-2 text-slate-500">
+                    <Inbox size={18} />
+                    <NotAvailable text="No students found" />
+                  </div>
                 </td>
               </tr>
             )}
@@ -249,10 +253,10 @@ export default function Students() {
                   <td className="p-4 text-slate-600">{s.loginType || "email"}</td>
                   <td className="p-4">
                     <span
-                      className={`px-2.5 py-1 rounded-full text-xs ${
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
                         s.isActive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-rose-50 text-rose-700 border-rose-200"
                       }`}
                     >
                       {s.isActive ? "Active" : "Blocked"}
@@ -285,7 +289,22 @@ export default function Students() {
       </div>
 
       <div className="md:hidden space-y-4">
-        {filteredStudents.map((s) => (
+        {loading && (
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-500">
+            Loading students...
+          </div>
+        )}
+
+        {!loading && filteredStudents.length === 0 && (
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-8">
+            <div className="flex flex-col items-center gap-2 text-slate-500">
+              <Inbox size={18} />
+              <NotAvailable text="No students found" />
+            </div>
+          </div>
+        )}
+
+        {!loading && filteredStudents.map((s) => (
           <div key={s._id} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 shadow-sm">
             <div className="flex gap-3">
               {s.profilePic ? (
@@ -303,10 +322,10 @@ export default function Students() {
 
             <div className="flex justify-between items-center">
               <span
-                className={`px-2.5 py-1 rounded-full text-xs ${
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
                   s.isActive
-                    ? "bg-green-100 text-green-700"
-                    : "bg-red-100 text-red-700"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-rose-50 text-rose-700 border-rose-200"
                 }`}
               >
                 {s.isActive ? "Active" : "Blocked"}

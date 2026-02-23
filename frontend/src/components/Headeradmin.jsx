@@ -1,4 +1,4 @@
-import { Bell, CheckCheck, Menu } from "lucide-react";
+import { Bell, CheckCheck, Menu, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export default function Header({ title, onMenuClick }) {
@@ -91,6 +91,22 @@ export default function Header({ title, onMenuClick }) {
     }
   };
 
+  const clearAllNotifications = async () => {
+    const token = localStorage.getItem("adminToken");
+    if (!token) return;
+
+    setNotifications([]);
+
+    try {
+      await fetch("http://localhost:5000/api/notifications/clear-all", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (error) {
+      console.error("Failed to clear admin notifications:", error);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-30 bg-white border-b-2 border-slate-300 px-4 sm:px-6 py-3">
       <div className="flex items-center justify-between">
@@ -137,6 +153,14 @@ export default function Header({ title, onMenuClick }) {
                       title="Mark all as read"
                     >
                       <CheckCheck size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearAllNotifications}
+                      className="p-1.5 rounded-md hover:bg-slate-100 text-red-500"
+                      title="Clear all notifications"
+                    >
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 )}

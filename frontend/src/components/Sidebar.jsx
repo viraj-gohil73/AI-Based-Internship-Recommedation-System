@@ -107,7 +107,7 @@ export default function Sidebar({ open, onClose }) {
   const menu = [
     { name: "AI Recommend", icon: Brain, path: "/student/ai-recommend" },
     { name: "Explore Internships", icon: Search, path: "/student/explore" },
-    { name: "Applied Internship", icon: GraduationCap, path: "/student/applied" },
+    { name: "Track  Internship", icon: GraduationCap, path: "/student/applied" },
     { name: "My Resume", icon: FileText, path: "/student/resume" },
     { name: "Watchlist", icon: Bookmark, path: "/student/watchlist" },
     { name: "Profile", icon: User, path: "/student/profile" },

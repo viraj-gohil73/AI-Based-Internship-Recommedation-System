@@ -17,18 +17,12 @@ import recruiterAuthRoutes from "./routes/recruiterAuthRoutes.js";
 import internshipRoutes from "./routes/internship.js";
 import studentRoutes from "./routes/studentRoutes.js";
 import { seedSubscriptionSystem } from "./controllers/seedSubscriptionSystem.js";
-import { handleRazorpayWebhook } from "./controllers/paymentWebhookController.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 
 dotenv.config();
 const app = express();
 
 app.use(cookieParser());
-app.post(
-  "/api/payments/razorpay/webhook",
-  express.raw({ type: "application/json" }),
-  handleRazorpayWebhook
-);
 app.use(express.json());
 app.use(
   cors({
