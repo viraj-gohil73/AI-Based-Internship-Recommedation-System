@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ export default function Login() {
     const password = formData.password.trim();
 
     if (!email || !password) {
-      alert("Email and password are required");
+      toast.error("Email and password are required");
       return;
     }
 
@@ -34,7 +35,7 @@ export default function Login() {
       const data = await res.json();
 
       if (!res.ok || !data?.token) {
-        alert(data?.message || "Login failed");
+        toast.error(data?.message || "Login failed");
         return;
       }
 
@@ -50,10 +51,10 @@ export default function Login() {
         )
       );
 
-      alert("Login Successful!");
+      toast.success("Login Successful!");
       navigate("/student-dashboard", { replace: true });
     } catch (error) {
-      alert("Server not responding");
+      toast.error("Server not responding");
       return;
     }
 

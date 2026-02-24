@@ -10,6 +10,9 @@ import {
   GraduationCap,
   CalendarDays,
   ClipboardList,
+  ArrowUp,
+  ArrowDown,
+  GripVertical,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Input from "../profile/shared/Input";
@@ -40,6 +43,7 @@ export default function EducationTab() {
   const [formData, setFormData] = useState(EMPTY_EDU);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [draggingIndex, setDraggingIndex] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -138,6 +142,31 @@ export default function EducationTab() {
   const handleDelete = async (index) => {
     const nextEducations = educations.filter((_, i) => i !== index);
     await persistEducations(nextEducations, "Education deleted");
+  };
+
+  const moveEducation = async (fromIndex, toIndex) => {
+    if (isSaving) return;
+    if (fromIndex === toIndex) return;
+    if (toIndex < 0 || toIndex >= educations.length) return;
+
+    const nextEducations = [...educations];
+    const [moved] = nextEducations.splice(fromIndex, 1);
+    nextEducations.splice(toIndex, 0, moved);
+    await persistEducations(nextEducations, "Education sequence updated");
+  };
+
+  const handleDragStart = (index) => {
+    setDraggingIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingIndex(null);
+  };
+
+  const handleDrop = async (targetIndex) => {
+    if (draggingIndex === null) return;
+    await moveEducation(draggingIndex, targetIndex);
+    setDraggingIndex(null);
   };
 
   const handleAddNew = () => {
@@ -351,9 +380,20 @@ export default function EducationTab() {
         educations.map((edu, index) => (
           <div
             key={index}
-            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 mb-4 hover:shadow-md hover:border-blue-300 transition flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4"
+            draggable={!isSaving}
+            onDragStart={() => handleDragStart(index)}
+            onDragEnd={handleDragEnd}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={() => handleDrop(index)}
+            className={`group bg-white rounded-2xl border p-5 sm:p-6 mb-4 hover:shadow-md transition flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 ${
+              draggingIndex === index ? "border-blue-400 bg-blue-50/40" : "border-slate-200 hover:border-blue-300"
+            }`}
           >
             <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 text-xs text-slate-500">
+                <GripVertical size={14} />
+                Drag to reorder
+              </div>
               <h3 className="text-base sm:text-lg font-semibold text-slate-800">{edu.instituteName}</h3>
 
               <p className="text-sm text-slate-500">
@@ -387,6 +427,24 @@ export default function EducationTab() {
             </div>
 
             <div className="flex sm:flex-col gap-3 self-end sm:self-start">
+              <button
+                onClick={() => moveEducation(index, index - 1)}
+                disabled={isSaving || index === 0}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 hover:border-blue-500 cursor-pointer text-slate-600 hover:text-blue-600 transition text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <ArrowUp size={16} />
+                Up
+              </button>
+
+              <button
+                onClick={() => moveEducation(index, index + 1)}
+                disabled={isSaving || index === educations.length - 1}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 hover:border-blue-500 cursor-pointer text-slate-600 hover:text-blue-600 transition text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <ArrowDown size={16} />
+                Down
+              </button>
+
               <button
                 onClick={() => handleEdit(index)}
                 disabled={isSaving}

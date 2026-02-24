@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  CalendarDays,
   Building2,
   Briefcase,
   RefreshCcw,
@@ -12,8 +13,8 @@ const RANGE_OPTIONS = [7, 30, 90, 180];
 const METRIC_STYLES = {
   "Active students": {
     icon: Users,
-    tone: "from-emerald-50 to-teal-50 text-emerald-700",
-    progress: "from-emerald-500 to-teal-500",
+    tone: "from-sky-50 to-blue-50 text-blue-700",
+    progress: "from-sky-500 to-blue-500",
   },
   "Active companies": {
     icon: Building2,
@@ -22,13 +23,13 @@ const METRIC_STYLES = {
   },
   "Open internships": {
     icon: Briefcase,
-    tone: "from-violet-50 to-purple-50 text-violet-700",
-    progress: "from-violet-500 to-purple-500",
+    tone: "from-blue-50 to-sky-50 text-sky-700",
+    progress: "from-blue-500 to-sky-500",
   },
   "Active recruiters": {
     icon: TrendingUp,
-    tone: "from-amber-50 to-orange-50 text-amber-700",
-    progress: "from-amber-500 to-orange-500",
+    tone: "from-indigo-50 to-blue-50 text-indigo-700",
+    progress: "from-indigo-500 to-blue-500",
   },
 };
 
@@ -107,22 +108,28 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full bg-blue-200/40 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-10 h-44 w-44 rounded-full bg-indigo-200/40 blur-2xl" />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900">
+          <div className="relative z-10 space-y-1.5">
+            <p className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-white/70 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-blue-700">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Analytics Overview
+            </p>
+            <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
               Admin Dashboard
             </h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-600">
               Real-time platform snapshot for last {data.rangeDays} days.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="relative z-10 flex items-center gap-2">
             <select
               value={range}
               onChange={(e) => setRange(Number(e.target.value))}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none"
+              className="rounded-xl border border-blue-200 bg-white/90 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
             >
               {RANGE_OPTIONS.map((days) => (
                 <option key={days} value={days}>
@@ -134,7 +141,7 @@ export default function Dashboard() {
             <button
               onClick={() => fetchDashboard({ silent: true })}
               disabled={refreshing || loading}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-300 bg-blue-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <RefreshCcw size={16} className={refreshing ? "animate-spin" : ""} />
               Refresh
@@ -144,7 +151,7 @@ export default function Dashboard() {
       </div>
 
       {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
           {error}
         </div>
       )}
@@ -152,7 +159,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {loading &&
           Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm animate-pulse">
+            <div key={i} className="animate-pulse rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="h-4 w-28 rounded bg-slate-200" />
               <div className="mt-3 h-8 w-20 rounded bg-slate-200" />
               <div className="mt-4 h-1.5 w-full rounded bg-slate-200" />
@@ -165,16 +172,18 @@ export default function Dashboard() {
             return (
               <div
                 key={card.label}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg"
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-slate-500">{card.label}</p>
+                    <p className="text-sm font-medium text-slate-500">{card.label}</p>
                     <h2 className="text-2xl font-semibold text-slate-900">
                       {numberFormat.format(card.value)}
                     </h2>
                   </div>
-                  <div className={`rounded-2xl bg-gradient-to-br ${card.tone} p-3`}>
+                  <div
+                    className={`rounded-2xl bg-gradient-to-br ${card.tone} p-3 transition-transform group-hover:scale-105`}
+                  >
                     <Icon className="h-5 w-5" />
                   </div>
                 </div>
@@ -198,7 +207,9 @@ export default function Dashboard() {
 
           <div className="mt-4 space-y-4">
             {(data.trends || []).length === 0 && !loading && (
-              <p className="text-sm text-slate-500">No trend data available.</p>
+              <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-5 text-center text-sm text-slate-500">
+                No trend data available.
+              </p>
             )}
 
             {(data.trends || []).map((trend) => {
@@ -229,13 +240,15 @@ export default function Dashboard() {
 
           <div className="mt-4 space-y-3">
             {(data.highlights || []).length === 0 && !loading && (
-              <p className="text-sm text-slate-500">No highlights available.</p>
+              <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-5 text-center text-sm text-slate-500">
+                No highlights available.
+              </p>
             )}
 
             {(data.highlights || []).map((item) => (
               <div
                 key={item.title}
-                className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
+                className="rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-blue-50/40 px-4 py-3"
               >
                 <p className="text-sm font-semibold text-slate-900">{item.title}</p>
                 <p className="mt-1 text-sm text-slate-600">{item.detail}</p>

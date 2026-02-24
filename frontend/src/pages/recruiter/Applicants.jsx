@@ -7,13 +7,13 @@ import {
   Download,
   CheckCircle2,
   Clock3,
-  XCircle,
   Users,
   Mail,
   Phone,
   MapPin,
   GraduationCap,
   ExternalLink,
+  X,
 } from "lucide-react";
 
 const STATUS_OPTIONS = [
@@ -54,6 +54,64 @@ const formatDate = (value) => {
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString();
 };
 
+const toArray = (value) => (Array.isArray(value) ? value : []);
+
+const normalizeSocialLinks = (links) =>
+  toArray(links)
+    .map((item) => {
+      if (!item) return null;
+      if (typeof item === "string") {
+        return { platform: "Profile", url: item };
+      }
+      return {
+        platform: item.platform || item.label || "Profile",
+        url: item.url || item.link || "",
+      };
+    })
+    .filter((item) => item && item.url);
+
+const normalizeStudentProfile = (rawStudent = {}, fallback = {}) => {
+  const source = rawStudent?.student || rawStudent?.profile || rawStudent || {};
+  const firstName = source.fname || source.firstName || fallback.fname || "";
+  const lastName = source.lname || source.lastName || fallback.lname || "";
+  const fullName =
+    `${firstName} ${lastName}`.trim() ||
+    source.name ||
+    fallback.name ||
+    "Student";
+
+  const skillsRaw = source.skills ?? fallback.skills ?? [];
+  const skills = Array.isArray(skillsRaw)
+    ? skillsRaw
+    : `${skillsRaw || ""}`
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+  return {
+    ...source,
+    ...fallback,
+    fname: firstName,
+    lname: lastName,
+    name: fullName,
+    email: source.email || fallback.email || "",
+    profilePic: source.profilePic || fallback.profilePic || "",
+    phone_no: source.phone_no || source.phone || fallback.phone || "",
+    city: source.city || fallback.city || "",
+    state: source.state || fallback.state || "",
+    preferredLocation:
+      source.preferredLocation || source.currentLocation || fallback.preferredLocation || "",
+    dob: source.dob || "",
+    gender: source.gender || "",
+    currentCourse: source.currentCourse || source.degree || source.course || "",
+    cgpa: source.cgpa || source.score || "",
+    resume: source.resume || fallback.resume || "",
+    skills,
+    educations: toArray(source.educations),
+    socialLinks: normalizeSocialLinks(source.socialLinks),
+  };
+};
+
 export default function Applicants() {
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,12 +121,7 @@ export default function Applicants() {
   const [busyKey, setBusyKey] = useState("");
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [loadingStudentProfile, setLoadingStudentProfile] = useState(false);
-  const studentSkills = Array.isArray(selectedStudent?.skills)
-    ? selectedStudent.skills
-    : `${selectedStudent?.skills || ""}`
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean);
+  const studentSkills = Array.isArray(selectedStudent?.skills) ? selectedStudent.skills : [];
   const studentEducations = Array.isArray(selectedStudent?.educations)
     ? selectedStudent.educations
     : [];
@@ -162,11 +215,16 @@ export default function Applicants() {
     }
   };
 
-  const openStudentProfile = async (studentId) => {
+  const openStudentProfile = async (applicant) => {
     try {
+      const fallback = normalizeStudentProfile({}, applicant?.student || {});
+      setSelectedStudent({
+        ...fallback,
+        _id: applicant?.studentId || fallback?._id,
+      });
       setLoadingStudentProfile(true);
       const token = localStorage.getItem("recruiterToken");
-      const res = await fetch(`http://localhost:5000/api/recruiter/students/${studentId}`, {
+      const res = await fetch(`http://localhost:5000/api/recruiter/students/${applicant.studentId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -177,7 +235,7 @@ export default function Applicants() {
         throw new Error(data.message || "Failed to fetch student profile");
       }
 
-      setSelectedStudent(data.student || null);
+      setSelectedStudent(normalizeStudentProfile(data.student || data.profile || data, applicant?.student || {}));
     } catch (error) {
       toast.error(error.message || "Unable to load student profile");
     } finally {
@@ -188,36 +246,31 @@ export default function Applicants() {
   return (
     <div className="min-h-full bg-gradient-to-br from-sky-50 via-white to-indigo-50 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="rounded-2xl border border-sky-100 bg-white p-5 shadow-sm">
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Applicants</h1>
-          <p className="text-sm text-slate-600 mt-1">
-            Review candidates who applied to your internships and take action.
-          </p>
-        </div>
+        
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-blue-100 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-2 text-slate-600">
+          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-blue-700">
               <Users size={16} />
               <span className="text-sm">Total Applicants</span>
             </div>
-            <p className="text-2xl font-bold mt-1">{applicants.length}</p>
+            <p className="mt-1 text-2xl font-bold text-blue-900">{applicants.length}</p>
           </div>
-          <div className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-2 text-slate-600">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-emerald-700">
               <CheckCircle2 size={16} />
               <span className="text-sm">Selected</span>
             </div>
-            <p className="text-2xl font-bold mt-1">
+            <p className="mt-1 text-2xl font-bold text-emerald-900">
               {applicants.filter((a) => a.status === "SELECTED").length}
             </p>
           </div>
-          <div className="rounded-xl border border-amber-100 bg-white p-4 shadow-sm">
-            <div className="flex items-center gap-2 text-slate-600">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+            <div className="flex items-center gap-2 text-amber-700">
               <Clock3 size={16} />
               <span className="text-sm">In Process</span>
             </div>
-            <p className="text-2xl font-bold mt-1">
+            <p className="mt-1 text-2xl font-bold text-amber-900">
               {
                 applicants.filter((a) =>
                   ["APPLIED", "SHORTLISTED", "INTERVIEW"].includes(a.status)
@@ -227,7 +280,7 @@ export default function Applicants() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-sky-100 bg-white p-4 shadow-sm">
+        <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 via-white to-indigo-50 p-4 shadow-sm">
           <div className="grid gap-3 md:grid-cols-3">
             <div className="relative md:col-span-1">
               <Search size={16} className="absolute left-3 top-3 text-slate-400" />
@@ -235,14 +288,14 @@ export default function Applicants() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by name, email, internship"
-                className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+                className="w-full rounded-lg border border-sky-200 bg-white pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
               />
             </div>
 
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+              className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
             >
               {STATUS_OPTIONS.map((status) => (
                 <option key={status} value={status}>
@@ -254,7 +307,7 @@ export default function Applicants() {
             <select
               value={internshipFilter}
               onChange={(e) => setInternshipFilter(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
+              className="rounded-lg border border-sky-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
             >
               {internships.map((title) => (
                 <option key={title} value={title}>
@@ -292,7 +345,7 @@ export default function Applicants() {
                   </tr>
                 ) : (
                   filteredApplicants.map((applicant) => (
-                    <tr key={applicant.applicationId} className="border-t border-slate-100">
+                    <tr key={applicant.applicationId} className="border-t border-slate-100 hover:bg-sky-50/40">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center text-xs font-semibold text-slate-700">
@@ -330,8 +383,8 @@ export default function Applicants() {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap items-center gap-2">
                           <button
-                            onClick={() => openStudentProfile(applicant.studentId)}
-                            className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                            onClick={() => openStudentProfile(applicant)}
+                            className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100"
                           >
                             <Eye size={14} />
                             Profile
@@ -369,7 +422,7 @@ export default function Applicants() {
       {selectedStudent && (
         <div className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="max-w-5xl mx-auto mt-4 mb-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
-            <div className="relative overflow-hidden border-b border-slate-200 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-6 text-white">
+            <div className="relative overflow-hidden border-b border-slate-200 bg-gradient-to-r from-sky-700 to-indigo-700 p-6 text-white">
               <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-sky-400/20 blur-2xl" />
               <div className="absolute -bottom-16 -left-14 h-52 w-52 rounded-full bg-indigo-400/20 blur-2xl" />
               <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -402,16 +455,16 @@ export default function Applicants() {
                   onClick={() => setSelectedStudent(null)}
                   className="self-start rounded-xl border border-white/20 bg-white/10 p-2 text-slate-100 transition hover:bg-white/20 sm:self-auto"
                 >
-                  <XCircle size={18} />
+                  <X size={18} />
                 </button>
               </div>
             </div>
 
             <div className="grid gap-5 p-5 lg:grid-cols-12">
               <div className="space-y-4 lg:col-span-4">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <h3 className="text-sm font-semibold text-slate-900">Contact Information</h3>
-                  <div className="mt-3 space-y-3 text-sm">
+                <div className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                    <h3 className="text-sm font-semibold text-slate-900">Contact Information</h3>
+                    <div className="mt-3 space-y-3 text-sm">
                     <p className="flex items-center gap-2 text-slate-700">
                       <Mail size={15} className="text-slate-500" />
                       {selectedStudent.email || "-"}
@@ -429,7 +482,7 @@ export default function Applicants() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Preferences</h3>
                   <div className="mt-2 text-sm text-slate-700">
                     <p>
@@ -443,7 +496,7 @@ export default function Applicants() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Documents & Links</h3>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {selectedStudent.resume ? (
@@ -464,7 +517,7 @@ export default function Applicants() {
                       .map((link, idx) => (
                         <a
                           key={`${link.url || "social"}-${idx}`}
-                          href={link.url || "#"}
+                          href={link.url}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
@@ -478,10 +531,10 @@ export default function Applicants() {
               </div>
 
               <div className="space-y-4 lg:col-span-8">
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Profile Overview</h3>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl border border-slate-200 p-3">
+                    <div className="rounded-xl border border-blue-200 bg-white p-3">
                       <p className="text-xs text-slate-500">Full Name</p>
                       <p className="text-sm font-medium text-slate-900">
                         {`${selectedStudent.fname || ""} ${selectedStudent.lname || ""}`.trim() ||
@@ -489,19 +542,19 @@ export default function Applicants() {
                           "-"}
                       </p>
                     </div>
-                    <div className="rounded-xl border border-slate-200 p-3">
+                    <div className="rounded-xl border border-indigo-200 bg-white p-3">
                       <p className="text-xs text-slate-500">Gender</p>
                       <p className="text-sm font-medium text-slate-900">
                         {selectedStudent.gender || "-"}
                       </p>
                     </div>
-                    <div className="rounded-xl border border-slate-200 p-3">
+                    <div className="rounded-xl border border-sky-200 bg-white p-3">
                       <p className="text-xs text-slate-500">Current Course</p>
                       <p className="text-sm font-medium text-slate-900">
                         {selectedStudent.currentCourse || selectedStudent.degree || "-"}
                       </p>
                     </div>
-                    <div className="rounded-xl border border-slate-200 p-3">
+                    <div className="rounded-xl border border-emerald-200 bg-white p-3">
                       <p className="text-xs text-slate-500">CGPA / Score</p>
                       <p className="text-sm font-medium text-slate-900">
                         {selectedStudent.cgpa || selectedStudent.score || "-"}
@@ -510,7 +563,7 @@ export default function Applicants() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Skills</h3>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {studentSkills.length ? (
@@ -528,7 +581,7 @@ export default function Applicants() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                   <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                     <GraduationCap size={16} className="text-slate-600" />
                     Education
@@ -538,7 +591,7 @@ export default function Applicants() {
                       {studentEducations.map((edu, idx) => (
                         <div
                           key={`${edu.instituteName || "edu"}-${idx}`}
-                          className="rounded-xl border border-slate-200 p-3"
+                          className="rounded-xl border border-amber-200 bg-white p-3"
                         >
                           <p className="font-medium text-slate-900">
                             {edu.degreeType || "Degree"}
@@ -564,15 +617,16 @@ export default function Applicants() {
                 </div>
               </div>
             </div>
+
+            {loadingStudentProfile && (
+              <div className="border-t border-slate-200 bg-slate-50 px-5 py-3 text-xs text-slate-600">
+                Refreshing latest profile details...
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {loadingStudentProfile ? (
-        <div className="fixed bottom-4 right-4 rounded-lg bg-slate-900 text-white px-3 py-2 text-xs">
-          Loading student profile...
-        </div>
-      ) : null}
     </div>
   );
 }

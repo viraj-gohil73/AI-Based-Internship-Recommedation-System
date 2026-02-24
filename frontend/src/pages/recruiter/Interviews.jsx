@@ -87,6 +87,7 @@ export default function Interviews() {
   });
   const [updatingStatusId, setUpdatingStatusId] = useState("");
   const [updatingScheduleId, setUpdatingScheduleId] = useState("");
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
 
   const loadData = async ({ silent = false } = {}) => {
     try {
@@ -312,128 +313,142 @@ export default function Interviews() {
           </div>
         </section>
 
-        <form onSubmit={createInterview} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-          <div className="flex items-center gap-2 text-slate-900">
-            <Plus size={16} />
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Schedule New Interview</h2>
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-slate-900">
+              <Plus size={16} />
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Schedule New Interview</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowScheduleForm((prev) => !prev)}
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+            >
+              <CalendarClock size={16} />
+              {showScheduleForm ? "Hide Schedule Section" : "Open Schedule Section"}
+            </button>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <label className="space-y-1">
-              <span className="text-xs font-medium text-slate-500">Internship</span>
-              <select
-                value={form.internshipId}
-                onChange={(e) => setForm((prev) => ({ ...prev, internshipId: e.target.value, studentId: "" }))}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
-                required
+          {showScheduleForm && (
+            <form onSubmit={createInterview} className="mt-4 space-y-4 border-t border-slate-200 pt-4">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <label className="space-y-1">
+                  <span className="text-xs font-medium text-slate-500">Internship</span>
+                  <select
+                    value={form.internshipId}
+                    onChange={(e) => setForm((prev) => ({ ...prev, internshipId: e.target.value, studentId: "" }))}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
+                    required
+                  >
+                    <option value="">Select internship</option>
+                    {internshipOptions.map((internship) => (
+                      <option key={internship.id} value={internship.id}>
+                        {internship.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="space-y-1">
+                  <span className="text-xs font-medium text-slate-500">Candidate</span>
+                  <select
+                    value={form.studentId}
+                    onChange={(e) => setForm((prev) => ({ ...prev, studentId: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
+                    required
+                  >
+                    <option value="">Select candidate</option>
+                    {candidateOptions.map((candidate) => (
+                      <option key={`${candidate.studentId}-${candidate.internshipId}`} value={candidate.studentId}>
+                        {candidate.student?.name || candidate.student?.email || "Student"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="space-y-1">
+                  <span className="text-xs font-medium text-slate-500">Schedule</span>
+                  <input
+                    type="datetime-local"
+                    value={form.scheduledAt}
+                    onChange={(e) => setForm((prev) => ({ ...prev, scheduledAt: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
+                    required
+                  />
+                </label>
+
+                <label className="space-y-1">
+                  <span className="text-xs font-medium text-slate-500">Duration (minutes)</span>
+                  <input
+                    type="number"
+                    min="10"
+                    max="480"
+                    value={form.durationMinutes}
+                    onChange={(e) => setForm((prev) => ({ ...prev, durationMinutes: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
+                  />
+                </label>
+
+                <label className="space-y-1">
+                  <span className="text-xs font-medium text-slate-500">Mode</span>
+                  <select
+                    value={form.mode}
+                    onChange={(e) => setForm((prev) => ({ ...prev, mode: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
+                  >
+                    {INTERVIEW_MODES.map((mode) => (
+                      <option key={mode} value={mode}>
+                        {mode}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="space-y-1">
+                  <span className="text-xs font-medium text-slate-500">Meeting Link</span>
+                  <input
+                    type="text"
+                    value={form.meetingLink}
+                    onChange={(e) => setForm((prev) => ({ ...prev, meetingLink: e.target.value }))}
+                    placeholder="For online interviews"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
+                  />
+                </label>
+
+                <label className="space-y-1">
+                  <span className="text-xs font-medium text-slate-500">Location</span>
+                  <input
+                    type="text"
+                    value={form.location}
+                    onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))}
+                    placeholder="For offline interviews"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
+                  />
+                </label>
+
+                <label className="space-y-1">
+                  <span className="text-xs font-medium text-slate-500">Notes</span>
+                  <input
+                    type="text"
+                    value={form.notes}
+                    onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Optional notes"
+                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
+                  />
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={creating}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
               >
-                <option value="">Select internship</option>
-                {internshipOptions.map((internship) => (
-                  <option key={internship.id} value={internship.id}>
-                    {internship.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-xs font-medium text-slate-500">Candidate</span>
-              <select
-                value={form.studentId}
-                onChange={(e) => setForm((prev) => ({ ...prev, studentId: e.target.value }))}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
-                required
-              >
-                <option value="">Select candidate</option>
-                {candidateOptions.map((candidate) => (
-                  <option key={`${candidate.studentId}-${candidate.internshipId}`} value={candidate.studentId}>
-                    {candidate.student?.name || candidate.student?.email || "Student"}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-xs font-medium text-slate-500">Schedule</span>
-              <input
-                type="datetime-local"
-                value={form.scheduledAt}
-                onChange={(e) => setForm((prev) => ({ ...prev, scheduledAt: e.target.value }))}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
-                required
-              />
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-xs font-medium text-slate-500">Duration (minutes)</span>
-              <input
-                type="number"
-                min="10"
-                max="480"
-                value={form.durationMinutes}
-                onChange={(e) => setForm((prev) => ({ ...prev, durationMinutes: e.target.value }))}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
-              />
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-xs font-medium text-slate-500">Mode</span>
-              <select
-                value={form.mode}
-                onChange={(e) => setForm((prev) => ({ ...prev, mode: e.target.value }))}
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
-              >
-                {INTERVIEW_MODES.map((mode) => (
-                  <option key={mode} value={mode}>
-                    {mode}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-xs font-medium text-slate-500">Meeting Link</span>
-              <input
-                type="text"
-                value={form.meetingLink}
-                onChange={(e) => setForm((prev) => ({ ...prev, meetingLink: e.target.value }))}
-                placeholder="For online interviews"
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
-              />
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-xs font-medium text-slate-500">Location</span>
-              <input
-                type="text"
-                value={form.location}
-                onChange={(e) => setForm((prev) => ({ ...prev, location: e.target.value }))}
-                placeholder="For offline interviews"
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
-              />
-            </label>
-
-            <label className="space-y-1">
-              <span className="text-xs font-medium text-slate-500">Notes</span>
-              <input
-                type="text"
-                value={form.notes}
-                onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
-                placeholder="Optional notes"
-                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-blue-300"
-              />
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            disabled={creating}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
-          >
-            <CalendarClock size={16} />
-            {creating ? "Scheduling..." : "Schedule Interview"}
-          </button>
-        </form>
+                <CalendarClock size={16} />
+                {creating ? "Scheduling..." : "Schedule Interview"}
+              </button>
+            </form>
+          )}
+        </section>
 
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 sm:px-5">
@@ -525,7 +540,7 @@ export default function Interviews() {
                       <div className="inline-flex flex-col items-center gap-2">
                         <Video size={18} className="text-slate-400" />
                         <p>No interviews yet.</p>
-                        <p className="text-xs">Use the form above to schedule your first interview.</p>
+                        <p className="text-xs">Use "Open Schedule Section" to schedule your first interview.</p>
                       </div>
                     </td>
                   </tr>

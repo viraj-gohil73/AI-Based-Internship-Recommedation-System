@@ -17,9 +17,9 @@ export default function SidebarRecruiter({ open, onClose }) {
   const recruiterName = recruiter?.name?.trim() || "Recruiter";
 
   const menu = [
-    { name: "Dashboard", icon: LayoutDashboard, path: "/recruiter/dashboard" },
-    { name: "Internships", icon: Briefcase, path: "/recruiter/internships" },
-    { name: "Applicants", icon: Users, path: "/recruiter/applicants" },
+    { name: "Overview", icon: LayoutDashboard, path: "/recruiter/dashboard" },
+    { name: "Internship Listings", icon: Briefcase, path: "/recruiter/internships" },
+    { name: "Candidates", icon: Users, path: "/recruiter/applicants" },
     { name: "Interviews", icon: CalendarClock, path: "/recruiter/interviews" },
     { name: "Analytics & Reports", icon: BarChart3, path: "/recruiter/analytics" },
     { name: "Settings", icon: Settings, path: "/recruiter/settings" },

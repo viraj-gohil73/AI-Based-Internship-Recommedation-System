@@ -105,12 +105,12 @@ export default function Sidebar({ open, onClose }) {
   };
 
   const menu = [
-    { name: "AI Recommend", icon: Brain, path: "/student/ai-recommend" },
-    { name: "Explore Internships", icon: Search, path: "/student/explore" },
-    { name: "Track  Internship", icon: GraduationCap, path: "/student/applied" },
+    { name: "Smart Recommendations", icon: Brain, path: "/student/ai-recommend" },
+    { name: "Browse Internships", icon: Search, path: "/student/explore" },
+    { name: "My  Applications", icon: GraduationCap, path: "/student/applied" },
     { name: "My Resume", icon: FileText, path: "/student/resume" },
-    { name: "Watchlist", icon: Bookmark, path: "/student/watchlist" },
-    { name: "Profile", icon: User, path: "/student/profile" },
+    { name: "Saved Intenship", icon: Bookmark, path: "/student/watchlist" },
+    { name: "My Profile", icon: User, path: "/student/profile" },
     { name: "Settings", icon: Settings, path: "/student/settings" },
   ];
 

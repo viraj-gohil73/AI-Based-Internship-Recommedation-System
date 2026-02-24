@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { BookmarkCheck, BookmarkPlus, Briefcase, Clock3, Eye, MapPin, Search, Users, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
 import StudentLayout from "../../layout/StudentLayout";
+import ResumeSelectionModal from "../../components/ResumeSelectionModal";
+import { useResumePickerModal } from "../../hooks/useResumePickerModal";
 
 const API_BASE_URL = "http://localhost:5000";
 const PAGE_SIZE = 8;
@@ -60,6 +62,15 @@ export default function ExploreInternships() {
     appliedThisMonth: 0,
     remainingThisMonth: 0,
   });
+  const {
+    isOpen: isResumeModalOpen,
+    options: resumeOptions,
+    selectedResumeUrl,
+    setSelectedResumeUrl,
+    requestResumeSelection,
+    confirmSelection,
+    cancelSelection,
+  } = useResumePickerModal();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -238,10 +249,16 @@ export default function ExploreInternships() {
     if (busyIds.has(key) || appliedIds.has(id)) return;
 
     try {
+      const selectedResume = await requestResumeSelection(API_BASE_URL, token);
+      if (!selectedResume) return;
       setBusy(key, true);
       const response = await fetch(`${API_BASE_URL}/api/student/internships/${id}/apply`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ resumeUrl: selectedResume.url }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data?.message || "Failed to apply internship");
@@ -501,6 +518,14 @@ export default function ExploreInternships() {
           </div>
         ) : null}
       </div>
+      <ResumeSelectionModal
+        open={isResumeModalOpen}
+        options={resumeOptions}
+        selectedResumeUrl={selectedResumeUrl}
+        onSelect={setSelectedResumeUrl}
+        onConfirm={confirmSelection}
+        onCancel={cancelSelection}
+      />
     </StudentLayout>
   );
 }

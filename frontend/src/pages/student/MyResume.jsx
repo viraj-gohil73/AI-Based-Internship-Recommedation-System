@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Download, Eye, FileText, Trash2, Upload } from "lucide-react";
 import toast from "react-hot-toast";
 import StudentLayout from "../../layout/StudentLayout";
@@ -13,6 +13,7 @@ const ACCEPTED_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 const SUPABASE_RESUME_BUCKET = import.meta.env.VITE_SUPABASE_RESUME_BUCKET || "resumes";
+const MAX_RESUME_COUNT = 3;
 
 const getFileNameFromUrl = (url = "") => {
   if (!url) return "resume";
@@ -22,25 +23,17 @@ const getFileNameFromUrl = (url = "") => {
   return decodeURIComponent(fileName);
 };
 
-const formatFileSize = (bytes) => {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "";
-  const mb = bytes / (1024 * 1024);
-  if (mb >= 1) return `${mb.toFixed(2)} MB`;
-  return `${Math.ceil(bytes / 1024)} KB`;
-};
-
 export default function MyResume() {
   const inputRef = useRef(null);
 
-  const [resumeUrl, setResumeUrl] = useState("");
-  const [resumeName, setResumeName] = useState("");
-  const [resumeSize, setResumeSize] = useState(0);
+  const [resumes, setResumes] = useState([]);
+  const [defaultResumeUrl, setDefaultResumeUrl] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const saveResumeToProfile = async (url) => {
+  const saveResumeState = async (nextResumes, nextDefaultResumeUrl) => {
     const token = localStorage.getItem("token");
     if (!token) throw new Error("Please login again");
 
@@ -50,15 +43,23 @@ export default function MyResume() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ resume: url }),
+      body: JSON.stringify({
+        resume: nextDefaultResumeUrl || "",
+        resumes: nextResumes,
+      }),
     });
 
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data?.message || "Failed to save resume");
+      throw new Error(data?.message || "Failed to save resumes");
     }
 
-    return data?.profile?.resume || url;
+    const profile = data?.profile || {};
+    const normalizedResumes = Array.isArray(profile?.resumes) ? profile.resumes : [];
+    return {
+      resumes: normalizedResumes,
+      resume: profile?.resume || "",
+    };
   };
 
   useEffect(() => {
@@ -75,17 +76,51 @@ export default function MyResume() {
     })
       .then((res) => res.json())
       .then((data) => {
-        const existingResume = data?.profile?.resume || "";
-        setResumeUrl(existingResume);
-        setResumeName(getFileNameFromUrl(existingResume));
+        const profile = data?.profile || {};
+        const list = Array.isArray(profile?.resumes) ? profile.resumes : [];
+        const legacyResume = String(profile?.resume || "").trim();
+        const seen = new Set();
+        const normalized = list
+          .map((item) => {
+            const url = String(item?.url || item || "").trim();
+            if (!url || seen.has(url)) return null;
+            seen.add(url);
+            return {
+              url,
+              name: String(item?.name || getFileNameFromUrl(url)).trim() || getFileNameFromUrl(url),
+              uploadedAt: item?.uploadedAt || null,
+            };
+          })
+          .filter(Boolean);
+
+        if (legacyResume && !seen.has(legacyResume)) {
+          normalized.unshift({
+            url: legacyResume,
+            name: getFileNameFromUrl(legacyResume),
+            uploadedAt: null,
+          });
+        }
+
+        setResumes(normalized);
+        setDefaultResumeUrl(legacyResume || normalized[0]?.url || "");
       })
       .catch(() => {
-        toast.error("Failed to load resume");
+        toast.error("Failed to load resumes");
       })
       .finally(() => {
         setLoading(false);
       });
   }, []);
+
+  const sortedResumes = useMemo(
+    () =>
+      [...resumes].sort((a, b) => {
+        const aTime = a?.uploadedAt ? new Date(a.uploadedAt).getTime() : 0;
+        const bTime = b?.uploadedAt ? new Date(b.uploadedAt).getTime() : 0;
+        return bTime - aTime;
+      }),
+    [resumes]
+  );
 
   const validateFile = (file) => {
     if (!file) return false;
@@ -143,6 +178,12 @@ export default function MyResume() {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !validateFile(file)) return;
+    if (resumes.length >= MAX_RESUME_COUNT) {
+      const msg = `You can upload maximum ${MAX_RESUME_COUNT} resumes. Remove one to upload a new resume.`;
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
 
     try {
       setUploading(true);
@@ -153,11 +194,20 @@ export default function MyResume() {
         throw new Error("Upload failed. No file URL returned.");
       }
 
-      const savedUrl = await saveResumeToProfile(cdnUrl);
-      setResumeUrl(savedUrl);
-      setResumeName(file.name);
-      setResumeSize(file.size);
-      toast.success("Resume uploaded and saved");
+      const nextResumes = [
+        { url: cdnUrl, name: file.name || getFileNameFromUrl(cdnUrl), uploadedAt: new Date().toISOString() },
+        ...resumes.filter((item) => item.url !== cdnUrl),
+      ];
+      const persisted = await saveResumeState(nextResumes, cdnUrl);
+      setResumes(
+        (Array.isArray(persisted?.resumes) ? persisted.resumes : nextResumes).map((item) => ({
+          url: String(item?.url || ""),
+          name: String(item?.name || getFileNameFromUrl(item?.url || "")).trim(),
+          uploadedAt: item?.uploadedAt || null,
+        }))
+      );
+      setDefaultResumeUrl(persisted?.resume || cdnUrl);
+      toast.success("Resume uploaded");
     } catch (uploadError) {
       setError(uploadError?.message || "Resume upload failed");
       toast.error(uploadError?.message || "Resume upload failed");
@@ -167,13 +217,15 @@ export default function MyResume() {
     }
   };
 
-  const handleRemove = async () => {
+  const handleRemove = async (url) => {
     try {
       setSaving(true);
-      await saveResumeToProfile("");
-      setResumeUrl("");
-      setResumeName("");
-      setResumeSize(0);
+      const nextResumes = resumes.filter((item) => item.url !== url);
+      const nextDefault =
+        defaultResumeUrl === url ? nextResumes[0]?.url || "" : defaultResumeUrl;
+      const persisted = await saveResumeState(nextResumes, nextDefault);
+      setResumes(Array.isArray(persisted?.resumes) ? persisted.resumes : nextResumes);
+      setDefaultResumeUrl(persisted?.resume || nextDefault);
       setError("");
       toast.success("Resume removed");
     } catch (removeError) {
@@ -183,16 +235,30 @@ export default function MyResume() {
     }
   };
 
-  const openResume = () => {
-    if (!resumeUrl) return;
-    window.open(resumeUrl, "_blank", "noopener,noreferrer");
+  const handleSetDefault = async (url) => {
+    try {
+      setSaving(true);
+      const persisted = await saveResumeState(resumes, url);
+      setResumes(Array.isArray(persisted?.resumes) ? persisted.resumes : resumes);
+      setDefaultResumeUrl(persisted?.resume || url);
+      toast.success("Default resume updated");
+    } catch (setDefaultError) {
+      toast.error(setDefaultError?.message || "Failed to set default resume");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const downloadResume = () => {
-    if (!resumeUrl) return;
+  const openResume = (url) => {
+    if (!url) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const downloadResume = (url, name) => {
+    if (!url) return;
     const link = document.createElement("a");
-    link.href = resumeUrl;
-    link.download = resumeName || "resume";
+    link.href = url;
+    link.download = name || "resume";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -205,7 +271,10 @@ export default function MyResume() {
           <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
             <h1 className="text-lg font-semibold text-slate-900">Resume Manager</h1>
             <p className="mt-1 text-sm text-slate-500">
-              Upload your resume to Supabase Storage and save its link to your profile.
+              Upload multiple resumes and choose which one is default for internship applications.
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              {resumes.length}/{MAX_RESUME_COUNT} resumes used
             </p>
           </div>
 
@@ -214,9 +283,14 @@ export default function MyResume() {
               <div className="mx-auto flex max-w-md flex-col items-center gap-2">
                 <Upload className="h-6 w-6 text-sky-700" />
                 <p className="text-sm font-medium text-slate-700">
-                  {uploading ? "Uploading..." : "Click to upload or replace resume"}
+                  {uploading ? "Uploading..." : "Click to upload resume"}
                 </p>
                 <p className="text-xs text-slate-500">PDF, DOC, DOCX | Max 2 MB</p>
+                {resumes.length >= MAX_RESUME_COUNT ? (
+                  <p className="text-xs font-medium text-amber-700">
+                    Resume limit reached. Remove one to upload a new resume.
+                  </p>
+                ) : null}
               </div>
               <input
                 ref={inputRef}
@@ -224,7 +298,7 @@ export default function MyResume() {
                 accept={ACCEPT_ATTR}
                 onChange={handleSelectFile}
                 className="hidden"
-                disabled={uploading || saving}
+                disabled={uploading || saving || resumes.length >= MAX_RESUME_COUNT}
               />
             </label>
 
@@ -239,57 +313,78 @@ export default function MyResume() {
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
                 Loading resume...
               </div>
-            ) : resumeUrl ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="rounded-lg bg-sky-100 p-2.5">
-                      <FileText className="h-6 w-6 text-sky-700" />
+            ) : sortedResumes.length ? (
+              <div className="space-y-3">
+                {sortedResumes.map((item) => {
+                  const isDefault = item.url === defaultResumeUrl;
+                  return (
+                    <div
+                      key={item.url}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5"
+                    >
+                      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="rounded-lg bg-sky-100 p-2.5">
+                            <FileText className="h-6 w-6 text-sky-700" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-800">
+                              {item.name || getFileNameFromUrl(item.url)}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {isDefault ? "Default resume for apply" : "Saved resume"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => openResume(item.url)}
+                            className="inline-flex items-center justify-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                          >
+                            <Eye className="h-4 w-4" />
+                            View
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => downloadResume(item.url, item.name)}
+                            className="inline-flex items-center justify-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                          >
+                            <Download className="h-4 w-4" />
+                            Download
+                          </button>
+
+                          {!isDefault ? (
+                            <button
+                              type="button"
+                              onClick={() => handleSetDefault(item.url)}
+                              disabled={saving || uploading}
+                              className="inline-flex items-center justify-center gap-1 rounded-md border border-sky-300 bg-sky-50 px-3 py-2 text-sm text-sky-700 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Use for Apply
+                            </button>
+                          ) : null}
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(item.url)}
+                            disabled={saving || uploading}
+                            className="inline-flex items-center justify-center gap-1 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Remove
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-800">
-                        {resumeName || getFileNameFromUrl(resumeUrl)}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {formatFileSize(resumeSize) || "Uploaded to Supabase Storage"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                    <button
-                      type="button"
-                      onClick={openResume}
-                      className="inline-flex items-center justify-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                    >
-                      <Eye className="h-4 w-4" />
-                      View
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={downloadResume}
-                      className="inline-flex items-center justify-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleRemove}
-                      disabled={saving || uploading}
-                      className="inline-flex items-center justify-center gap-1 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Remove
-                    </button>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                No resume saved yet.
+                No resumes saved yet.
               </div>
             )}
           </div>

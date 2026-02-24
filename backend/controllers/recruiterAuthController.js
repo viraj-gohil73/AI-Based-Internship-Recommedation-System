@@ -62,6 +62,7 @@ const resolveRecruiterApplicationContext = async (recruiterId, internshipId, stu
       certificates: 1,
       socialLinks: 1,
       resume: 1,
+      resumes: 1,
       createdAt: 1,
       appliedInternships: 1,
     }
@@ -100,7 +101,7 @@ export const loginRecruiter = async (req, res) => {
       });
     }
 
-    if (recruiter.status === "BLOCKED") {
+    if (recruiter.isactive === false || recruiter.status === "BLOCKED") {
       return res.status(403).json({
         message: "Your account is blocked",
       });
@@ -178,6 +179,7 @@ export const getRecruiterApplicants = async (req, res) => {
         skills: 1,
         profilePic: 1,
         resume: 1,
+        resumes: 1,
         appliedInternships: 1,
       }
     ).lean();
@@ -206,7 +208,8 @@ export const getRecruiterApplicants = async (req, res) => {
             state: student.state || "",
             skills: Array.isArray(student.skills) ? student.skills : [],
             profilePic: student.profilePic || "",
-            resume: student.resume || "",
+            resume: entry?.resumeUrl || student.resume || "",
+            resumeName: entry?.resumeName || "",
           },
         });
       });
@@ -246,9 +249,17 @@ export const updateApplicationStatus = async (req, res) => {
       return res.status(404).json({ message: "Internship not found" });
     }
 
+    const applicationUpdate = { "appliedInternships.$.status": status };
+
+    if (status === "REJECTED") {
+      applicationUpdate["appliedInternships.$.rejectedAt"] = new Date();
+    } else {
+      applicationUpdate["appliedInternships.$.rejectedAt"] = null;
+    }
+
     const updateResult = await Student.updateOne(
       { _id: studentId, "appliedInternships.internship": internshipId },
-      { $set: { "appliedInternships.$.status": status } }
+      { $set: applicationUpdate }
     );
 
     if (!updateResult.matchedCount) {
@@ -337,6 +348,7 @@ export const getStudentProfileForRecruiter = async (req, res) => {
       certificates: 1,
       socialLinks: 1,
       resume: 1,
+      resumes: 1,
       createdAt: 1,
     }).lean();
 
@@ -383,6 +395,8 @@ export const getRecruiterApplicantDetail = async (req, res) => {
         studentId: String(student._id),
         status: application.status || "APPLIED",
         appliedAt: application.appliedAt || null,
+        resumeUrl: application.resumeUrl || student.resume || "",
+        resumeName: application.resumeName || "",
       },
       student: {
         ...student,
@@ -483,7 +497,12 @@ export const createRecruiterInterview = async (req, res) => {
 
     await Student.updateOne(
       { _id: studentId, "appliedInternships.internship": internshipId },
-      { $set: { "appliedInternships.$.status": "INTERVIEW" } }
+      {
+        $set: {
+          "appliedInternships.$.status": "INTERVIEW",
+          "appliedInternships.$.rejectedAt": null,
+        },
+      }
     );
 
     await runNotificationTask("schedule-interview", async () => {

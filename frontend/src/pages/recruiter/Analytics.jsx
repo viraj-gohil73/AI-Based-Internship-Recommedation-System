@@ -217,56 +217,35 @@ export default function RecruiterAnalytics() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-90px)] bg-gradient-to-br from-slate-100 via-blue-50 to-white p-4 sm:p-6">
+    <div className="min-h-[calc(100vh-90px)] bg-gradient-to-br from-sky-50 via-white to-indigo-50 p-4 sm:p-6">
       <div className="mx-auto max-w-7xl space-y-6">
-        <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-white p-5 shadow-sm sm:p-7">
-          <div className="pointer-events-none absolute -right-20 -top-16 h-52 w-52 rounded-full bg-blue-200/40 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-blue-200/40 blur-3xl" />
-
-          <div className="relative flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">Recruiter Workspace</p>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Analytics & Reports</h1>
-              <p className="mt-2 text-sm text-slate-600">Live funnel metrics and downloadable recruiter reports from your current pipeline.</p>
-            </div>
-
-            <button
-              onClick={() => loadData({ silent: true })}
-              className={`inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-300 hover:bg-slate-50 ${
-                refreshing ? "scale-[0.98] shadow-inner" : "shadow-sm hover:shadow"
-              }`}
-            >
-              <RefreshCw size={15} className={`transition-colors ${refreshing ? "animate-spin text-blue-600" : ""}`} />
-              <span>{refreshing ? "Refreshing..." : "Refresh data"}</span>
-            </button>
-          </div>
-        </section>
+        
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Active Internships</p>
-            <p className="mt-2 text-3xl font-extrabold text-slate-900">{overview.activeInternships}</p>
-            <p className="mt-2 text-xs text-slate-600">{internships.length} total internships</p>
+          <article className="rounded-2xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+            <p className="text-sm font-medium text-blue-700">Active Internships</p>
+            <p className="mt-2 text-3xl font-extrabold text-blue-900">{overview.activeInternships}</p>
+            <p className="mt-2 text-xs text-blue-700">{internships.length} total internships</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Total Applicants</p>
-            <p className="mt-2 text-3xl font-extrabold text-slate-900">{applicants.length}</p>
-            <p className="mt-2 text-xs text-slate-600">{statusMix.APPLIED} awaiting first review</p>
+          <article className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 shadow-sm">
+            <p className="text-sm font-medium text-indigo-700">Total Applicants</p>
+            <p className="mt-2 text-3xl font-extrabold text-indigo-900">{applicants.length}</p>
+            <p className="mt-2 text-xs text-indigo-700">{statusMix.APPLIED} awaiting first review</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Scheduled Interviews</p>
-            <p className="mt-2 text-3xl font-extrabold text-slate-900">{overview.scheduledInterviews}</p>
-            <p className="mt-2 text-xs text-slate-600">{overview.completedInterviews} completed</p>
+          <article className="rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
+            <p className="text-sm font-medium text-amber-700">Scheduled Interviews</p>
+            <p className="mt-2 text-3xl font-extrabold text-amber-900">{overview.scheduledInterviews}</p>
+            <p className="mt-2 text-xs text-amber-700">{overview.completedInterviews} completed</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Selection Rate</p>
-            <p className="mt-2 text-3xl font-extrabold text-slate-900">{overview.conversion}%</p>
-            <p className="mt-2 text-xs text-slate-600">{overview.selectedApplicants} selected candidates</p>
+          <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+            <p className="text-sm font-medium text-emerald-700">Selection Rate</p>
+            <p className="mt-2 text-3xl font-extrabold text-emerald-900">{overview.conversion}%</p>
+            <p className="mt-2 text-xs text-emerald-700">{overview.selectedApplicants} selected candidates</p>
           </article>
         </section>
 
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
+          <article className="rounded-2xl border border-sky-200 bg-sky-50 p-5 shadow-sm xl:col-span-2">
             <div className="flex items-center gap-2">
               <BarChart3 size={16} className="text-blue-700" />
               <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">6-Month Trend</h2>
@@ -292,26 +271,26 @@ export default function RecruiterAnalytics() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-violet-200 bg-violet-50 p-5 shadow-sm">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Application Funnel</h2>
             <div className="mt-4 space-y-2 text-sm">
-              <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+              <div className="flex items-center justify-between rounded-lg border border-violet-200 bg-white px-3 py-2">
                 <span className="text-slate-600">Applied</span>
                 <span className="font-semibold text-slate-900">{statusMix.APPLIED}</span>
               </div>
-              <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+              <div className="flex items-center justify-between rounded-lg border border-violet-200 bg-white px-3 py-2">
                 <span className="text-slate-600">Shortlisted</span>
                 <span className="font-semibold text-slate-900">{statusMix.SHORTLISTED}</span>
               </div>
-              <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+              <div className="flex items-center justify-between rounded-lg border border-violet-200 bg-white px-3 py-2">
                 <span className="text-slate-600">Interview</span>
                 <span className="font-semibold text-slate-900">{statusMix.INTERVIEW}</span>
               </div>
-              <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+              <div className="flex items-center justify-between rounded-lg border border-violet-200 bg-white px-3 py-2">
                 <span className="text-slate-600">Selected</span>
                 <span className="font-semibold text-emerald-700">{statusMix.SELECTED}</span>
               </div>
-              <div className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
+              <div className="flex items-center justify-between rounded-lg border border-violet-200 bg-white px-3 py-2">
                 <span className="text-slate-600">Rejected</span>
                 <span className="font-semibold text-rose-700">{statusMix.REJECTED}</span>
               </div>
@@ -320,7 +299,7 @@ export default function RecruiterAnalytics() {
         </section>
 
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
+          <article className="rounded-2xl border border-blue-200 bg-blue-50 p-5 shadow-sm xl:col-span-2">
             <div className="flex items-center gap-2">
               <BriefcaseBusiness size={16} className="text-blue-700" />
               <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Top Internships by Applicants</h2>
@@ -329,7 +308,7 @@ export default function RecruiterAnalytics() {
             <div className="mt-4 overflow-x-auto">
               <table className="w-full min-w-[560px] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr className="border-b border-blue-200 text-left text-xs uppercase tracking-wide text-slate-500">
                     <th className="py-2">Internship</th>
                     <th className="py-2">Applicants</th>
                     <th className="py-2">Interview</th>
@@ -339,7 +318,7 @@ export default function RecruiterAnalytics() {
                 <tbody>
                   {topInternships.length ? (
                     topInternships.map((row) => (
-                      <tr key={row.internshipId} className="border-b border-slate-100">
+                      <tr key={row.internshipId} className="border-b border-blue-100">
                         <td className="py-2 pr-3 text-slate-800">{row.internshipTitle}</td>
                         <td className="py-2 text-slate-700">{row.applicants}</td>
                         <td className="py-2 text-slate-700">{row.interview}</td>
@@ -356,7 +335,7 @@ export default function RecruiterAnalytics() {
             </div>
           </article>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Reports</h2>
             <div className="mt-4 space-y-2">
               <button

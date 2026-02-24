@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { X, Calendar, Check, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { X, Calendar, Check, AlertCircle, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 export default function RecruiterInternshipForm() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     title: "",
     internship_type: "",
@@ -150,20 +152,30 @@ export default function RecruiterInternshipForm() {
 
 
   return (
-    <div className="min-h-screen  px-2">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 px-3 py-6 sm:px-4">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="mb-8"
+          className="mb-6 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm"
         >
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            Post Internship
-          </h1>
-          <p className="text-gray-600 mt-2">Create and publish a new internship opportunity</p>
+          <div className="flex flex-col gap-4 bg-gradient-to-r from-blue-600 to-indigo-600 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-white sm:text-4xl">Post Internship</h1>
+              <p className="mt-1 text-sm text-blue-100">Create and publish a new internship opportunity</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50"
+            >
+              <ArrowLeft size={16} />
+              Back
+            </button>
+          </div>
           {postingLimitReached && (
-            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            <div className="mx-5 my-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
               Posting limit reached ({postingLimits.activePostingsCount}/{postingLimits.maxActivePostings}).
             </div>
           )}
@@ -204,7 +216,7 @@ export default function RecruiterInternshipForm() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="bg-white border border-gray-200 rounded-2xl shadow-lg p-8 space-y-8"
+          className="space-y-8 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:p-8"
         >
           {/* BASIC INFO */}
           <Section title="Basic Information" delay={0.2}>
@@ -229,7 +241,7 @@ export default function RecruiterInternshipForm() {
 
           {/* STIPEND */}
           <Section title="Stipend" delay={0.4}>
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
+            <div className="rounded-lg border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <motion.div
@@ -239,7 +251,7 @@ export default function RecruiterInternshipForm() {
                     transition={{ duration: 0.6 }}
                     className="p-2 bg-white rounded-full"
                   >
-                    <span className={form.is_paid ? "text-indigo-600 text-lg" : "text-gray-400 text-lg"}>₹</span>
+                    <span className={form.is_paid ? "text-blue-600 text-lg" : "text-gray-400 text-lg"}>INR</span>
                   </motion.div>
 
                   <div>
@@ -261,7 +273,7 @@ export default function RecruiterInternshipForm() {
                   whileTap={{ scale: 0.9 }}
                   className={`relative h-7 w-12 rounded-full transition-colors duration-300 flex-shrink-0 ${
                     form.is_paid
-                      ? "bg-gradient-to-r from-indigo-500 to-purple-500"
+                      ? "bg-gradient-to-r from-blue-500 to-indigo-500"
                       : "bg-gray-300"
                   }`}
                 >
@@ -282,7 +294,7 @@ export default function RecruiterInternshipForm() {
                       }}
                       className="absolute inset-0 flex items-center justify-center"
                     >
-                      <Check size={14} className="text-indigo-600" />
+                      <Check size={14} className="text-blue-600" />
                     </motion.div>
                   </motion.div>
                 </motion.button>
@@ -299,8 +311,8 @@ export default function RecruiterInternshipForm() {
                   className="mt-4"
                 >
                   <Grid>
-                    <Input label="Stipend Min (₹)" name="stipend_min" type="number" onChange={handleChange} />
-                    <Input label="Stipend Max (₹)" name="stipend_max" type="number" onChange={handleChange} />
+                    <Input label="Stipend Min (INR)" name="stipend_min" type="number" onChange={handleChange} />
+                    <Input label="Stipend Max (INR)" name="stipend_max" type="number" onChange={handleChange} />
                   </Grid>
                 </motion.div>
               )}
@@ -340,7 +352,7 @@ export default function RecruiterInternshipForm() {
 
           {/* PUBLISH */}
           <Section title="Publication Status" delay={0.8}>
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
+            <div className="rounded-lg border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <motion.div
@@ -351,7 +363,7 @@ export default function RecruiterInternshipForm() {
                     className="p-2 bg-white rounded-full"
                   >
                     {form.publish ? (
-                      <Eye className="text-indigo-600" size={18} />
+                      <Eye className="text-blue-600" size={18} />
                     ) : (
                       <EyeOff className="text-gray-400" size={18} />
                     )}
@@ -378,7 +390,7 @@ export default function RecruiterInternshipForm() {
                   whileTap={{ scale: 0.9 }}
                   className={`relative h-7 w-12 rounded-full transition-colors duration-300 flex-shrink-0 ${
                     form.publish
-                      ? "bg-gradient-to-r from-indigo-500 to-purple-500"
+                      ? "bg-gradient-to-r from-blue-500 to-indigo-500"
                       : "bg-gray-300"
                   }`}
                 >
@@ -399,7 +411,7 @@ export default function RecruiterInternshipForm() {
                       }}
                       className="absolute inset-0 flex items-center justify-center"
                     >
-                      <Check size={14} className="text-indigo-600" />
+                      <Check size={14} className="text-blue-600" />
                     </motion.div>
                   </motion.div>
                 </motion.button>
@@ -411,9 +423,9 @@ export default function RecruiterInternshipForm() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="mt-2 pt-2 border-t border-indigo-200"
+                    className="mt-2 border-t border-blue-200 pt-2"
                   >
-                    <div className="flex items-center gap-2 text-xs text-indigo-700 bg-indigo-50 rounded px-2 py-1.5">
+                    <div className="flex items-center gap-2 rounded bg-blue-50 px-2 py-1.5 text-xs text-blue-700">
                       <Check size={12} />
                       <span>Ready to accept applications</span>
                     </div>
@@ -436,8 +448,8 @@ export default function RecruiterInternshipForm() {
               whileTap={{ scale: 0.95 }}
               className={`relative px-10 py-3 rounded-xl font-bold text-md text-white transition overflow-hidden shadow-lg ${
                 loading
-                  ? "bg-indigo-400 cursor-not-allowed"
-                  : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                  ? "cursor-not-allowed bg-blue-300"
+                  : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
               }`}
             >
               <motion.span
@@ -476,7 +488,7 @@ function Section({ title, children, delay = 0 }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
     >
-      <h2 className="text-lg font-semibold mb-4 border-b-2 border-indigo-200 pb-3 text-gray-800">
+      <h2 className="mb-4 border-b-2 border-blue-200 pb-3 text-lg font-semibold text-slate-800">
         {title}
       </h2>
       {children}
@@ -491,13 +503,13 @@ function Grid({ children }) {
 function Input({ label, name, type = "text", icon, onChange, required = false }) {
   return (
     <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
       <div className="relative">
         {icon && (
           <motion.span
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="absolute left-3 top-2.5 text-indigo-400"
+            className="absolute left-3 top-2.5 text-blue-500"
           >
             {icon}
           </motion.span>
@@ -508,9 +520,9 @@ function Input({ label, name, type = "text", icon, onChange, required = false })
           required={required}
           onChange={onChange}
           whileFocus={{ scale: 1.01 }}
-          className={`w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 transition ${
+          className={`w-full rounded-lg border-2 border-slate-200 px-3 py-2.5 transition ${
             icon ? "pl-10" : ""
-          } focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none`}
+          } focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none`}
         />
       </div>
     </motion.div>
@@ -520,13 +532,13 @@ function Input({ label, name, type = "text", icon, onChange, required = false })
 function Textarea({ label, name, onChange }) {
   return (
     <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
       <motion.textarea
         name={name}
         rows="3"
         onChange={onChange}
         whileFocus={{ scale: 1.01 }}
-        className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none resize-none"
+        className="w-full resize-none rounded-lg border-2 border-slate-200 px-3 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
       />
     </motion.div>
   );
@@ -535,12 +547,12 @@ function Textarea({ label, name, onChange }) {
 function Select({ label, name, options, onChange }) {
   return (
     <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <label className="mb-2 block text-sm font-medium text-slate-700">{label}</label>
       <motion.select
         name={name}
         onChange={onChange}
         whileFocus={{ scale: 1.01 }}
-        className="w-full border-2 border-gray-200 rounded-lg px-3 py-2.5 cursor-pointer focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none bg-white"
+        className="w-full cursor-pointer rounded-lg border-2 border-slate-200 bg-white px-3 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
       >
         <option value="">Select</option>
         {options.map((o) => (
@@ -568,14 +580,14 @@ function ChipInput({ value, setValue, onAdd, chips, onRemove, placeholder }) {
           onKeyPress={handleKeyPress}
           placeholder={placeholder}
           whileFocus={{ scale: 1.01 }}
-          className="flex-1 border-2 border-gray-200 rounded-lg px-3 py-2.5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+          className="flex-1 rounded-lg border-2 border-slate-200 px-3 py-2.5 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none"
         />
         <motion.button
           type="button"
           onClick={onAdd}
-          whileHover={{ scale: 1.05, backgroundColor: "#4f46e5" }}
+          whileHover={{ scale: 1.05, backgroundColor: "#1d4ed8" }}
           whileTap={{ scale: 0.95 }}
-          className="px-6 bg-indigo-600 text-white rounded-lg font-medium transition"
+          className="rounded-lg bg-blue-600 px-6 font-medium text-white transition"
         >
           Add
         </motion.button>
@@ -590,7 +602,7 @@ function ChipInput({ value, setValue, onAdd, chips, onRemove, placeholder }) {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               whileHover={{ scale: 1.05 }}
-              className="flex items-center gap-2 bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-full text-sm font-medium"
+              className="flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1.5 text-sm font-medium text-blue-700"
             >
               {chip}
               <motion.button

@@ -1,14 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, X, Save, CodeXml, Sparkles, CheckCircle2 } from "lucide-react";
+import toast from "react-hot-toast";
+
+const API_BASE_URL = "http://localhost:5000";
 
 export default function SkillsTab() {
-  const [skills, setSkills] = useState([
-    "Education Law",
-    "HTML",
-    "Ruby (Programming Language)",
-    "E-Discovery",
-    "Facility Layout Design",
-  ]);
+  const [skills, setSkills] = useState([]);
   const [skillInput, setSkillInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -37,11 +34,59 @@ export default function SkillsTab() {
     setSkills(skills.filter((_, i) => i !== index));
   };
 
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    fetch(`${API_BASE_URL}/api/student/profile`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.message || "Failed to load skills");
+        const nextSkills = Array.isArray(data?.profile?.skills)
+          ? data.profile.skills.filter((skill) => typeof skill === "string")
+          : [];
+        setSkills(nextSkills);
+      })
+      .catch((error) => {
+        toast.error(error.message || "Unable to load skills");
+      });
+  }, []);
+
   const handleSave = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Please login again");
+      return;
+    }
+
     try {
       setIsSaving(true);
-      // TODO: save skills to backend
-      console.log("Saved skills:", skills);
+      const response = await fetch(`${API_BASE_URL}/api/student/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ skills }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data?.message || "Failed to save skills");
+      }
+
+      const savedSkills = Array.isArray(data?.profile?.skills)
+        ? data.profile.skills.filter((skill) => typeof skill === "string")
+        : skills;
+
+      setSkills(savedSkills);
+      toast.success("Skills saved");
+    } catch (error) {
+      toast.error(error.message || "Failed to save skills");
     } finally {
       setIsSaving(false);
     }

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 
 export default function ForgotPassword() {
   const [formData, setFormData] = useState({
@@ -30,7 +31,7 @@ export default function ForgotPassword() {
 
     try {
       console.log("Reset link sent to:", formData.email);
-      alert("Reset link sent to your email!");
+      toast.success("A password reset link has been sent. Please check your email to reset your password.");
       setFormData({ email: "" });
     } catch (err) {
       console.error(err);
@@ -84,3 +85,4 @@ export default function ForgotPassword() {
     </div>
   );
 }
+

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link, useParams } from "react-router-dom"; // or use Next.js useSearchParams
+import toast from "react-hot-toast";
 
 export default function ResetPassword() {
   const { token } = useParams(); // optional, if you send token in URL like /reset-password/:token
@@ -56,7 +57,7 @@ export default function ResetPassword() {
     // });
 
     console.log("Password reset successfully!");
-    alert("Your password has been reset successfully!");
+    toast.success("Your password has been reset successfully!");
     setFormData({ password: "", confirmPassword: "" });
   } catch (err) {
     console.error(err);

@@ -60,6 +60,22 @@ const studentSchema = new mongoose.Schema({
     resume:{
         type: String,
     },
+    resumes: [
+        {
+            url: {
+                type: String,
+                default: "",
+            },
+            name: {
+                type: String,
+                default: "",
+            },
+            uploadedAt: {
+                type: Date,
+                default: Date.now,
+            },
+        }
+    ],
     address:{
         type: String,
     },
@@ -146,6 +162,18 @@ const studentSchema = new mongoose.Schema({
                 type: String,
                 enum: ["APPLIED", "SHORTLISTED", "INTERVIEW", "SELECTED", "REJECTED"],
                 default: "APPLIED",
+            },
+            rejectedAt: {
+                type: Date,
+                default: null,
+            },
+            resumeUrl: {
+                type: String,
+                default: "",
+            },
+            resumeName: {
+                type: String,
+                default: "",
             },
         }
     ],

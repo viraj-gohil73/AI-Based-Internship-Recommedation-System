@@ -30,6 +30,35 @@ const getMonthlyAppliedCount = (entries = [], date = new Date()) => {
   }).length;
 };
 
+const addOneMonth = (dateValue) => {
+  const next = new Date(dateValue);
+  next.setMonth(next.getMonth() + 1);
+  return next;
+};
+
+const getFileNameFromUrl = (url = "") => {
+  if (typeof url !== "string" || !url.trim()) return "resume";
+  const cleanUrl = url.split("?")[0];
+  const parts = cleanUrl.split("/");
+  return decodeURIComponent(parts[parts.length - 1] || "resume");
+};
+
+const normalizeResumes = (resumes) => {
+  if (!Array.isArray(resumes)) return [];
+  const seen = new Set();
+  return resumes
+    .map((item) => {
+      const url = String(item?.url || item || "").trim();
+      if (!url || seen.has(url)) return null;
+      seen.add(url);
+      return {
+        url,
+        name: String(item?.name || getFileNameFromUrl(url)).trim() || getFileNameFromUrl(url),
+      };
+    })
+    .filter(Boolean);
+};
+
 const isInternshipCompleted = (internshipDoc) => {
   if (!internshipDoc) return false;
   if (internshipDoc.intern_status === "CLOSED") return true;
@@ -196,6 +225,8 @@ export const getAppliedInternships = async (req, res) => {
           ...internship,
           applicationStatus: entry.status || "APPLIED",
           appliedAt: entry.appliedAt || null,
+          resumeUrl: entry.resumeUrl || "",
+          resumeName: entry.resumeName || "",
           internshipCompleted,
           canGiveFeedback,
           hasFeedback: feedbackInfo.hasFeedback,
@@ -290,6 +321,7 @@ export const unsaveInternship = async (req, res) => {
 export const applyInternship = async (req, res) => {
   try {
     const { internshipId } = req.params;
+    const requestedResumeUrl = String(req.body?.resumeUrl || "").trim();
 
     if (!mongoose.Types.ObjectId.isValid(internshipId)) {
       return res.status(400).json({ success: false, message: "Invalid internship ID" });
@@ -311,7 +343,7 @@ export const applyInternship = async (req, res) => {
     }
 
     const student = await Student.findById(req.studentId).select(
-      "fname lname appliedInternships savedInternships"
+      "fname lname resume resumes appliedInternships savedInternships"
     );
     if (!student) {
       return res.status(404).json({ success: false, message: "Student not found" });
@@ -339,9 +371,82 @@ export const applyInternship = async (req, res) => {
       });
     }
 
+    const rejectedEntries = (student.appliedInternships || []).filter(
+      (entry) => entry?.status === "REJECTED" && entry?.internship
+    );
+
+    if (rejectedEntries.length > 0 && internship.company_id) {
+      const rejectedInternshipIds = rejectedEntries.map((entry) => entry.internship);
+
+      const sameCompanyRejectedInternships = await Internship.find(
+        {
+          _id: { $in: rejectedInternshipIds },
+          company_id: internship.company_id,
+        },
+        { _id: 1 }
+      ).lean();
+
+      if (sameCompanyRejectedInternships.length > 0) {
+        const sameCompanyRejectedIdSet = new Set(
+          sameCompanyRejectedInternships.map((doc) => String(doc._id))
+        );
+
+        let latestRejectedAt = null;
+        rejectedEntries.forEach((entry) => {
+          if (!sameCompanyRejectedIdSet.has(String(entry.internship))) return;
+          const candidateDate = entry.rejectedAt || entry.appliedAt;
+          if (!candidateDate) return;
+          const parsed = new Date(candidateDate);
+          if (Number.isNaN(parsed.getTime())) return;
+          if (!latestRejectedAt || parsed > latestRejectedAt) {
+            latestRejectedAt = parsed;
+          }
+        });
+
+        if (latestRejectedAt) {
+          const reapplyAllowedAt = addOneMonth(latestRejectedAt);
+          const now = new Date();
+          if (now < reapplyAllowedAt) {
+            return res.status(429).json({
+              success: false,
+              message:
+                "You can apply to this company's internships only after 1 month from your last rejection.",
+              reapplyAllowedAt,
+            });
+          }
+        }
+      }
+    }
+
+    const resumeOptions = normalizeResumes(student.resumes || []);
+    const defaultResumeUrl = String(student.resume || "").trim();
+    if (defaultResumeUrl && !resumeOptions.some((item) => item.url === defaultResumeUrl)) {
+      resumeOptions.unshift({
+        url: defaultResumeUrl,
+        name: getFileNameFromUrl(defaultResumeUrl),
+      });
+    }
+
+    const selectedResume = requestedResumeUrl
+      ? resumeOptions.find((item) => item.url === requestedResumeUrl)
+      : resumeOptions.find((item) => item.url === defaultResumeUrl) || resumeOptions[0];
+
+    if (!selectedResume?.url) {
+      return res.status(400).json({
+        success: false,
+        message: "Please upload a resume before applying.",
+      });
+    }
+
     student.appliedInternships = [
       ...(student.appliedInternships || []),
-      { internship: internship._id, status: "APPLIED", appliedAt: new Date() },
+      {
+        internship: internship._id,
+        status: "APPLIED",
+        appliedAt: new Date(),
+        resumeUrl: selectedResume.url,
+        resumeName: selectedResume.name || getFileNameFromUrl(selectedResume.url),
+      },
     ];
 
     const isSaved = (student.savedInternships || []).some(
@@ -385,6 +490,8 @@ export const applyInternship = async (req, res) => {
       success: true,
       message: "Internship applied successfully",
       applied: true,
+      resumeUrl: selectedResume.url,
+      resumeName: selectedResume.name || getFileNameFromUrl(selectedResume.url),
       monthlyApplicationLimit: MONTHLY_APPLICATION_LIMIT,
       appliedThisMonth: appliedThisMonth + 1,
     });

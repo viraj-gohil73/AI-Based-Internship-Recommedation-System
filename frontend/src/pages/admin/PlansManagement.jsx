@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, RefreshCcw } from "lucide-react";
+import {
+  Layers,
+  PencilLine,
+  Plus,
+  Power,
+  RefreshCcw,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 const emptyForm = {
@@ -13,6 +19,14 @@ const emptyForm = {
   addonRecruiterSeatMonthlyPrice: 0,
   addonRecruiterSeatYearlyPrice: 0,
   displayOrder: 0,
+};
+
+const inputClass =
+  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
+
+const formatCurrency = (value) => {
+  const num = Number(value || 0);
+  return `INR ${new Intl.NumberFormat("en-IN").format(num)}`;
 };
 
 export default function PlansManagement() {
@@ -42,7 +56,29 @@ export default function PlansManagement() {
     fetchPlans();
   }, []);
 
-  const modeLabel = useMemo(() => (editingId ? "Update Plan" : "Create Plan"), [editingId]);
+  const modeLabel = useMemo(
+    () => (editingId ? "Update Plan" : "Create Plan"),
+    [editingId]
+  );
+
+  const summary = useMemo(() => {
+    const active = plans.filter((p) => p.isActive).length;
+    const inactive = plans.length - active;
+    const avgMonthly =
+      plans.length > 0
+        ? Math.round(
+            plans.reduce((sum, p) => sum + Number(p.monthlyBasePrice || 0), 0) /
+              plans.length
+          )
+        : 0;
+
+    return {
+      total: plans.length,
+      active,
+      inactive,
+      avgMonthly,
+    };
+  }, [plans]);
 
   const toPayload = () => ({
     ...form,
@@ -84,14 +120,17 @@ export default function PlansManagement() {
 
   const toggleStatus = async (plan) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/plans/${plan._id}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ isActive: !plan.isActive }),
-      });
+      const res = await fetch(
+        `http://localhost:5000/api/admin/plans/${plan._id}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ isActive: !plan.isActive }),
+        }
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to update status");
       toast.success(plan.isActive ? "Plan disabled" : "Plan enabled");
@@ -120,30 +159,52 @@ export default function PlansManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-900">Plan Management</h1>
-            <p className="text-sm text-slate-500">Manage pricing, limits and add-on seat charges.</p>
+      <section className="relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute -top-16 -right-16 h-40 w-40 rounded-full bg-blue-200/40 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-10 h-44 w-44 rounded-full bg-indigo-200/40 blur-2xl" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative z-10">
+            <p className="inline-flex items-center rounded-full border border-blue-200 bg-white/70 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-blue-700">
+              Admin Billing
+            </p>
+            <h1 className="mt-2 text-2xl font-semibold text-slate-900">Plan Management</h1>
+            <p className="mt-1 text-sm text-slate-600">
+              Configure pricing, seat limits, and posting caps for all plans.
+            </p>
           </div>
           <button
             onClick={fetchPlans}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            className="relative z-10 inline-flex items-center gap-2 rounded-xl border border-blue-300 bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-500"
           >
             <RefreshCcw size={16} />
             Refresh
           </button>
         </div>
-      </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">{modeLabel}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <SummaryCard label="Total Plans" value={summary.total} />
+          <SummaryCard label="Active" value={summary.active} />
+          <SummaryCard label="Inactive" value={summary.inactive} />
+          <SummaryCard label="Avg Monthly" value={formatCurrency(summary.avgMonthly)} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-lg font-semibold text-slate-900">{modeLabel}</h2>
+          {editingId && (
+            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
+              <PencilLine size={12} /> Editing existing plan
+            </span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Field label="Code">
             <select
               value={form.code}
               onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className={inputClass}
               disabled={Boolean(editingId)}
             >
               <option value="Starter">Starter</option>
@@ -155,7 +216,8 @@ export default function PlansManagement() {
             <input
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className={inputClass}
+              placeholder="Public name shown in UI"
             />
           </Field>
           <Field label="Display Order">
@@ -163,7 +225,7 @@ export default function PlansManagement() {
               type="number"
               value={form.displayOrder}
               onChange={(e) => setForm((prev) => ({ ...prev, displayOrder: e.target.value }))}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className={inputClass}
             />
           </Field>
           <Field label="Monthly Base">
@@ -173,7 +235,7 @@ export default function PlansManagement() {
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, monthlyBasePrice: e.target.value }))
               }
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className={inputClass}
             />
           </Field>
           <Field label="Yearly Base">
@@ -183,7 +245,7 @@ export default function PlansManagement() {
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, yearlyBasePrice: e.target.value }))
               }
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className={inputClass}
             />
           </Field>
           <Field label="Included Recruiter Seats">
@@ -193,15 +255,18 @@ export default function PlansManagement() {
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, includedRecruiterSeats: e.target.value }))
               }
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className={inputClass}
             />
           </Field>
-          <Field label="Max Active Postings (blank=unlimited)">
+          <Field label="Max Active Postings (leave blank for unlimited)">
             <input
               type="number"
               value={form.maxActivePostings}
-              onChange={(e) => setForm((prev) => ({ ...prev, maxActivePostings: e.target.value }))}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, maxActivePostings: e.target.value }))
+              }
+              className={inputClass}
+              placeholder="Leave blank for unlimited"
             />
           </Field>
           <Field label="Addon Seat Monthly">
@@ -214,7 +279,7 @@ export default function PlansManagement() {
                   addonRecruiterSeatMonthlyPrice: e.target.value,
                 }))
               }
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className={inputClass}
             />
           </Field>
           <Field label="Addon Seat Yearly">
@@ -227,22 +292,27 @@ export default function PlansManagement() {
                   addonRecruiterSeatYearlyPrice: e.target.value,
                 }))
               }
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+              className={inputClass}
             />
           </Field>
         </div>
-        <Field label="Description">
-          <textarea
-            rows={2}
-            value={form.description}
-            onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          />
-        </Field>
-        <div className="flex gap-2">
+
+        <div className="mt-3">
+          <Field label="Description">
+            <textarea
+              rows={3}
+              value={form.description}
+              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+              className={inputClass}
+              placeholder="Short description for internal/admin context"
+            />
+          </Field>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
           <button
             onClick={submitPlan}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
           >
             <Plus size={16} />
             {modeLabel}
@@ -253,84 +323,161 @@ export default function PlansManagement() {
                 setEditingId(null);
                 setForm(emptyForm);
               }}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700"
+              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
             >
               Cancel Edit
             </button>
           )}
         </div>
-      </div>
+      </section>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600">
-            <tr>
-              <th className="p-3 text-left">Plan</th>
-              <th className="p-3 text-left">Base (M/Y)</th>
-              <th className="p-3 text-left">Limits</th>
-              <th className="p-3 text-left">Addon (M/Y)</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="hidden md:block">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-600">
               <tr>
-                <td className="p-4 text-center text-slate-500" colSpan="6">
-                  Loading plans...
-                </td>
+                <th className="p-3 text-left font-medium">Plan</th>
+                <th className="p-3 text-left font-medium">Base (M/Y)</th>
+                <th className="p-3 text-left font-medium">Limits</th>
+                <th className="p-3 text-left font-medium">Addon (M/Y)</th>
+                <th className="p-3 text-left font-medium">Status</th>
+                <th className="p-3 text-right font-medium">Actions</th>
               </tr>
-            )}
-            {!loading &&
-              plans.map((plan) => (
-                <tr key={plan._id} className="border-t border-slate-100">
-                  <td className="p-3">
-                    <p className="font-medium text-slate-900">{plan.code}</p>
-                    <p className="text-xs text-slate-500">{plan.name}</p>
-                  </td>
-                  <td className="p-3">
-                    INR {plan.monthlyBasePrice} / INR {plan.yearlyBasePrice}
-                  </td>
-                  <td className="p-3">
-                    Seats: {plan.includedRecruiterSeats} | Postings:{" "}
-                    {plan.maxActivePostings === null ? "Unlimited" : plan.maxActivePostings}
-                  </td>
-                  <td className="p-3">
-                    INR {plan.addonRecruiterSeatMonthlyPrice} / INR{" "}
-                    {plan.addonRecruiterSeatYearlyPrice}
-                  </td>
-                  <td className="p-3">
-                    <span
-                      className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                        plan.isActive
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-rose-100 text-rose-700"
-                      }`}
-                    >
-                      {plan.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right">
-                    <div className="inline-flex gap-2">
-                      <button
-                        onClick={() => startEdit(plan)}
-                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => toggleStatus(plan)}
-                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700"
-                      >
-                        {plan.isActive ? "Disable" : "Enable"}
-                      </button>
-                    </div>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td className="p-4 text-center text-slate-500" colSpan="6">
+                    Loading plans...
                   </td>
                 </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
+              )}
+
+              {!loading && plans.length === 0 && (
+                <tr>
+                  <td className="p-8 text-center text-slate-500" colSpan="6">
+                    No plans found.
+                  </td>
+                </tr>
+              )}
+
+              {!loading &&
+                plans.map((plan) => (
+                  <tr key={plan._id} className="border-t border-slate-100">
+                    <td className="p-3">
+                      <p className="font-semibold text-slate-900">{plan.code}</p>
+                      <p className="text-xs text-slate-500">{plan.name || "-"}</p>
+                    </td>
+                    <td className="p-3 text-slate-700">
+                      {formatCurrency(plan.monthlyBasePrice)} / {formatCurrency(plan.yearlyBasePrice)}
+                    </td>
+                    <td className="p-3 text-slate-700">
+                      Seats: {plan.includedRecruiterSeats} | Postings:{" "}
+                      {plan.maxActivePostings === null ? "Unlimited" : plan.maxActivePostings}
+                    </td>
+                    <td className="p-3 text-slate-700">
+                      {formatCurrency(plan.addonRecruiterSeatMonthlyPrice)} /{" "}
+                      {formatCurrency(plan.addonRecruiterSeatYearlyPrice)}
+                    </td>
+                    <td className="p-3">
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                          plan.isActive
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-rose-100 text-rose-700"
+                        }`}
+                      >
+                        {plan.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right">
+                      <div className="inline-flex gap-2">
+                        <button
+                          onClick={() => startEdit(plan)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                        >
+                          <PencilLine size={14} /> Edit
+                        </button>
+                        <button
+                          onClick={() => toggleStatus(plan)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                        >
+                          <Power size={14} /> {plan.isActive ? "Disable" : "Enable"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="space-y-3 p-3 md:hidden">
+          {loading && <p className="p-3 text-center text-sm text-slate-500">Loading plans...</p>}
+          {!loading && plans.length === 0 && (
+            <p className="p-3 text-center text-sm text-slate-500">No plans found.</p>
+          )}
+          {!loading &&
+            plans.map((plan) => (
+              <article
+                key={plan._id}
+                className="rounded-xl border border-slate-200 p-4 shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="flex items-center gap-1 font-semibold text-slate-900">
+                      <Layers size={14} /> {plan.code}
+                    </p>
+                    <p className="text-xs text-slate-500">{plan.name || "-"}</p>
+                  </div>
+                  <span
+                    className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                      plan.isActive
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-rose-100 text-rose-700"
+                    }`}
+                  >
+                    {plan.isActive ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                <div className="mt-3 space-y-1 text-xs text-slate-600">
+                  <p>Base: {formatCurrency(plan.monthlyBasePrice)} / {formatCurrency(plan.yearlyBasePrice)}</p>
+                  <p>
+                    Limits: {plan.includedRecruiterSeats} seats, {" "}
+                    {plan.maxActivePostings === null ? "Unlimited" : plan.maxActivePostings} postings
+                  </p>
+                  <p>
+                    Addon: {formatCurrency(plan.addonRecruiterSeatMonthlyPrice)} / {" "}
+                    {formatCurrency(plan.addonRecruiterSeatYearlyPrice)}
+                  </p>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => startEdit(plan)}
+                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => toggleStatus(plan)}
+                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700"
+                  >
+                    {plan.isActive ? "Disable" : "Enable"}
+                  </button>
+                </div>
+              </article>
+            ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function SummaryCard({ label, value }) {
+  return (
+    <div className="rounded-xl border border-blue-100 bg-white/80 p-3">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-1 text-lg font-semibold text-slate-900">{value}</p>
     </div>
   );
 }
@@ -338,7 +485,7 @@ export default function PlansManagement() {
 function Field({ label, children }) {
   return (
     <label className="text-sm text-slate-700">
-      <span className="mb-1 block">{label}</span>
+      <span className="mb-1.5 block font-medium">{label}</span>
       {children}
     </label>
   );

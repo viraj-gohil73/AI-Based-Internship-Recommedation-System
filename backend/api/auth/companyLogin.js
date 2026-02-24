@@ -24,6 +24,13 @@ export const companyLogin = async (req, res) => {
       });
     }
 
+    if (company.isactive === false) {
+      return res.status(403).json({
+        success: false,
+        message: "Your account is blocked",
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, company.password);
     //const isMatch = password === company.password;
     if (!isMatch) {

@@ -1,7 +1,8 @@
 import Student from "../models/Student.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import fetch from "node-fetch";
+
+const MAX_RESUME_COUNT = 3;
 
 export const registerStudent = async (req, res) => {
   try {
@@ -58,6 +59,10 @@ export const loginStudent = async (req, res) => {
       return res.status(404).json({ success: false, message: "Invalid email or password" });
     }
 
+    if (student.isactive === false) {
+      return res.status(403).json({ success: false, message: "Your account is blocked" });
+    }
+
     const isMatch = await bcrypt.compare(password, student.password);
     if (!isMatch) {
       return res.status(400).json({ success: false, message: "Invalid email or password" });
@@ -96,6 +101,20 @@ const splitCommaSeparated = (value) => {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+};
+
+const normalizeSkills = (skills) => {
+  if (Array.isArray(skills)) {
+    return skills
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
+  }
+
+  if (typeof skills === "string") {
+    return splitCommaSeparated(skills);
+  }
+
+  return [];
 };
 
 const validateNewPassword = (password) => {
@@ -177,33 +196,29 @@ const normalizeSocialLinks = (socialLinks) => {
   }));
 };
 
-const getUploadcareUUID = (url = "") => {
-  if (typeof url !== "string" || !url.trim()) return "";
-  const match = url.match(
-    /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})/i
-  );
-  return match ? match[1] : "";
+const getFileNameFromUrl = (url = "") => {
+  if (typeof url !== "string" || !url.trim()) return "resume";
+  const cleanUrl = url.split("?")[0];
+  const parts = cleanUrl.split("/");
+  return decodeURIComponent(parts[parts.length - 1] || "resume");
 };
 
-const deleteUploadcareFile = async (url) => {
-  const uuid = getUploadcareUUID(url);
-  if (!uuid) return;
+const normalizeResumes = (resumes) => {
+  if (!Array.isArray(resumes)) return [];
 
-  const publicKey = process.env.UPLOADCARE_PUBLIC_KEY;
-  const secretKey = process.env.UPLOADCARE_SECRET_KEY;
-  if (!publicKey || !secretKey) return;
-
-  try {
-    await fetch(`https://api.uploadcare.com/files/${uuid}/`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Uploadcare.Simple ${publicKey}:${secretKey}`,
-        Accept: "application/vnd.uploadcare-v0.7+json",
-      },
-    });
-  } catch (error) {
-    console.error("Failed to delete previous Uploadcare resume:", error?.message || error);
-  }
+  const seen = new Set();
+  return resumes
+    .map((item) => {
+      const url = String(item?.url || item || "").trim();
+      if (!url || seen.has(url)) return null;
+      seen.add(url);
+      return {
+        url,
+        name: String(item?.name || getFileNameFromUrl(url)).trim() || getFileNameFromUrl(url),
+        uploadedAt: item?.uploadedAt ? new Date(item.uploadedAt) : new Date(),
+      };
+    })
+    .filter(Boolean);
 };
 
 export const getStudentProfile = async (req, res) => {
@@ -213,6 +228,13 @@ export const getStudentProfile = async (req, res) => {
     if (!student) {
       return res.status(404).json({ success: false, message: "Student not found" });
     }
+
+    const legacyResume = String(student.resume || "").trim();
+    const normalizedResumes = normalizeResumes(student.resumes || []);
+    const hasLegacyInList = normalizedResumes.some((item) => item.url === legacyResume);
+    const resumes = legacyResume && !hasLegacyInList
+      ? [{ url: legacyResume, name: getFileNameFromUrl(legacyResume), uploadedAt: new Date() }, ...normalizedResumes]
+      : normalizedResumes;
 
     return res.status(200).json({
       success: true,
@@ -232,11 +254,13 @@ export const getStudentProfile = async (req, res) => {
         preferredLocation: student.preferredLocation || "",
         languages: Array.isArray(student.languages) ? student.languages.join(", ") : "",
         hobbies: Array.isArray(student.hobbies) ? student.hobbies.join(", ") : "",
+        skills: normalizeSkills(student.skills),
         educations: normalizeEducations(student.educations),
         certificates: normalizeCertificates(student.certificates),
         projects: normalizeProjects(student.projects),
         socialLinks: normalizeSocialLinks(student.socialLinks),
-        resume: student.resume || "",
+        resume: legacyResume,
+        resumes,
       },
     });
   } catch (error) {
@@ -345,11 +369,13 @@ export const updateStudentProfile = async (req, res) => {
       preferredLocation,
       languages,
       hobbies,
+      skills,
       educations,
       certificates,
       projects,
       socialLinks,
       resume,
+      resumes,
     } = req.body;
 
     if (Object.prototype.hasOwnProperty.call(req.body, "dp")) student.profilePic = dp || "";
@@ -372,6 +398,9 @@ export const updateStudentProfile = async (req, res) => {
     if (Object.prototype.hasOwnProperty.call(req.body, "hobbies")) {
       student.hobbies = splitCommaSeparated(hobbies);
     }
+    if (Object.prototype.hasOwnProperty.call(req.body, "skills")) {
+      student.skills = normalizeSkills(skills);
+    }
     if (Object.prototype.hasOwnProperty.call(req.body, "educations")) {
       student.educations = normalizeEducations(educations);
     }
@@ -384,16 +413,47 @@ export const updateStudentProfile = async (req, res) => {
     if (Object.prototype.hasOwnProperty.call(req.body, "socialLinks")) {
       student.socialLinks = normalizeSocialLinks(socialLinks);
     }
+
+    let nextResumes = normalizeResumes(student.resumes || []);
+    const currentResume = String(student.resume || "").trim();
+    if (currentResume && !nextResumes.some((item) => item.url === currentResume)) {
+      nextResumes = [
+        { url: currentResume, name: getFileNameFromUrl(currentResume), uploadedAt: new Date() },
+        ...nextResumes,
+      ];
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "resumes")) {
+      nextResumes = normalizeResumes(resumes);
+      if (nextResumes.length > MAX_RESUME_COUNT) {
+        return res.status(400).json({
+          success: false,
+          message: `You can upload maximum ${MAX_RESUME_COUNT} resumes only.`,
+        });
+      }
+    }
+
     if (Object.prototype.hasOwnProperty.call(req.body, "resume")) {
       const nextResume = typeof resume === "string" ? resume.trim() : "";
-      const previousResume = student.resume || "";
-
-      if (previousResume && previousResume !== nextResume) {
-        await deleteUploadcareFile(previousResume);
-      }
-
       student.resume = nextResume;
+      if (nextResume && !nextResumes.some((item) => item.url === nextResume)) {
+        nextResumes = [
+          { url: nextResume, name: getFileNameFromUrl(nextResume), uploadedAt: new Date() },
+          ...nextResumes,
+        ];
+      }
+    } else if (student.resume && !nextResumes.some((item) => item.url === student.resume)) {
+      student.resume = nextResumes[0]?.url || "";
     }
+
+    if (nextResumes.length > MAX_RESUME_COUNT) {
+      return res.status(400).json({
+        success: false,
+        message: `You can upload maximum ${MAX_RESUME_COUNT} resumes only.`,
+      });
+    }
+
+    student.resumes = nextResumes;
 
     await student.save();
 
@@ -402,10 +462,12 @@ export const updateStudentProfile = async (req, res) => {
       message: "Profile updated successfully",
       profile: {
         dp: student.profilePic || "",
+        skills: normalizeSkills(student.skills),
         certificates: normalizeCertificates(student.certificates),
         projects: normalizeProjects(student.projects),
         socialLinks: normalizeSocialLinks(student.socialLinks),
         resume: student.resume || "",
+        resumes: normalizeResumes(student.resumes || []),
       },
     });
   } catch (error) {
