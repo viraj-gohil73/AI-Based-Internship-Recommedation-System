@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Save, Camera, Sparkles, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useLocation, useNavigate } from "react-router-dom";
 import Input from "../profile/shared/Input";
 import GenderSelect from "../profile/shared/GenderSelect";
 
 const API_BASE_URL = "http://localhost:5000";
 
 export default function PersonalInfoTab() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const uploadRef = useRef(null);
   const syncUserStorage = (patch = {}) => {
     try {
@@ -41,21 +44,40 @@ export default function PersonalInfoTab() {
     hobbies: "",
   });
 
-  const validate = () => {
+  const normalizeProfile = (value) => ({
+    ...value,
+    firstName: String(value.firstName || "").trim(),
+    lastName: String(value.lastName || "").trim(),
+    gender: String(value.gender || "").trim(),
+    dob: String(value.dob || "").trim(),
+    phone: String(value.phone || "").replace(/\D/g, ""),
+    email: String(value.email || "").trim(),
+    address1: String(value.address1 || "").trim(),
+    address2: String(value.address2 || "").trim(),
+    city: String(value.city || "").trim(),
+    state: String(value.state || "").trim(),
+    pincode: String(value.pincode || "").replace(/\D/g, ""),
+    preferredLocation: String(value.preferredLocation || "").trim(),
+    languages: String(value.languages || "").trim(),
+    hobbies: String(value.hobbies || "").trim(),
+  });
+
+  const validate = (inputProfile) => {
+    const payload = normalizeProfile(inputProfile || profile);
     const newErrors = {};
 
-    if (profile.phone.length !== 10) newErrors.phone = "Enter valid 10-digit Indian mobile number";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) newErrors.email = "Enter valid email address";
-    if (!/^\d{6}$/.test(profile.pincode)) newErrors.pincode = "Pincode must be 6 digits";
-    if (!profile.gender) newErrors.gender = "Gender is required";
-    if (!profile.city) newErrors.city = "City is required";
-    if (!profile.state) newErrors.state = "State is required";
-    if (!profile.preferredLocation) newErrors.preferredLocation = "Current location is required";
-    if (!profile.firstName) newErrors.firstName = "First name is required";
-    if (!profile.lastName) newErrors.lastName = "Last name is required";
-    if (!profile.dob) newErrors.dob = "Date of birth is required";
-    if (profile.hobbies.length > 0 && !/^[a-zA-Z\s,]+$/.test(profile.hobbies)) newErrors.hobbies = "Hobbies must be comma-separated";
-    if (profile.languages.length > 0 && !/^[a-zA-Z\s,]+$/.test(profile.languages)) newErrors.languages = "Languages must be comma-separated";
+    if (payload.phone.length !== 10) newErrors.phone = "Enter valid 10-digit Indian mobile number";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) newErrors.email = "Enter valid email address";
+    if (!/^\d{6}$/.test(payload.pincode)) newErrors.pincode = "Pincode must be 6 digits";
+    if (!payload.gender) newErrors.gender = "Gender is required";
+    if (!payload.city) newErrors.city = "City is required";
+    if (!payload.state) newErrors.state = "State is required";
+    if (!payload.preferredLocation) newErrors.preferredLocation = "Current location is required";
+    if (!payload.firstName) newErrors.firstName = "First name is required";
+    if (!payload.lastName) newErrors.lastName = "Last name is required";
+    if (!payload.dob) newErrors.dob = "Date of birth is required";
+    if (payload.hobbies.length > 0 && !/^[a-zA-Z\s,]+$/.test(payload.hobbies)) newErrors.hobbies = "Hobbies must be comma-separated";
+    if (payload.languages.length > 0 && !/^[a-zA-Z\s,]+$/.test(payload.languages)) newErrors.languages = "Languages must be comma-separated";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -108,7 +130,9 @@ export default function PersonalInfoTab() {
       return;
     }
 
-    if (!validate()) return;
+    const payload = normalizeProfile(profile);
+    setProfile(payload);
+    if (!validate(payload)) return;
 
     const token = localStorage.getItem("token");
     if (!token) {
@@ -125,7 +149,7 @@ export default function PersonalInfoTab() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(profile),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -135,15 +159,18 @@ export default function PersonalInfoTab() {
       }
 
       syncUserStorage({
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        fname: profile.firstName,
-        lname: profile.lastName,
-        name: `${profile.firstName || ""} ${profile.lastName || ""}`.trim(),
-        email: profile.email,
-        dp: profile.dp,
-        avatar: profile.dp,
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        fname: payload.firstName,
+        lname: payload.lastName,
+        name: `${payload.firstName || ""} ${payload.lastName || ""}`.trim(),
+        email: payload.email,
+        dp: payload.dp,
+        avatar: payload.dp,
       });
+      if (location.state?.profileRequired) {
+        navigate(location.pathname, { replace: true, state: {} });
+      }
       toast.success("Profile saved successfully");
     } catch (error) {
       toast.error(error.message || "Failed to save profile");

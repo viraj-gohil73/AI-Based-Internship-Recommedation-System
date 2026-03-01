@@ -1,4 +1,5 @@
 import Student from "../models/Student.js";
+import Company from "../models/Company.js";
 import bcrypt from "bcryptjs";
 
 export const registerStudent = async (req, res) => {
@@ -13,11 +14,21 @@ export const registerStudent = async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const existingUser = await Student.findOne({ email: normalizedEmail });
-    if (existingUser) {
+    const [existingStudent, existingCompany] = await Promise.all([
+      Student.findOne({ email: normalizedEmail }),
+      Company.findOne({ email: normalizedEmail }),
+    ]);
+
+    if (existingStudent) {
       return res.status(400).json({
         success: false,
         message: "Email already registered",
+      });
+    }
+    if (existingCompany) {
+      return res.status(400).json({
+        success: false,
+        message: "This email is already registered as company. Use company login.",
       });
     }
 

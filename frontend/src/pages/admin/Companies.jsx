@@ -14,6 +14,8 @@ import {
   Calendar,
   Globe,
   X,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import NotAvailable from "../../components/NotAvailable.jsx";
@@ -402,7 +404,7 @@ export default function Companies() {
           onClick={() => setSelectedCompany(null)}
         >
           <div
-            className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            className="flex w-full max-w-3xl max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-700 px-6 py-5 text-white">
@@ -453,8 +455,9 @@ export default function Companies() {
               </div>
             </div>
 
-            <div className="grid gap-4 px-6 py-5 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+              <div className="grid gap-4 px-6 py-5 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Contact
                 </p>
@@ -469,12 +472,28 @@ export default function Companies() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Globe size={14} className="text-slate-400" />
-                    {selectedCompany.website || "-"}
+                    {selectedCompany.website ? (
+                      <a
+                        href={selectedCompany.website}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-blue-700 hover:underline"
+                      >
+                        {selectedCompany.website}
+                        <ExternalLink size={12} />
+                      </a>
+                    ) : (
+                      "-"
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail size={14} className="text-slate-400" />
+                    <span className="truncate">{selectedCompany.secondaryEmail || "-"}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Company
                 </p>
@@ -485,14 +504,71 @@ export default function Companies() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Building2 size={14} className="text-slate-400" />
-                    {selectedCompany.companySize || "-"}
+                    {selectedCompany.companySize || "-"} employees
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar size={14} className="text-slate-400" />
-                    {selectedCompany.createdAt
-                      ? new Date(selectedCompany.createdAt).toLocaleDateString()
-                      : "-"}
+                    Founded: {selectedCompany.foundedYear || "-"}
                   </div>
+                </div>
+              </div>
+
+                <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Address
+                </p>
+                <div className="mt-3 text-sm text-slate-700 space-y-2">
+                  <p>{selectedCompany.address1 || "-"}</p>
+                  {selectedCompany.address2 && <p>{selectedCompany.address2}</p>}
+                  <p>
+                    {selectedCompany.city || "-"}, {selectedCompany.state || "-"} {selectedCompany.pincode || "-"}
+                  </p>
+                </div>
+              </div>
+
+                <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Business Details
+                </p>
+                <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                  <p><span className="text-slate-500">Tagline:</span> {selectedCompany.tagline || "-"}</p>
+                  <p><span className="text-slate-500">GST:</span> {selectedCompany.gst_no || "-"}</p>
+                  <p><span className="text-slate-500">Recruiters:</span> {selectedCompany.recruiterCount ?? "-"}</p>
+                  <p><span className="text-slate-500">Internships:</span> {selectedCompany.internshipCount ?? "-"}</p>
+                  <p><span className="text-slate-500">Created:</span> {selectedCompany.createdAt ? new Date(selectedCompany.createdAt).toLocaleString() : "-"}</p>
+                  <p><span className="text-slate-500">Updated:</span> {selectedCompany.updatedAt ? new Date(selectedCompany.updatedAt).toLocaleString() : "-"}</p>
+                </div>
+              </div>
+
+                <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  About
+                </p>
+                <p className="mt-3 text-sm text-slate-700 whitespace-pre-wrap">
+                  {selectedCompany.about || "-"}
+                </p>
+              </div>
+
+                <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Documents
+                </p>
+                <div className="mt-3">
+                  {selectedCompany.reg_doc ? (
+                    <a
+                      href={selectedCompany.reg_doc}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 hover:bg-amber-100"
+                    >
+                      <FileText size={14} />
+                      Registration Document
+                      <ExternalLink size={12} />
+                    </a>
+                  ) : (
+                    <p className="text-sm text-slate-600">No document uploaded</p>
+                  )}
+                </div>
                 </div>
               </div>
             </div>

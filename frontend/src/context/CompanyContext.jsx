@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 const CompanyContext = createContext(null);
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 export function CompanyProvider({ children }) {
   const [company, setCompany] = useState(null);
@@ -18,7 +19,7 @@ export function CompanyProvider({ children }) {
         const token = localStorage.getItem("token");
 
         const res = await fetch(
-          "http://localhost:5000/api/company/me",
+          `${API_BASE_URL}/api/company/me`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -53,11 +54,16 @@ export function CompanyProvider({ children }) {
           reg_doc: data.data.reg_doc || "",
           verificationStatus: data.data.verificationStatus || "DRAFT",
         });
-      } catch (err) {
-        console.error("Company fetch error", err);
-      } finally {
-        setLoading(false);
+    } catch (err) {
+      console.error("Company fetch error", err);
+      if (err instanceof TypeError) {
+        console.error(
+          "Network error while fetching company profile. Check backend server, API URL, and CORS."
+        );
       }
+    } finally {
+      setLoading(false);
+    }
     };
 
     fetchCompany();
@@ -70,7 +76,7 @@ export function CompanyProvider({ children }) {
       setLoading(true);
 
       const res = await fetch(
-        "http://localhost:5000/api/company/update",
+        `${API_BASE_URL}/api/company/update`,
         {
           method: "PATCH",
           headers: {
@@ -96,6 +102,11 @@ export function CompanyProvider({ children }) {
       return data.company;
     } catch (error) {
       console.error("Company update error", error);
+      if (error instanceof TypeError) {
+        throw new Error(
+          "Network error: backend not reachable. Check if API server is running and VITE_API_BASE_URL is correct."
+        );
+      }
       throw error;
     } finally {
       setLoading(false);

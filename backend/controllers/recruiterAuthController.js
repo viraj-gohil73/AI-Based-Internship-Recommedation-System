@@ -115,6 +115,12 @@ export const loginRecruiter = async (req, res) => {
       });
     }
 
+    const loginAt = new Date();
+    await Recruiter.updateOne(
+      { _id: recruiter._id },
+      { $set: { last_login: loginAt } }
+    );
+
     const token = jwt.sign(
       { id: recruiter._id, role: "RECRUITER" },
       process.env.JWT_SECRET,
@@ -129,6 +135,7 @@ export const loginRecruiter = async (req, res) => {
         name: recruiter.name,
         email: recruiter.email,
         companyId: recruiter.companyId,
+        last_login: loginAt,
       },
     });
   } catch (error) {
@@ -611,3 +618,4 @@ export const updateRecruiterInterview = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+

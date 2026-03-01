@@ -90,7 +90,8 @@ const subscriptionSchema = new mongoose.Schema(
     },
     providerSubscriptionId: {
       type: String,
-      default: null,
+      default: undefined,
+      set: (value) => (value == null ? undefined : value),
     },
     providerCustomerId: {
       type: String,

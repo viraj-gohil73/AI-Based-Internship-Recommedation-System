@@ -73,8 +73,8 @@ const Company = new mongoose.Schema({
     }, 
     verificationStatus: {
         type: String,
-        enum: ["RESUBMISSION", "SUBMITTED", "APPROVED", "REJECTED"],
-        default: "RESUBMISSION",
+        enum: ["DRAFT", "RESUBMISSION", "SUBMITTED", "APPROVED", "REJECTED"],
+        default: "DRAFT",
     },
     isactive:{
         type:Boolean,

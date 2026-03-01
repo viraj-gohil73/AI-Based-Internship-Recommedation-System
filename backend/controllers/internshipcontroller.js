@@ -4,6 +4,8 @@ import {
   runNotificationTask,
 } from "../services/notificationService.js";
 
+const MAX_INTERNSHIPS_PER_COMPANY_PER_MONTH = 5;
+
 const toClientInternship = (internshipDoc) => {
   if (!internshipDoc) return null;
 
@@ -80,10 +82,37 @@ export const createInternship = async (req, res) => {
       return res.status(400).json({ message: "Title is required" });
     }
 
-    if (stipend_min && stipend_max && stipend_min > stipend_max) {
+    const stipendMinValue = Number(stipend_min || 0);
+    const stipendMaxValue = Number(stipend_max || 0);
+
+    if (
+      Number.isFinite(stipendMinValue) &&
+      Number.isFinite(stipendMaxValue) &&
+      stipendMinValue > stipendMaxValue
+    ) {
       return res
         .status(400)
         .json({ message: "Stipend min cannot be greater than max" });
+    }
+
+    if (!req.recruiter?.companyId) {
+      return res.status(400).json({ message: "Recruiter company is required" });
+    }
+
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0);
+
+    const monthlyPostedCount = await Internship.countDocuments({
+      company_id: req.recruiter.companyId,
+      createdAt: { $gte: monthStart, $lt: nextMonthStart },
+    });
+
+    if (monthlyPostedCount >= MAX_INTERNSHIPS_PER_COMPANY_PER_MONTH) {
+      return res.status(403).json({
+        success: false,
+        message: `Monthly internship limit reached. One company can post maximum ${MAX_INTERNSHIPS_PER_COMPANY_PER_MONTH} internships per month.`,
+      });
     }
 
     /* ===== CREATE DOCUMENT ===== */
@@ -169,3 +198,4 @@ export const getExploreInternships = async (req, res) => {
     });
   }
 };
+

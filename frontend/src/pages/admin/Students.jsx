@@ -9,10 +9,13 @@ import {
   RefreshCcw,
   Mail,
   Phone,
-  MapPin,
-  Calendar,
   X,
   Inbox,
+  GraduationCap,
+  Award,
+  FolderKanban,
+  Link as LinkIcon,
+  FileText,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import NotAvailable from "../../components/NotAvailable.jsx";
@@ -24,6 +27,7 @@ export default function Students() {
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [profileLoadingId, setProfileLoadingId] = useState(null);
 
   const token = localStorage.getItem("adminToken");
 
@@ -55,6 +59,11 @@ export default function Students() {
       setLoading(false);
     }
   };
+
+  const normalizeStudent = (student) => ({
+    ...student,
+    isActive: student?.isActive ?? student?.isactive ?? true,
+  });
 
   const toggleBlock = async (id, isActive) => {
     try {
@@ -122,6 +131,42 @@ export default function Students() {
   const getStudentName = (s) => {
     const name = `${s.fname || ""} ${s.lname || ""}`.trim();
     return name || s.email || "Student";
+  };
+
+  const formatDate = (value) => {
+    if (!value) return "-";
+    const dt = new Date(value);
+    return Number.isNaN(dt.getTime()) ? "-" : dt.toLocaleDateString();
+  };
+
+  const asArray = (value) => (Array.isArray(value) ? value.filter(Boolean) : []);
+
+  const openStudentProfile = async (student) => {
+    const studentId = student?._id || student?.id;
+    if (!studentId) {
+      toast.error("Student id is missing");
+      return;
+    }
+
+    setSelectedStudent(normalizeStudent(student));
+
+    try {
+      setProfileLoadingId(studentId);
+      const res = await fetch(`http://localhost:5000/api/admin/student/${studentId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = await res.json();
+
+      if (!res.ok || !result?.success) {
+        throw new Error(result?.message || "Failed to load student profile");
+      }
+
+      setSelectedStudent(normalizeStudent(result.data || student));
+    } catch (error) {
+      console.error("Student profile fetch failed:", error);
+    } finally {
+      setProfileLoadingId(null);
+    }
   };
 
   return (
@@ -265,10 +310,11 @@ export default function Students() {
                   <td className="p-4 text-right">
                     <div className="inline-flex gap-2">
                       <button
-                        onClick={() => setSelectedStudent(s)}
-                        className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+                        onClick={() => openStudentProfile(s)}
+                        className="p-2 flex items-center font-semibold border border-slate-200 rounded-lg hover:bg-slate-50"
+                        disabled={profileLoadingId === s._id}
                       >
-                        <Eye size={16} />
+                        {profileLoadingId === s._id ? "..." : <Eye size={16} className="mr-2"/>} View Profile
                       </button>
                       <button
                         onClick={() => requestBlockChange(s)}
@@ -333,10 +379,11 @@ export default function Students() {
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => setSelectedStudent(s)}
+                  onClick={() => openStudentProfile(s)}
                   className="p-2 border border-slate-200 rounded-lg"
+                  disabled={profileLoadingId === s._id}
                 >
-                  <Eye size={16} />
+                  {profileLoadingId === s._id ? "..." : <Eye size={16} />}
                 </button>
                 <button
                   onClick={() => requestBlockChange(s)}
@@ -358,11 +405,10 @@ export default function Students() {
           onClick={() => setSelectedStudent(null)}
         >
           <div
-            className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            className="w-full max-w-5xl max-h-[92vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-700 px-6 py-5 text-white">
-              <div className="absolute right-0 top-0 h-full w-36 bg-white/10 blur-2xl" />
+            <div className="relative border-b border-indigo-700 bg-indigo-600 px-6 py-5 text-white">
               <div className="relative flex items-start justify-between gap-4">
                 <div className="flex items-center gap-4">
                   {selectedStudent.profilePic ? (
@@ -371,7 +417,7 @@ export default function Students() {
                       className="h-14 w-14 rounded-full border border-white/30 object-cover ring-4 ring-white/10"
                     />
                   ) : (
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-white/10 text-sm font-semibold text-white ring-4 ring-white/10">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-white/20 text-sm font-semibold text-white">
                       {getStudentName(selectedStudent).slice(0, 2).toUpperCase()}
                     </div>
                   )}
@@ -379,20 +425,20 @@ export default function Students() {
                     <h3 className="text-xl font-semibold">
                       {getStudentName(selectedStudent)}
                     </h3>
-                    <p className="text-sm text-white/80">
+                    <p className="text-sm text-indigo-100">
                       {selectedStudent.loginType || "email"} login
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2 text-xs">
                       <span
                         className={`rounded-full px-2.5 py-1 ${
                           selectedStudent.isActive
-                            ? "bg-emerald-400/20 text-emerald-100"
-                            : "bg-rose-400/20 text-rose-100"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-rose-100 text-rose-700"
                         }`}
                       >
                         {selectedStudent.isActive ? "Active" : "Blocked"}
                       </span>
-                      <span className="rounded-full bg-white/15 px-2.5 py-1 text-white/90">
+                      <span className="rounded-full bg-white/20 px-2.5 py-1 text-white">
                         Skills: {selectedStudent.skills?.length || 0}
                       </span>
                     </div>
@@ -400,56 +446,230 @@ export default function Students() {
                 </div>
                 <button
                   onClick={() => setSelectedStudent(null)}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white transition hover:bg-white/30"
                 >
                   <X size={16} />
                 </button>
               </div>
             </div>
 
-            <div className="grid gap-4 px-6 py-5 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Contact
-                </p>
-                <div className="mt-3 grid gap-2 text-sm text-slate-700">
-                  <div className="flex items-center gap-2">
-                    <Mail size={14} className="text-slate-400" />
-                    <span className="truncate">{selectedStudent.email}</span>
+            <div className="max-h-[72vh] overflow-y-auto px-6 py-5 space-y-5 bg-white">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Contact
+                  </p>
+                  <div className="mt-3 grid gap-2 text-sm text-slate-700">
+                    <div className="flex items-center gap-2">
+                      <Mail size={14} className="text-slate-400" />
+                      <span className="truncate">{selectedStudent.email || "-"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone size={14} className="text-slate-400" />
+                      {selectedStudent.phone_no || "-"}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Phone size={14} className="text-slate-400" />
-                    {selectedStudent.phone_no || "-"}
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Personal
+                  </p>
+                  <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                    <p><span className="text-slate-500">First Name:</span> {selectedStudent.fname || "-"}</p>
+                    <p><span className="text-slate-500">Last Name:</span> {selectedStudent.lname || "-"}</p>
+                    <p><span className="text-slate-500">Gender:</span> {selectedStudent.gender || "-"}</p>
+                    <p><span className="text-slate-500">DOB:</span> {formatDate(selectedStudent.dob)}</p>
+                    <p className="sm:col-span-2"><span className="text-slate-500">Location:</span> {selectedStudent.preferredLocation || "-"}</p>
+                    <p><span className="text-slate-500">City:</span> {selectedStudent.city || "-"}</p>
+                    <p><span className="text-slate-500">State:</span> {selectedStudent.state || "-"}</p>
+                    <p><span className="text-slate-500">Pincode:</span> {selectedStudent.pincode || "-"}</p>
+                    <p><span className="text-slate-500">Joined:</span> {formatDate(selectedStudent.createdAt)}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Profile
+                  Address
                 </p>
-                <div className="mt-3 grid gap-2 text-sm text-slate-700">
-                  <div className="flex items-center gap-2">
-                    <MapPin size={14} className="text-slate-400" />
-                    {selectedStudent.preferredLocation || "-"}
+                <p className="mt-3 text-sm text-slate-700">
+                  {[selectedStudent.address1, selectedStudent.address2, selectedStudent.city, selectedStudent.state, selectedStudent.pincode]
+                    .filter(Boolean)
+                    .join(", ") || "-"}
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Languages
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {asArray(selectedStudent.languages).length ? asArray(selectedStudent.languages).map((item, idx) => (
+                      <span key={`${item}-${idx}`} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">{item}</span>
+                    )) : <span className="text-sm text-slate-500">-</span>}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar size={14} className="text-slate-400" />
-                    {selectedStudent.createdAt
-                      ? new Date(selectedStudent.createdAt).toLocaleDateString()
-                      : "-"}
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Hobbies
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {asArray(selectedStudent.hobbies).length ? asArray(selectedStudent.hobbies).map((item, idx) => (
+                      <span key={`${item}-${idx}`} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">{item}</span>
+                    )) : <span className="text-sm text-slate-500">-</span>}
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex flex-wrap gap-2 px-6 pb-6 text-xs text-slate-600">
-              <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                Student ID: {selectedStudent._id || "-"}
-              </span>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                Login: {selectedStudent.loginType || "email"}
-              </span>
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Skills
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {asArray(selectedStudent.skills).length ? asArray(selectedStudent.skills).map((item, idx) => (
+                    <span key={`${item}-${idx}`} className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{item}</span>
+                  )) : <span className="text-sm text-slate-500">No skills added</span>}
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-2">
+                    <FileText size={14} />
+                    Resumes
+                  </p>
+                  <div className="mt-3 space-y-2 text-sm">
+                    {asArray(selectedStudent.resumes).length ? asArray(selectedStudent.resumes).map((resume, idx) => (
+                      <a
+                        key={`${resume?.url || "resume"}-${idx}`}
+                        href={resume?.url || "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700 hover:bg-slate-100"
+                      >
+                        <span className="truncate">{resume?.name || `Resume ${idx + 1}`}</span>
+                        <span className="text-xs text-slate-500">{formatDate(resume?.uploadedAt)}</span>
+                      </a>
+                    )) : selectedStudent.resume ? (
+                      <a
+                        href={selectedStudent.resume}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-slate-700 hover:bg-slate-50"
+                      >
+                        View Resume
+                      </a>
+                    ) : (
+                      <span className="text-slate-500">No resume uploaded</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Activity
+                  </p>
+                  <div className="mt-3 space-y-2 text-sm text-slate-700">
+                    <p>Saved internships: <span className="font-semibold">{asArray(selectedStudent.savedInternships).length}</span></p>
+                    <p>Applied internships: <span className="font-semibold">{asArray(selectedStudent.appliedInternships).length}</span></p>
+                    <p>Profile last updated: <span className="font-semibold">{formatDate(selectedStudent.updatedAt)}</span></p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-2">
+                    <GraduationCap size={14} />
+                    Education
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {asArray(selectedStudent.educations).length ? asArray(selectedStudent.educations).map((edu, idx) => (
+                      <div key={`edu-${idx}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                        <p className="font-semibold">{edu?.instituteName || "-"}</p>
+                        <p>{edu?.degreeType || "-"} {edu?.fieldOfStudy ? `- ${edu.fieldOfStudy}` : ""}</p>
+                        <p className="text-xs text-slate-500">
+                          {edu?.startYear || "-"} - {edu?.endYear || (edu?.status === "pursuing" ? "Present" : "-")}
+                        </p>
+                      </div>
+                    )) : <p className="text-sm text-slate-500">No education details</p>}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-2">
+                    <Award size={14} />
+                    Certificates
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {asArray(selectedStudent.certificates).length ? asArray(selectedStudent.certificates).map((cert, idx) => (
+                      <div key={`cert-${idx}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                        <p className="font-semibold">{cert?.name || "-"}</p>
+                        <p>{cert?.organization || "-"}</p>
+                        <p className="text-xs text-slate-500">{cert?.issueDate || "-"} {cert?.expiryDate ? `to ${cert.expiryDate}` : ""}</p>
+                      </div>
+                    )) : <p className="text-sm text-slate-500">No certificates</p>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-2">
+                    <FolderKanban size={14} />
+                    Projects
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {asArray(selectedStudent.projects).length ? asArray(selectedStudent.projects).map((project, idx) => (
+                      <div key={`project-${idx}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                        <p className="font-semibold">{project?.title || "-"}</p>
+                        <p className="line-clamp-2">{project?.description || "-"}</p>
+                        {project?.liveUrl && (
+                          <a href={project.liveUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex text-xs text-indigo-600 hover:underline">
+                            View project link
+                          </a>
+                        )}
+                      </div>
+                    )) : <p className="text-sm text-slate-500">No projects</p>}
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-2">
+                    <LinkIcon size={14} />
+                    Social Links
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {asArray(selectedStudent.socialLinks).length ? asArray(selectedStudent.socialLinks).map((item, idx) => (
+                      <a
+                        key={`social-${idx}`}
+                        href={item?.url || "#"}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 hover:bg-slate-100"
+                      >
+                        <span>{item?.platform || "Link"}</span>
+                        <span className="truncate text-xs text-slate-500 max-w-[65%] text-right">{item?.username || item?.url || "-"}</span>
+                      </a>
+                    )) : <p className="text-sm text-slate-500">No social links</p>}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 text-xs text-slate-700 pb-1">
+                <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 shadow-sm">
+                  Student ID: {selectedStudent._id || "-"}
+                </span>
+                <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 shadow-sm">
+                  Login: {selectedStudent.loginType || "email"}
+                </span>
+                <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 shadow-sm">
+                  Created: {formatDate(selectedStudent.createdAt)}
+                </span>
+              </div>
             </div>
           </div>
         </div>

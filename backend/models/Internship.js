@@ -113,6 +113,7 @@ const internshipSchema = new mongoose.Schema(
 
 /* ================= INDEXES (IMPORTANT) ================= */
 internshipSchema.index({ company_id: 1 });
+internshipSchema.index({ company_id: 1, createdAt: -1 });
 internshipSchema.index({ recruiter_id: 1 });
 internshipSchema.index({ intern_status: 1 });
 internshipSchema.index({ is_published: 1 });

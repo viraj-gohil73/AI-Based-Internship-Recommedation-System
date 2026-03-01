@@ -23,7 +23,11 @@ export default function CompanyProfile() {
 
   const [activeTab, setActiveTab] = useState(tabs[0]);
 
-  const status = company?.verificationStatus || "DRAFT";
+  const hasDocument =
+    typeof company?.reg_doc === "string" && company.reg_doc.trim().length > 0;
+  const rawStatus = company?.verificationStatus || "DRAFT";
+  const status =
+    rawStatus === "RESUBMISSION" && !hasDocument ? "DRAFT" : rawStatus;
 
   const isUnderReview = status === "SUBMITTED";
   const isResubmission = status === "RESUBMISSION";

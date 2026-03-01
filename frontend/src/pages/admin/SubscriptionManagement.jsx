@@ -354,28 +354,59 @@ export default function SubscriptionManagement() {
           onClick={() => setSelected(null)}
         >
           <div
-            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+            className="flex w-full max-w-2xl max-h-[90vh] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-slate-900">
-              {getCompanyName(selected)}
-            </h3>
-            <p className="text-sm text-slate-500">{getCompanyEmail(selected)}</p>
-            <div className="mt-4 space-y-2 text-sm text-slate-600">
-              <p><b className="text-slate-700">Plan:</b> {selected.planCode || selected.planCodeSnapshot || selected.plan || "-"}</p>
-              <p><b className="text-slate-700">Cycle:</b> {selected.billingCycle || "-"}</p>
-              <p><b className="text-slate-700">Seats:</b> {selected.totalRecruiterSeats || selected.seats || 0}</p>
-              <p><b className="text-slate-700">Amount:</b> {formatCurrency(selected.totalAmount || selected.amount)}</p>
-              <p><b className="text-slate-700">Period End:</b> {formatDate(getRenewalDate(selected))}</p>
-              <p><b className="text-slate-700">Status:</b> {readableStatus(selected.status)}</p>
+            <div className="border-b border-indigo-200 bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 px-6 py-5 text-white">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <h3 className="truncate text-xl font-semibold">{getCompanyName(selected)}</h3>
+                  <p className="mt-1 truncate text-sm text-white/85">{getCompanyEmail(selected)}</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-medium">
+                      {selected.planCode || selected.planCodeSnapshot || selected.plan || "-"}
+                    </span>
+                    <span className={`rounded-full px-2.5 py-1 text-xs ${statusBadge(selected.status)}`}>
+                      {readableStatus(selected.status)}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelected(null)}
+                  className="rounded-lg bg-white/20 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/30"
+                >
+                  Close
+                </button>
+              </div>
             </div>
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setSelected(null)}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-              >
-                Close
-              </button>
+
+            <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50 p-6 [scrollbar-gutter:stable]">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <MetricCard label="Plan Amount" value={formatCurrency(selected.totalAmount || selected.amount)} />
+                <MetricCard label="Recruiter Seats" value={String(selected.totalRecruiterSeats || selected.seats || 0)} />
+                <MetricCard label="Renewal Date" value={formatDate(getRenewalDate(selected))} />
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subscription Details</p>
+                <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                  <p><span className="font-semibold text-slate-900">Plan:</span> {selected.planCode || selected.planCodeSnapshot || selected.plan || "-"}</p>
+                  <p><span className="font-semibold text-slate-900">Billing Cycle:</span> {selected.billingCycle || "-"}</p>
+                  <p><span className="font-semibold text-slate-900">Seats:</span> {selected.totalRecruiterSeats || selected.seats || 0}</p>
+                  <p><span className="font-semibold text-slate-900">Amount:</span> {formatCurrency(selected.totalAmount || selected.amount)}</p>
+                  <p><span className="font-semibold text-slate-900">Period End:</span> {formatDate(getRenewalDate(selected))}</p>
+                  <p><span className="font-semibold text-slate-900">Status:</span> {readableStatus(selected.status)}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => setSelected(null)}
+                  className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                >
+                  Done
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -442,4 +473,13 @@ function readableStatus(status) {
   if (status === "CANCELLED") return "Cancelled";
   if (status === "EXPIRED") return "Expired";
   return status;
+}
+
+function MetricCard({ label, value }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <p className="text-xs font-medium text-slate-500">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-900">{value}</p>
+    </div>
+  );
 }

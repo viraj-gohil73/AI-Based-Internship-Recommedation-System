@@ -33,6 +33,9 @@ const STATUS_ACTIONS = [
   { label: "Reset", value: "APPLIED" },
 ];
 
+const PROFILE_BUTTON_CLASS =
+  "group inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-gradient-to-r from-indigo-50 to-sky-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 transition hover:from-indigo-100 hover:to-sky-100 focus:outline-none focus:ring-2 focus:ring-indigo-200";
+
 const getStatusClasses = (status) => {
   switch (status) {
     case "SHORTLISTED":
@@ -384,10 +387,12 @@ export default function Applicants() {
                         <div className="flex flex-wrap items-center gap-2">
                           <button
                             onClick={() => openStudentProfile(applicant)}
-                            className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-100"
+                            className={PROFILE_BUTTON_CLASS}
                           >
-                            <Eye size={14} />
-                            Profile
+                            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 transition group-hover:bg-indigo-200">
+                              <Eye size={12} />
+                            </span>
+                            View Profile
                           </button>
                           <Link
                             to={`/recruiter/applicants/${applicant.internshipId}/${applicant.studentId}`}

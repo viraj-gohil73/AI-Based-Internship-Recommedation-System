@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { X, Calendar, Check, AlertCircle, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+
+const MONTHLY_COMPANY_INTERNSHIP_LIMIT = 5;
 
 export default function RecruiterInternshipForm() {
   const navigate = useNavigate();
@@ -34,6 +37,8 @@ export default function RecruiterInternshipForm() {
   const [postingLimits, setPostingLimits] = useState({
     maxActivePostings: null,
     activePostingsCount: 0,
+    monthlyCompanyLimit: MONTHLY_COMPANY_INTERNSHIP_LIMIT,
+    monthlyCompanyPostedCount: 0,
   });
 
   useEffect(() => {
@@ -50,11 +55,17 @@ export default function RecruiterInternshipForm() {
         setPostingLimits({
           maxActivePostings: data?.entitlements?.limits?.maxActivePostings ?? null,
           activePostingsCount: data?.usage?.activePostingsCount ?? 0,
+          monthlyCompanyLimit:
+            data?.entitlements?.limits?.monthlyInternshipsPerCompany ??
+            MONTHLY_COMPANY_INTERNSHIP_LIMIT,
+          monthlyCompanyPostedCount: data?.usage?.monthlyInternshipsCount ?? 0,
         });
       } catch (err) {
         setPostingLimits({
           maxActivePostings: null,
           activePostingsCount: 0,
+          monthlyCompanyLimit: MONTHLY_COMPANY_INTERNSHIP_LIMIT,
+          monthlyCompanyPostedCount: 0,
         });
       }
     };
@@ -66,6 +77,8 @@ export default function RecruiterInternshipForm() {
     postingLimits.maxActivePostings !== null &&
     postingLimits.maxActivePostings !== undefined &&
     postingLimits.activePostingsCount >= postingLimits.maxActivePostings;
+  const monthlyLimitReached =
+    postingLimits.monthlyCompanyPostedCount >= postingLimits.monthlyCompanyLimit;
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -106,6 +119,15 @@ export default function RecruiterInternshipForm() {
       );
       return;
     }
+    if (monthlyLimitReached) {
+      setError(
+        `Monthly internship limit reached (${postingLimits.monthlyCompanyPostedCount}/${postingLimits.monthlyCompanyLimit}).`
+      );
+      toast.error(
+        `Monthly internship limit reached. Maximum ${postingLimits.monthlyCompanyLimit} internships per month per company.`
+      );
+      return;
+    }
     setLoading(true);
 
     const token = localStorage.getItem("recruiterToken");
@@ -136,14 +158,19 @@ export default function RecruiterInternshipForm() {
       const data = await res.json();
       setSuccess(true);
       console.log("SUCCESS:", data);
+      toast.success("Internship submitted successfully");
+      setPostingLimits((prev) => ({
+        ...prev,
+        monthlyCompanyPostedCount: prev.monthlyCompanyPostedCount + 1,
+      }));
 
       setTimeout(() => {
         setSuccess(false);
-        // Reset form or redirect
-        // navigate("/recruiter/internships");
-      }, 2000);
+        navigate("/recruiter/internships");
+      }, 1000);
     } catch (error) {
       setError(error.message);
+      toast.error(error.message || "Failed to submit internship");
       console.error("ERROR:", error.message);
     } finally {
       setLoading(false);
@@ -177,6 +204,15 @@ export default function RecruiterInternshipForm() {
           {postingLimitReached && (
             <div className="mx-5 my-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
               Posting limit reached ({postingLimits.activePostingsCount}/{postingLimits.maxActivePostings}).
+            </div>
+          )}
+          <div className="mx-5 mb-4 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
+            Monthly company posting limit: {postingLimits.monthlyCompanyPostedCount}/{postingLimits.monthlyCompanyLimit}
+            {" "}- Remaining: {Math.max(postingLimits.monthlyCompanyLimit - postingLimits.monthlyCompanyPostedCount, 0)}
+          </div>
+          {monthlyLimitReached && (
+            <div className="mx-5 mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              Monthly internship limit reached ({postingLimits.monthlyCompanyPostedCount}/{postingLimits.monthlyCompanyLimit}).
             </div>
           )}
         </motion.div>
@@ -443,7 +479,7 @@ export default function RecruiterInternshipForm() {
           >
             <motion.button
               type="submit"
-              disabled={loading || postingLimitReached}
+              disabled={loading || postingLimitReached || monthlyLimitReached}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={`relative px-10 py-3 rounded-xl font-bold text-md text-white transition overflow-hidden shadow-lg ${

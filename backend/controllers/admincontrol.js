@@ -159,7 +159,7 @@ export const respondToCompany = async (req, res) => {
 
 export const getCompanyDetails = async (req, res) => {
   try {
-    const company = await Company.findById(req.params.id);
+    const company = await Company.findById(req.params.id).select("-password -__v");
 
     if (!company) {
       return res.status(404).json({
@@ -168,9 +168,18 @@ export const getCompanyDetails = async (req, res) => {
       });
     }
 
+    const [recruiterCount, internshipCount] = await Promise.all([
+      Recruiter.countDocuments({ companyId: company._id }),
+      Internship.countDocuments({ company_id: company._id }),
+    ]);
+
     return res.status(200).json({
       success: true,
-      data: company,
+      data: {
+        ...company.toObject(),
+        recruiterCount,
+        internshipCount,
+      },
     });
   } catch (error) {
     return res.status(500).json({
@@ -231,6 +240,7 @@ export const toggleCompanyActive = async (req, res) => {
 export const getRecruiters = async (req, res) => {
   try {
     const recruiters = await Recruiter.find()
+      .select("-password")
       .populate("companyId", "companyName")
       .sort({ createdAt: -1 });
 
@@ -252,11 +262,99 @@ export const getRecruiters = async (req, res) => {
   }
 };
 
+export const getInternships = async (req, res) => {
+  try {
+    const [internships, applicationCounts] = await Promise.all([
+      Internship.find()
+        .populate("company_id", "companyName email")
+        .populate("recruiter_id", "name email")
+        .sort({ createdAt: -1 }),
+      Student.aggregate([
+        { $unwind: "$appliedInternships" },
+        {
+          $group: {
+            _id: "$appliedInternships.internship",
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
+    const countMap = new Map(
+      applicationCounts.map((row) => [String(row._id), Number(row.count || 0)])
+    );
+
+    const data = internships.map((item) => ({
+      ...item.toObject(),
+      companyName: item.company_id?.companyName || "",
+      companyEmail: item.company_id?.email || "",
+      recruiterName: item.recruiter_id?.name || "",
+      recruiterEmail: item.recruiter_id?.email || "",
+      applicationsCount: countMap.get(String(item._id)) || 0,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      count: data.length,
+      data,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch internships",
+    });
+  }
+};
+
+export const disableInternship = async (req, res) => {
+  try {
+    const internship = await Internship.findById(req.params.id);
+
+    if (!internship) {
+      return res.status(404).json({ message: "Internship not found" });
+    }
+
+    if (internship.intern_status === "CLOSED") {
+      return res.status(200).json({
+        success: true,
+        message: "Internship already disabled",
+        data: internship,
+      });
+    }
+
+    internship.intern_status = "CLOSED";
+    internship.is_published = "false";
+    await internship.save();
+
+    await logAdminAction({
+      action: "Internship disabled",
+      actor: getActor(req),
+      target: internship.title || String(internship._id),
+      type: "INTERNSHIP",
+      severity: "MEDIUM",
+      meta: {
+        internshipId: internship._id,
+        intern_status: internship.intern_status,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Internship disabled",
+      data: internship,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Action failed" });
+  }
+};
+
 export const getRecruiterDetails = async (req, res) => {
   try {
-    const recruiter = await Recruiter.findById(req.params.id).populate(
+    const recruiter = await Recruiter.findById(req.params.id)
+      .select("-password -__v")
+      .populate(
       "companyId",
-      "companyName email"
+      "companyName email mobile website industry city state address1 address2 pincode logo verificationStatus"
     );
 
     if (!recruiter) {
@@ -266,10 +364,16 @@ export const getRecruiterDetails = async (req, res) => {
       });
     }
 
+    const assignedInternshipsCount = await Internship.countDocuments({
+      recruiter_id: recruiter._id,
+    });
+
     const payload = {
       ...recruiter.toObject(),
       companyName: recruiter.companyId?.companyName || null,
       companyEmail: recruiter.companyId?.email || null,
+      company: recruiter.companyId || null,
+      assignedInternshipsCount,
     };
 
     return res.status(200).json({
@@ -317,7 +421,9 @@ export const toggleRecruiterActive = async (req, res) => {
 /* ================= STUDENTS ================= */
 export const getStudents = async (req, res) => {
   try {
-    const students = await Student.find().sort({ createdAt: -1 });
+    const students = await Student.find()
+      .select("-password -__v")
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       success: true,
@@ -328,6 +434,32 @@ export const getStudents = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch students",
+    });
+  }
+};
+
+export const getStudentDetails = async (req, res) => {
+  try {
+    const student = await Student.findById(req.params.id)
+      .select("-password -__v")
+      .populate("savedInternships", "title company_id")
+      .populate("appliedInternships.internship", "title company_id intern_status");
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: "Student not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: student,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch student details",
     });
   }
 };

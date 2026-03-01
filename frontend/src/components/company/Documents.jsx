@@ -1,7 +1,13 @@
-import { Upload, Files, Trash2, CheckCircle2, ExternalLink, AlertCircle, ListChecks } from "lucide-react";
+import { Upload, Files, Trash2, CheckCircle2, ExternalLink, ListChecks } from "lucide-react";
 import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useCompany } from "../../context/CompanyContext";
+import { supabase } from "../../utils/supabaseClient";
+
+const SUPABASE_COMPANY_DOC_BUCKET =
+  import.meta.env.VITE_SUPABASE_COMPANY_DOC_BUCKET ||
+  import.meta.env.VITE_SUPABASE_RESUME_BUCKET ||
+  "resumes";
 
 export default function Documents({ data, setFormData, disabled }) {
   const fileRef = useRef(null);
@@ -11,7 +17,9 @@ export default function Documents({ data, setFormData, disabled }) {
   const [uploading, setUploading] = useState(false);
 
   /* ✅ SINGLE SOURCE OF TRUTH */
-  const hasDocument = typeof data?.reg_doc === "string";
+  const regDocUrl =
+    typeof data?.reg_doc === "string" ? data.reg_doc.trim() : "";
+  const hasDocument = Boolean(regDocUrl);
 
   /* ---------------- FILE NAME (UI ONLY) ---------------- */
   const getDisplayFileName = () => {
@@ -25,13 +33,19 @@ export default function Documents({ data, setFormData, disabled }) {
   const validateFile = (file) => {
     if (!file) return false;
 
-    const allowedTypes = [
+    const allowedMimeTypes = [
       "application/pdf",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ];
+    const allowedExtensions = [".pdf", ".doc", ".docx"];
+    const fileName = (file.name || "").toLowerCase();
+    const hasAllowedExtension = allowedExtensions.some((ext) =>
+      fileName.endsWith(ext)
+    );
+    const hasAllowedMimeType = allowedMimeTypes.includes(file.type);
 
-    if (!allowedTypes.includes(file.type)) {
+    if (!hasAllowedMimeType && !hasAllowedExtension) {
       toast.error("Only PDF or DOC/DOCX files are allowed");
       return false;
     }
@@ -44,15 +58,45 @@ export default function Documents({ data, setFormData, disabled }) {
     return true;
   };
 
+  const uploadDocumentToSupabase = async (selectedFile) => {
+    if (!supabase) {
+      throw new Error(
+        "Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+      );
+    }
+
+    const safeFileName = (selectedFile.name || "registration-document")
+      .replace(/\s+/g, "-")
+      .replace(/[^a-zA-Z0-9._-]/g, "");
+    const filePath = `company-documents/${Date.now()}-${safeFileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(SUPABASE_COMPANY_DOC_BUCKET)
+      .upload(filePath, selectedFile, {
+        cacheControl: "3600",
+        contentType: selectedFile.type || undefined,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      throw new Error(uploadError.message || "Document upload failed");
+    }
+
+    const { data } = supabase.storage
+      .from(SUPABASE_COMPANY_DOC_BUCKET)
+      .getPublicUrl(filePath);
+
+    if (!data?.publicUrl) {
+      throw new Error("Upload succeeded but public URL is unavailable");
+    }
+
+    return data.publicUrl;
+  };
+
   /* ---------------- UPLOAD ---------------- */
   const handleUpload = async () => {
     if (!file) {
       toast.error("Please choose a file first");
-      return;
-    }
-
-    if (!window.uploadcare) {
-      toast.error("Upload service not available");
       return;
     }
 
@@ -61,14 +105,13 @@ export default function Documents({ data, setFormData, disabled }) {
     setUploading(true);
 
     try {
-      const upload = window.uploadcare.fileFrom("object", file);
-      const result = await upload.promise();
+      const documentUrl = await uploadDocumentToSupabase(file);
 
-      await updateCompany({ reg_doc: result.cdnUrl });
+      await updateCompany({ reg_doc: documentUrl });
 
       setFormData((prev) => ({
         ...prev,
-        reg_doc: result.cdnUrl,
+        reg_doc: documentUrl,
       }));
 
       toast.success("Document uploaded successfully");
@@ -77,7 +120,7 @@ export default function Documents({ data, setFormData, disabled }) {
       if (fileRef.current) fileRef.current.value = "";
     } catch (err) {
       console.error(err);
-      toast.error("Upload failed");
+      toast.error(err?.message || "Upload failed");
     } finally {
       setUploading(false);
     }
@@ -135,7 +178,7 @@ export default function Documents({ data, setFormData, disabled }) {
                 {getDisplayFileName()}
               </p>
               <a
-                href={data.reg_doc}
+                href={regDocUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="text-xs text-green-600 hover:text-green-700 font-semibold hover:underline inline-flex items-center gap-1 mt-1"
@@ -179,6 +222,7 @@ export default function Documents({ data, setFormData, disabled }) {
             
             <label className="cursor-pointer">
               <input
+                ref={fileRef}
                 accept=".pdf,.doc,.docx"
                 type="file"
                 disabled={disabled}

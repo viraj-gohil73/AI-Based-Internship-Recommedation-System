@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Lock, Users, Briefcase } from "lucide-react";
 import UnderReviewAlert from "../../../components/UnderReviewAlert";
 import { useCompany } from "../../../context/CompanyContext";
@@ -39,6 +39,23 @@ export default function Subscription() {
     () => plans.find((p) => p.code === selectedPlanCode) || null,
     [plans, selectedPlanCode]
   );
+
+  useEffect(() => {
+    if (!plans.length) return;
+    const isCurrentSelectionValid = plans.some((p) => p.code === selectedPlanCode);
+    if (!isCurrentSelectionValid) {
+      setSelectedPlanCode(plans[0].code);
+    }
+  }, [plans, selectedPlanCode]);
+  const bestChoiceCode = useMemo(() => {
+    if (!plans.length) return null;
+    const orderedByValue = [...plans].sort((a, b) => {
+      const aPrice = Number(a.monthlyBasePrice || 0);
+      const bPrice = Number(b.monthlyBasePrice || 0);
+      return aPrice - bPrice;
+    });
+    return orderedByValue[Math.floor(orderedByValue.length / 2)]?.code || orderedByValue[0]?.code || null;
+  }, [plans]);
 
   const amountPreview = useMemo(() => {
     if (!selectedPlan) return { base: 0, addon: 0, total: 0 };
@@ -137,8 +154,17 @@ export default function Subscription() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {plans.map((plan) => {
                 const isSelected = selectedPlanCode === plan.code;
+                const isBestChoice = bestChoiceCode === plan.code;
                 const price =
                   billingCycle === "yearly" ? plan.yearlyBasePrice : plan.monthlyBasePrice;
+                const seatPrice =
+                  billingCycle === "yearly"
+                    ? plan.addonRecruiterSeatYearlyPrice
+                    : plan.addonRecruiterSeatMonthlyPrice;
+                const yearlySavings = Math.max(
+                  0,
+                  Number(plan.monthlyBasePrice || 0) * 12 - Number(plan.yearlyBasePrice || 0)
+                );
                 return (
                   <button
                     key={plan._id}
@@ -146,19 +172,46 @@ export default function Subscription() {
                     onClick={() => setSelectedPlanCode(plan.code)}
                     className={`rounded-xl border p-4 text-left transition ${
                       isSelected
-                        ? "border-blue-500 shadow-md bg-blue-50"
-                        : "border-slate-200 hover:border-blue-300"
+                        ? "border-blue-500 shadow-md bg-gradient-to-b from-blue-50 to-white"
+                        : "border-slate-200 hover:border-blue-300 hover:shadow-sm"
                     }`}
                   >
-                    <p className="font-semibold text-slate-900">{plan.name}</p>
-                    <p className="text-xs text-slate-500">{plan.description}</p>
-                    <p className="mt-2 text-2xl font-bold text-slate-900">{formatCurrency(price)}</p>
-                    <p className="text-xs text-slate-500">
-                      Includes {plan.includedRecruiterSeats} seats,{" "}
-                      {plan.maxActivePostings === null
-                        ? "unlimited postings"
-                        : `${plan.maxActivePostings} active postings`}
-                    </p>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-slate-900">{plan.name}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{plan.description}</p>
+                      </div>
+                      {isBestChoice && (
+                        <span className="rounded-full bg-amber-100 text-amber-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide">
+                          Best Choice
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-2xl font-bold text-slate-900">{formatCurrency(price)}</p>
+                      <p className="text-xs text-slate-500">
+                        per {billingCycle === "yearly" ? "year" : "month"}
+                      </p>
+                    </div>
+                    <ul className="mt-3 space-y-1.5 text-xs text-slate-600">
+                      <li>
+                        {plan.includedRecruiterSeats} recruiter seat{plan.includedRecruiterSeats > 1 ? "s" : ""} included
+                      </li>
+                      <li>
+                        {plan.maxActivePostings === null
+                          ? "Unlimited active internship posts"
+                          : `${plan.maxActivePostings} active internship posts`}
+                      </li>
+                      <li>Extra seat: {formatCurrency(seatPrice)}</li>
+                      {yearlySavings > 0 && (
+                        <li>Yearly savings: {formatCurrency(yearlySavings)}</li>
+                      )}
+                    </ul>
+                    {isSelected && (
+                      <p className="mt-3 inline-flex rounded-md bg-blue-100 px-2 py-1 text-[11px] font-semibold text-blue-700">
+                        Selected plan
+                      </p>
+                    )}
                   </button>
                 );
               })}
@@ -180,6 +233,20 @@ export default function Subscription() {
               <p>Base: <b className="text-slate-800">{formatCurrency(amountPreview.base)}</b></p>
               <p>Add-on: <b className="text-slate-800">{formatCurrency(amountPreview.addon)}</b></p>
               <p>Total: <b className="text-slate-900">{formatCurrency(amountPreview.total)}</b></p>
+              <p>
+                Recruiter seats:{" "}
+                <b className="text-slate-800">
+                  {(selectedPlan?.includedRecruiterSeats || 0) + Number(extraSeats || 0)}
+                </b>
+              </p>
+              <p>
+                Internship post limit:{" "}
+                <b className="text-slate-800">
+                  {selectedPlan?.maxActivePostings === null
+                    ? "Unlimited"
+                    : selectedPlan?.maxActivePostings ?? 0}
+                </b>
+              </p>
             </div>
           </div>
 

@@ -1,4 +1,5 @@
 import Company from "../models/Company.js";
+import Student from "../models/Student.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import fetch from "node-fetch";
@@ -15,15 +16,29 @@ export const registerCompany = async (req, res) => {
     // Check all fields
     if (!email || !password || !companyName)
       return res.status(400).json({ message: "All fields are required" });
-    // Check existing email
-    const existingUser = await Company.findOne({ email });
-    if (existingUser)
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Ensure one email can only belong to one account type
+    const [existingCompany, existingStudent] = await Promise.all([
+      Company.findOne({ email: normalizedEmail }),
+      Student.findOne({ email: normalizedEmail }),
+    ]);
+
+    if (existingCompany)
       return res.status(400).json({ message: "Email already registered" });
+    if (existingStudent)
+      return res.status(400).json({
+        message: "This email is already registered as student. Use student login.",
+      });
 
     password = await bcrypt.hash(password, 10);
 
     // Create company
-    const newCompany = await Company.create({ email, password, companyName });
+    const newCompany = await Company.create({
+      email: normalizedEmail,
+      password,
+      companyName,
+    });
     await ensureTrialSubscription(newCompany._id);
     await runNotificationTask("company-register", async () => {
       await createNotification({

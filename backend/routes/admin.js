@@ -6,9 +6,12 @@ import {
   getApprovedCompanies,
   toggleCompanyActive,
   getRecruiters,
+  getInternships,
+  disableInternship,
   getRecruiterDetails,
   toggleRecruiterActive,
   getStudents,
+  getStudentDetails,
   toggleStudentActive,
   getSubscriptions,
   cancelSubscription,
@@ -67,6 +70,8 @@ router.get(
    RECRUITERS (ADMIN)
 ========================================= */
 router.get("/recruiters", getRecruiters);
+router.get("/internships", getInternships);
+router.patch("/internship/:id/disable", disableInternship);
 router.get("/recruiter/:id", getRecruiterDetails);
 router.patch("/recruiter/:id/block", toggleRecruiterActive);
 
@@ -74,6 +79,7 @@ router.patch("/recruiter/:id/block", toggleRecruiterActive);
    STUDENTS (ADMIN)
 ========================================= */
 router.get("/students", getStudents);
+router.get("/student/:id", getStudentDetails);
 router.patch("/student/:id/block", toggleStudentActive);
 
 /* =========================================

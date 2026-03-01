@@ -2,6 +2,7 @@
 export const verifyOtp = async (req, res) => {
   try {
     const { email, otp, role } = req.body;
+    const normalizedEmail = email?.trim().toLowerCase();
 
     // ---------- Validation ----------
     if (!email || !otp || !role) {
@@ -11,14 +12,14 @@ export const verifyOtp = async (req, res) => {
       });
     }
 
-    if (!global.tempOtps || !global.tempOtps[email]) {
+    if (!global.tempOtps || !global.tempOtps[normalizedEmail]) {
       return res.status(400).json({
         success: false,
         message: "OTP not found or expired",
       });
     }
 
-    const savedOtpData = global.tempOtps[email];
+    const savedOtpData = global.tempOtps[normalizedEmail];
 
     // ---------- Role check ----------
     if (savedOtpData.role !== role) {
@@ -33,7 +34,7 @@ export const verifyOtp = async (req, res) => {
     const isExpired = Date.now() - savedOtpData.createdAt > OTP_EXPIRY_TIME;
 
     if (isExpired) {
-      delete global.tempOtps[email];
+      delete global.tempOtps[normalizedEmail];
       return res.status(400).json({
         success: false,
         message: "OTP expired",
@@ -49,7 +50,7 @@ export const verifyOtp = async (req, res) => {
     }
 
     // ---------- Success ----------
-    delete global.tempOtps[email];
+    delete global.tempOtps[normalizedEmail];
 
     return res.status(200).json({
       success: true,

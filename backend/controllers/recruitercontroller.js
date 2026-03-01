@@ -6,6 +6,8 @@ import {
   runNotificationTask,
 } from "../services/notificationService.js";
 
+const MAX_RECRUITERS_PER_COMPANY = 2;
+
 export const createRecruiter = async (req, res) => {
   try {
     if (!req.user || !req.companyId) {
@@ -30,6 +32,14 @@ export const createRecruiter = async (req, res) => {
     const exists = await Recruiter.findOne({ email });
     if (exists) {
       return res.status(409).json({ message: "Email already exists" });
+    }
+
+    const recruitersCount = await Recruiter.countDocuments({ companyId: req.companyId });
+    if (recruitersCount >= MAX_RECRUITERS_PER_COMPANY) {
+      return res.status(403).json({
+        success: false,
+        message: `Recruiter limit reached. You can add maximum ${MAX_RECRUITERS_PER_COMPANY} recruiters.`,
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

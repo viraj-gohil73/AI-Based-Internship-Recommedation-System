@@ -22,32 +22,51 @@ export const sendOtp = async (req, res) => {
       });
     }
 
-    // ---------- Select model based on role ----------
-    let Model;
+    const normalizedEmail = email.trim().toLowerCase();
 
-    if (role === "student") Model = Student;
-    else if (role === "company") Model = Company;
-    //else if (role === "recruiter") Model = Recruiter;
-    else {
+    if (role !== "student" && role !== "company") {
       return res.status(400).json({
         success: false,
         message: "Invalid role",
       });
     }
 
-    // ---------- Check existing user ----------
-    const existingUser = await Model.findOne({ email });
+    const [existingStudent, existingCompany] = await Promise.all([
+      Student.findOne({ email: normalizedEmail }),
+      Company.findOne({ email: normalizedEmail }),
+    ]);
 
-    if (existingUser) {
+    if (role === "student" && existingStudent) {
       return res.status(400).json({
         success: false,
-        message: "User already exists. Please login.",
+        message: "Student already exists. Please login.",
+      });
+    }
+
+    if (role === "company" && existingCompany) {
+      return res.status(400).json({
+        success: false,
+        message: "Company already exists. Please login.",
+      });
+    }
+
+    if (role === "student" && existingCompany) {
+      return res.status(400).json({
+        success: false,
+        message: "This email is already registered as company. Use company login.",
+      });
+    }
+
+    if (role === "company" && existingStudent) {
+      return res.status(400).json({
+        success: false,
+        message: "This email is already registered as student. Use student login.",
       });
     }
 
     // ---------- Generate OTP ----------
     const otp = Math.floor(100000 + Math.random() * 900000);
-    console.log(`OTP for ${email} (${role}):`, otp);
+    console.log(`OTP for ${normalizedEmail} (${role}):`, otp);
 
     // ---------- Email content ----------
     const emailContent = `
@@ -70,7 +89,7 @@ Internship Finder Team
 © ${new Date().getFullYear()}
 `;
 
-    const sent = await sendEmail(email, "Your OTP Code", emailContent);
+    const sent = await sendEmail(normalizedEmail, "Your OTP Code", emailContent);
 
     if (!sent) {
       return res.status(500).json({
@@ -81,7 +100,7 @@ Internship Finder Team
 
     // ---------- Store OTP (temporary) ----------
     global.tempOtps = global.tempOtps || {};
-    global.tempOtps[email] = {
+    global.tempOtps[normalizedEmail] = {
       otp,
       role,
       createdAt: Date.now(),

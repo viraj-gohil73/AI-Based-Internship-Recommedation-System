@@ -1,18 +1,22 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { Camera, Lock, UserPlus, UsersRound } from "lucide-react";
 import { useSubscription } from "../../../context/SubscriptionContext";
 
+const MAX_RECRUITERS_PER_COMPANY = 2;
+
 export default function AddRecruiter() {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const mobileRegex = /^[6-9]\d{9}$/;
   const [dpUploading, setDpUploading] = useState(false);
+  const [errors, setErrors] = useState({});
   const { entitlements, usage, current } = useSubscription();
+  const [recruitersCount, setRecruitersCount] = useState(null);
 
   const navigate = useNavigate();
-  const uploadRef = useRef(null);
+  const dpInputRef = useRef(null);
 
   const [loading, setLoading] = useState(false);
 
@@ -28,52 +32,131 @@ export default function AddRecruiter() {
   });
   const accessKnown = entitlements !== null;
   const hardLocked = accessKnown && !entitlements?.accessAllowed;
-  const seatLimit = current?.totalRecruiterSeats ?? 0;
-  const usedSeats = usage?.recruitersCount ?? 0;
-  const seatLimitReached =
-    entitlements?.accessAllowed && seatLimit !== null && usedSeats >= seatLimit;
+  const seatLimit = MAX_RECRUITERS_PER_COMPANY;
+  const usedSeats = recruitersCount ?? usage?.recruitersCount ?? 0;
+  const seatLimitReached = usedSeats >= seatLimit;
+
+  const fetchRecruitersCount = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return usage?.recruitersCount ?? 0;
+
+      const response = await fetch("http://localhost:5000/api/company/recruiters", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) return usage?.recruitersCount ?? 0;
+
+      const count = Array.isArray(data?.recruiters) ? data.recruiters.length : 0;
+      setRecruitersCount(count);
+      return count;
+    } catch {
+      return usage?.recruitersCount ?? 0;
+    }
+  };
+
+  useEffect(() => {
+    fetchRecruitersCount();
+  }, []);
 
   /* ================= UPLOADCARE WIDGET HANDLER ================= */
 
   const openUploader = () => {
-    uploadRef.current?.click();
+    dpInputRef.current?.click();
   };
 
-  useEffect(() => {
-    if (!uploadRef.current || !window.uploadcare) return;
+  const handleDpSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    const widget = window.uploadcare.Widget(uploadRef.current);
+    if (!window.uploadcare) {
+      toast.error("Image uploader is not available right now");
+      e.target.value = "";
+      return;
+    }
 
-    widget.onUploadComplete((fileInfo) => {
-      setDpUploading(false);
+    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only PNG, JPG, JPEG, WEBP allowed");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      e.target.value = "";
+      return;
+    }
+
+    try {
+      if (!window.UPLOADCARE_PUBLIC_KEY && import.meta.env.VITE_UPLOADCARE_PUBLIC_KEY) {
+        window.UPLOADCARE_PUBLIC_KEY = import.meta.env.VITE_UPLOADCARE_PUBLIC_KEY;
+      }
+
+      setDpUploading(true);
+      const upload = window.uploadcare.fileFrom("object", file);
+      const result = await upload.promise();
+
       setForm((prev) => ({
         ...prev,
-        dp: fileInfo.cdnUrl,
+        dp: result?.cdnUrl || "",
       }));
-    });
-
-    widget.onChange(() => {
-      setDpUploading(true);
-    });
-  }, []);
+      toast.success("Profile image uploaded");
+    } catch (error) {
+      toast.error("Image upload failed. Please try again.");
+    } finally {
+      setDpUploading(false);
+      e.target.value = "";
+    }
+  };
 
 
   /* ================= SUBMIT ================= */
 
   const submit = async () => {
+    if (loading) return;
+
     if (hardLocked) {
       return toast.error("Active approved subscription is required.");
     }
     if (seatLimitReached) {
-      return toast.error("Recruiter seat limit reached. Upgrade your plan.");
+      return toast.error(`Recruiter limit reached. Maximum ${MAX_RECRUITERS_PER_COMPANY} recruiters allowed.`);
+    }
+    if (dpUploading) {
+      return toast.error("Please wait for profile image upload to finish.");
     }
 
-    if (!form.name.trim()) return toast.error("Full name is required");
-    if (!emailRegex.test(form.email)) return toast.error("Invalid email");
-    if (!form.password || form.password.length < 6)
-      return toast.error("Password must be at least 6 characters");
-    if (!mobileRegex.test(form.mobile))
-      return toast.error("Invalid mobile number");
+    const normalizedName = form.name.trim();
+    const normalizedEmail = form.email.trim().toLowerCase();
+    const normalizedPassword = String(form.password || "");
+    const normalizedMobile = String(form.mobile || "").replace(/\D/g, "");
+
+    const nextErrors = {};
+    if (!normalizedName || normalizedName.length < 2) {
+      nextErrors.name = "Enter valid full name";
+    }
+    if (!emailRegex.test(normalizedEmail)) {
+      nextErrors.email = "Enter valid email";
+    }
+    if (normalizedPassword.length < 6) {
+      nextErrors.password = "Password must be at least 6 characters";
+    }
+    if (!mobileRegex.test(normalizedMobile)) {
+      nextErrors.mobile = "Enter valid 10-digit mobile number";
+    }
+
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      return toast.error("Please fix form errors");
+    }
+
+    const latestCount = await fetchRecruitersCount();
+    if (latestCount >= MAX_RECRUITERS_PER_COMPANY) {
+      return toast.error(`Recruiter limit reached. Maximum ${MAX_RECRUITERS_PER_COMPANY} recruiters allowed.`);
+    }
 
     try {
       setLoading(true);
@@ -87,7 +170,13 @@ export default function AddRecruiter() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(form),
+          body: JSON.stringify({
+            ...form,
+            name: normalizedName,
+            email: normalizedEmail,
+            password: normalizedPassword,
+            mobile: normalizedMobile,
+          }),
         }
       );
 
@@ -110,7 +199,7 @@ export default function AddRecruiter() {
   const inputClass =
     "w-full rounded-xl border border-slate-300 px-4 py-2.5 text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100 transition bg-white";
 
-  const seatsLeft = Math.max((seatLimit || 0) - (usedSeats || 0), 0);
+  const seatsLeft = Math.max(seatLimit - usedSeats, 0);
   const statusTone = hardLocked
     ? "border-rose-200 bg-rose-50 text-rose-700"
     : seatLimitReached
@@ -138,11 +227,11 @@ export default function AddRecruiter() {
             <div className={`rounded-xl border px-4 py-3 text-sm ${statusTone}`}>
               <div className="flex items-center gap-2 font-semibold">
                 {hardLocked ? <Lock size={16} /> : <UsersRound size={16} />}
-                {hardLocked ? "Creation blocked" : `Seats: ${usedSeats}/${seatLimit}`}
+                {hardLocked ? "Creation blocked" : `Used: ${usedSeats}/${seatLimit}`}
               </div>
               {!hardLocked && (
                 <p className="mt-1 text-xs">
-                  {seatLimitReached ? "No recruiter seats left" : `${seatsLeft} seat(s) remaining`}
+                  {seatLimitReached ? "No recruiter slots left" : `Remaining: ${seatsLeft}/${seatLimit}`}
                 </p>
               )}
             </div>
@@ -162,7 +251,7 @@ export default function AddRecruiter() {
           )}
           {!hardLocked && seatLimitReached && (
             <div className="mb-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-              Seat limit reached ({usedSeats}/{seatLimit}). Buy extra recruiter seats to continue.
+              Seat limit reached ({usedSeats}/{seatLimit}). Maximum {MAX_RECRUITERS_PER_COMPANY} recruiters allowed.
             </div>
           )}
 
@@ -222,13 +311,11 @@ export default function AddRecruiter() {
               </div>
 
               <input
-                ref={uploadRef}
-                type="hidden"
-                role="uploadcare-uploader"
-                data-public-key={import.meta.env.VITE_UPLOADCARE_PUBLIC_KEY}
-                data-images-only="true"
-                data-crop="1:1"
-                data-image-shrink="512x512"
+                ref={dpInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleDpSelect}
+                className="hidden"
               />
             </motion.div>
 
@@ -245,10 +332,12 @@ export default function AddRecruiter() {
                     whileFocus={{ scale: 1.01 }}
                     className={inputClass}
                     value={form.name}
-                    onChange={(e) =>
-                      setForm({ ...form, name: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setForm({ ...form, name: e.target.value });
+                      setErrors((prev) => ({ ...prev, name: "" }));
+                    }}
                   />
+                  {errors.name && <p className="mt-1 text-xs text-rose-600">{errors.name}</p>}
                 </div>
 
                 <div>
@@ -258,10 +347,12 @@ export default function AddRecruiter() {
                     type="email"
                     className={inputClass}
                     value={form.email}
-                    onChange={(e) =>
-                      setForm({ ...form, email: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setForm({ ...form, email: e.target.value });
+                      setErrors((prev) => ({ ...prev, email: "" }));
+                    }}
                   />
+                  {errors.email && <p className="mt-1 text-xs text-rose-600">{errors.email}</p>}
                 </div>
 
                 <div>
@@ -271,10 +362,12 @@ export default function AddRecruiter() {
                     type="password"
                     className={inputClass}
                     value={form.password}
-                    onChange={(e) =>
-                      setForm({ ...form, password: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setForm({ ...form, password: e.target.value });
+                      setErrors((prev) => ({ ...prev, password: "" }));
+                    }}
                   />
+                  {errors.password && <p className="mt-1 text-xs text-rose-600">{errors.password}</p>}
                 </div>
 
                 <div>
@@ -284,10 +377,13 @@ export default function AddRecruiter() {
                     className={inputClass}
                     maxLength={10}
                     value={form.mobile}
-                    onChange={(e) =>
-                      setForm({ ...form, mobile: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const onlyDigits = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setForm({ ...form, mobile: onlyDigits });
+                      setErrors((prev) => ({ ...prev, mobile: "" }));
+                    }}
                   />
+                  {errors.mobile && <p className="mt-1 text-xs text-rose-600">{errors.mobile}</p>}
                 </div>
 
                 <div>
@@ -345,8 +441,8 @@ export default function AddRecruiter() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={submit}
-              disabled={loading || dpUploading || hardLocked || seatLimitReached}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:shadow-md disabled:opacity-50 sm:w-auto"
+              disabled={loading || hardLocked || seatLimitReached}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-700 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               <UserPlus size={16} />
               {loading ? "Creating..." : "Create Recruiter"}

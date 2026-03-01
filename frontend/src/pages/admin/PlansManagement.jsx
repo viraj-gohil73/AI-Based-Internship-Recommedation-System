@@ -29,6 +29,29 @@ const formatCurrency = (value) => {
   return `INR ${new Intl.NumberFormat("en-IN").format(num)}`;
 };
 
+const getPlanTheme = (code) => {
+  const value = String(code || "").toLowerCase();
+  if (value === "starter") {
+    return {
+      card: "from-emerald-50 via-white to-lime-50 border-emerald-200",
+      chip: "bg-emerald-100 text-emerald-700",
+      icon: "text-emerald-600",
+    };
+  }
+  if (value === "pro") {
+    return {
+      card: "from-blue-50 via-white to-indigo-50 border-blue-200",
+      chip: "bg-blue-100 text-blue-700",
+      icon: "text-blue-600",
+    };
+  }
+  return {
+    card: "from-fuchsia-50 via-white to-orange-50 border-fuchsia-200",
+    chip: "bg-fuchsia-100 text-fuchsia-700",
+    icon: "text-fuchsia-600",
+  };
+};
+
 export default function PlansManagement() {
   const token = localStorage.getItem("adminToken");
   const [plans, setPlans] = useState([]);
@@ -331,143 +354,83 @@ export default function PlansManagement() {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="hidden md:block">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="p-3 text-left font-medium">Plan</th>
-                <th className="p-3 text-left font-medium">Base (M/Y)</th>
-                <th className="p-3 text-left font-medium">Limits</th>
-                <th className="p-3 text-left font-medium">Addon (M/Y)</th>
-                <th className="p-3 text-left font-medium">Status</th>
-                <th className="p-3 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr>
-                  <td className="p-4 text-center text-slate-500" colSpan="6">
-                    Loading plans...
-                  </td>
-                </tr>
-              )}
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        {loading && <p className="p-3 text-center text-sm text-slate-500">Loading plans...</p>}
+        {!loading && plans.length === 0 && (
+          <p className="p-3 text-center text-sm text-slate-500">No plans found.</p>
+        )}
 
-              {!loading && plans.length === 0 && (
-                <tr>
-                  <td className="p-8 text-center text-slate-500" colSpan="6">
-                    No plans found.
-                  </td>
-                </tr>
-              )}
-
-              {!loading &&
-                plans.map((plan) => (
-                  <tr key={plan._id} className="border-t border-slate-100">
-                    <td className="p-3">
-                      <p className="font-semibold text-slate-900">{plan.code}</p>
-                      <p className="text-xs text-slate-500">{plan.name || "-"}</p>
-                    </td>
-                    <td className="p-3 text-slate-700">
-                      {formatCurrency(plan.monthlyBasePrice)} / {formatCurrency(plan.yearlyBasePrice)}
-                    </td>
-                    <td className="p-3 text-slate-700">
-                      Seats: {plan.includedRecruiterSeats} | Postings:{" "}
-                      {plan.maxActivePostings === null ? "Unlimited" : plan.maxActivePostings}
-                    </td>
-                    <td className="p-3 text-slate-700">
-                      {formatCurrency(plan.addonRecruiterSeatMonthlyPrice)} /{" "}
-                      {formatCurrency(plan.addonRecruiterSeatYearlyPrice)}
-                    </td>
-                    <td className="p-3">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                          plan.isActive
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-rose-100 text-rose-700"
-                        }`}
-                      >
-                        {plan.isActive ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right">
-                      <div className="inline-flex gap-2">
-                        <button
-                          onClick={() => startEdit(plan)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                        >
-                          <PencilLine size={14} /> Edit
-                        </button>
-                        <button
-                          onClick={() => toggleStatus(plan)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                        >
-                          <Power size={14} /> {plan.isActive ? "Disable" : "Enable"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="space-y-3 p-3 md:hidden">
-          {loading && <p className="p-3 text-center text-sm text-slate-500">Loading plans...</p>}
-          {!loading && plans.length === 0 && (
-            <p className="p-3 text-center text-sm text-slate-500">No plans found.</p>
-          )}
-          {!loading &&
-            plans.map((plan) => (
+        {!loading && plans.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {plans.map((plan) => (
               <article
                 key={plan._id}
-                className="rounded-xl border border-slate-200 p-4 shadow-sm"
+                className={`rounded-2xl border bg-gradient-to-br p-4 shadow-sm ${getPlanTheme(plan.code).card}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="flex items-center gap-1 font-semibold text-slate-900">
-                      <Layers size={14} /> {plan.code}
+                    <p className={`inline-flex items-center gap-1.5 text-sm font-semibold ${getPlanTheme(plan.code).icon}`}>
+                      <Layers size={15} /> {plan.code}
                     </p>
-                    <p className="text-xs text-slate-500">{plan.name || "-"}</p>
+                    <p className="mt-1 text-xs text-slate-500">{plan.name || "No public name"}</p>
                   </div>
                   <span
-                    className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                      plan.isActive
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-rose-100 text-rose-700"
-                    }`}
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${plan.isActive ? getPlanTheme(plan.code).chip : "bg-rose-100 text-rose-700"}`}
                   >
                     {plan.isActive ? "Active" : "Inactive"}
                   </span>
                 </div>
-                <div className="mt-3 space-y-1 text-xs text-slate-600">
-                  <p>Base: {formatCurrency(plan.monthlyBasePrice)} / {formatCurrency(plan.yearlyBasePrice)}</p>
-                  <p>
-                    Limits: {plan.includedRecruiterSeats} seats, {" "}
-                    {plan.maxActivePostings === null ? "Unlimited" : plan.maxActivePostings} postings
-                  </p>
-                  <p>
-                    Addon: {formatCurrency(plan.addonRecruiterSeatMonthlyPrice)} / {" "}
-                    {formatCurrency(plan.addonRecruiterSeatYearlyPrice)}
-                  </p>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-slate-200 bg-white p-2.5">
+                    <p className="text-[11px] text-slate-500">Monthly Base</p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-800">
+                      {formatCurrency(plan.monthlyBasePrice)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-2.5">
+                    <p className="text-[11px] text-slate-500">Yearly Base</p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-800">
+                      {formatCurrency(plan.yearlyBasePrice)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-2.5">
+                    <p className="text-[11px] text-slate-500">Included Seats</p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-800">
+                      {plan.includedRecruiterSeats}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-2.5">
+                    <p className="text-[11px] text-slate-500">Max Postings</p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-800">
+                      {plan.maxActivePostings === null ? "Unlimited" : plan.maxActivePostings}
+                    </p>
+                  </div>
                 </div>
+
+                <div className="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700">
+                  Addon seat: {formatCurrency(plan.addonRecruiterSeatMonthlyPrice)} /{" "}
+                  {formatCurrency(plan.addonRecruiterSeatYearlyPrice)}
+                </div>
+
                 <div className="mt-3 flex gap-2">
                   <button
                     onClick={() => startEdit(plan)}
-                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700"
+                    className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
                   >
-                    Edit
+                    <PencilLine size={14} /> Edit
                   </button>
                   <button
                     onClick={() => toggleStatus(plan)}
-                    className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700"
+                    className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
                   >
-                    {plan.isActive ? "Disable" : "Enable"}
+                    <Power size={14} /> {plan.isActive ? "Disable" : "Enable"}
                   </button>
                 </div>
               </article>
             ))}
-        </div>
+          </div>
+        )}
       </section>
     </div>
   );

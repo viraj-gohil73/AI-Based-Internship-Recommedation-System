@@ -1,7 +1,7 @@
-import { Bell, CheckCheck, Menu, Search, Trash2 } from "lucide-react";
+import { Bell, CheckCheck, Menu, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-export default function Header({ title, onMenuClick }) {
+export default function Header({ onMenuClick }) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
@@ -106,7 +106,7 @@ export default function Header({ title, onMenuClick }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-gradient-to-r from-white via-blue-50 to-white border-b border-blue-200 shadow-md px-4 sm:px-6 py-4">
+    <header className="sticky top-0 z-30 bg-gradient-to-r from-white via-blue-50 to-white border-b border-blue-200 shadow-md px-4 sm:px-6 py-2">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
@@ -115,21 +115,9 @@ export default function Header({ title, onMenuClick }) {
           >
             <Menu size={22} />
           </button>
-
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-700 bg-clip-text text-transparent truncate">
-            {title}
-          </h1>
         </div>
 
         <div className="flex items-center gap-3 relative" ref={ref}>
-          <div className="hidden md:flex items-center bg-gradient-to-r from-gray-100 to-gray-50 px-4 py-2.5 rounded-lg border border-gray-200 hover:border-blue-300 transition shadow-sm">
-            <Search size={18} className="text-gray-500" />
-            <input
-              className="ml-3 bg-transparent outline-none text-sm text-gray-700 placeholder-gray-500 w-40"
-              placeholder="Search internships"
-            />
-          </div>
-
           <button
             onClick={async () => {
               const next = !open;

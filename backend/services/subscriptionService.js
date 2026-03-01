@@ -13,6 +13,7 @@ export const SUBSCRIPTION_STATUSES = {
 };
 
 const TRIAL_DURATION_DAYS = 14;
+const MAX_MONTHLY_INTERNSHIPS_PER_COMPANY = 5;
 
 const addDays = (date, days) => {
   const next = new Date(date);
@@ -109,18 +110,27 @@ export const refreshSubscriptionStatus = async (subscription) => {
 };
 
 export const getCompanyUsage = async (companyId) => {
-  const [recruitersCount, activePostingsCount] = await Promise.all([
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0, 0);
+
+  const [recruitersCount, activePostingsCount, monthlyInternshipsCount] = await Promise.all([
     Recruiter.countDocuments({ companyId }),
     Internship.countDocuments({
       company_id: companyId,
       intern_status: "ACTIVE",
       is_published: "true",
     }),
+    Internship.countDocuments({
+      company_id: companyId,
+      createdAt: { $gte: monthStart, $lt: nextMonthStart },
+    }),
   ]);
 
   return {
     recruitersCount,
     activePostingsCount,
+    monthlyInternshipsCount,
   };
 };
 
@@ -155,6 +165,7 @@ export const computeEntitlements = ({ company, subscription }) => {
         subscription?.maxActivePostings === undefined
           ? null
           : subscription?.maxActivePostings,
+      monthlyInternshipsPerCompany: MAX_MONTHLY_INTERNSHIPS_PER_COMPANY,
     },
   };
 };

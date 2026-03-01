@@ -12,6 +12,9 @@ import {
   Mail,
   Calendar,
   X,
+  Globe,
+  MapPin,
+  BriefcaseBusiness,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import NotAvailable from "../../components/NotAvailable.jsx";
@@ -405,7 +408,7 @@ export default function Recruiters() {
           onClick={() => setSelectedRecruiter(null)}
         >
           <div
-            className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            className="flex w-full max-w-3xl max-h-[90vh] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-700 px-6 py-5 text-white">
@@ -456,8 +459,9 @@ export default function Recruiters() {
               </div>
             </div>
 
-            <div className="grid gap-4 px-6 py-5 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+              <div className="grid gap-4 px-6 py-5 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Contact
                 </p>
@@ -477,10 +481,17 @@ export default function Recruiters() {
                       ? new Date(selectedRecruiter.createdAt).toLocaleDateString()
                       : "-"}
                   </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar size={14} className="text-slate-400" />
+                    Last login:{" "}
+                    {selectedRecruiter.last_login
+                      ? new Date(selectedRecruiter.last_login).toLocaleString()
+                      : "-"}
+                  </div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Company
                 </p>
@@ -497,21 +508,61 @@ export default function Recruiters() {
                   )}
                   <div className="flex items-center gap-2">
                     <Calendar size={14} className="text-slate-400" />
-                    {selectedRecruiter.last_login
-                      ? new Date(selectedRecruiter.last_login).toLocaleString()
-                      : "-"}
+                    Status: {selectedRecruiter.company?.verificationStatus || "-"}
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex flex-wrap gap-2 px-6 pb-6 text-xs text-slate-600">
-              <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                Recruiter ID: {selectedRecruiter._id || "-"}
-              </span>
-              <span className="rounded-full bg-slate-100 px-2.5 py-1">
-                Company Ref: {getCompanyRef(selectedRecruiter)}
-              </span>
+                <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Recruiter Metrics
+                </p>
+                <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                  <p><span className="text-slate-500">Assigned Internships:</span> {selectedRecruiter.assignedInternshipsCount ?? "-"}</p>
+                  <p><span className="text-slate-500">Can Post:</span> {selectedRecruiter.canpost ? "Yes" : "No"}</p>
+                  <p><span className="text-slate-500">Created:</span> {selectedRecruiter.createdAt ? new Date(selectedRecruiter.createdAt).toLocaleString() : "-"}</p>
+                  <p><span className="text-slate-500">Updated:</span> {selectedRecruiter.updatedAt ? new Date(selectedRecruiter.updatedAt).toLocaleString() : "-"}</p>
+                </div>
+              </div>
+
+                <div className="sm:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Company Details
+                </p>
+                <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                  <div className="flex items-center gap-2">
+                    <Globe size={14} className="text-slate-400" />
+                    {selectedRecruiter.company?.website || "-"}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <BriefcaseBusiness size={14} className="text-slate-400" />
+                    {selectedRecruiter.company?.industry || "-"}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin size={14} className="text-slate-400" />
+                    {selectedRecruiter.company?.city || "-"}, {selectedRecruiter.company?.state || "-"} {selectedRecruiter.company?.pincode || "-"}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone size={14} className="text-slate-400" />
+                    {selectedRecruiter.company?.mobile || "-"}
+                  </div>
+                </div>
+                {(selectedRecruiter.company?.address1 || selectedRecruiter.company?.address2) && (
+                  <p className="mt-3 text-sm text-slate-700">
+                    {selectedRecruiter.company?.address1 || ""} {selectedRecruiter.company?.address2 || ""}
+                  </p>
+                )}
+                </div>
+
+                <div className="flex flex-wrap gap-2 text-xs text-slate-600 sm:col-span-2">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    Recruiter ID: {selectedRecruiter._id || "-"}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    Company Ref: {getCompanyRef(selectedRecruiter)}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

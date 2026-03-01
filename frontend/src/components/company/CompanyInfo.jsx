@@ -372,7 +372,7 @@ export default function CompanyInfoTab({ data, setFormData, disabled }) {
         <button
           disabled={disabled}
           onClick={handleSave}
-          className={`inline-flex items-center gap-2 px-10 py-3 rounded-lg text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-lg ${
+          className={`inline-flex items-center gap-2 px-10 py-3 m-6 rounded-lg text-sm font-semibold transition-all duration-300 shadow-md hover:shadow-lg ${
             !disabled
               ? "bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
               : "bg-gray-300 text-gray-500 cursor-not-allowed opacity-75"

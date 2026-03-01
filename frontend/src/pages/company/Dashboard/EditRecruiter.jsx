@@ -6,6 +6,8 @@ export default function EditRecruiter() {
   const { id } = useParams();
   const navigate = useNavigate();
   const uploadRef = useRef(null);
+  const widgetRef = useRef(null);
+  const widgetBoundRef = useRef(false);
 
   const [loading, setLoading] = useState(false);
   const [dpUploading, setDpUploading] = useState(false);
@@ -63,16 +65,47 @@ export default function EditRecruiter() {
 
   /* ================= UPLOADCARE DP ================= */
   const openUploader = () => {
+    if (!window.uploadcare) {
+      toast.error("Image uploader is not available right now");
+      return;
+    }
+
+    if (!widgetRef.current && uploadRef.current) {
+      widgetRef.current = window.uploadcare.Widget(uploadRef.current);
+    }
+
+    if (widgetRef.current?.openDialog) {
+      widgetRef.current.openDialog();
+      return;
+    }
+
     uploadRef.current?.click();
   };
 
   useEffect(() => {
     if (!uploadRef.current || !window.uploadcare) return;
 
-    const widget = window.uploadcare.Widget(uploadRef.current);
+    if (!widgetRef.current) {
+      widgetRef.current = window.uploadcare.Widget(uploadRef.current);
+    }
+    const widget = widgetRef.current;
 
-    widget.onChange(() => {
+    if (widgetBoundRef.current) return;
+    widgetBoundRef.current = true;
+
+    widget.onChange((file) => {
+      if (!file) {
+        setDpUploading(false);
+        return;
+      }
       setDpUploading(true);
+
+      if (typeof file.fail === "function") {
+        file.fail(() => {
+          setDpUploading(false);
+          toast.error("Image upload failed. Please try again.");
+        });
+      }
     });
 
     widget.onUploadComplete((fileInfo) => {
@@ -185,7 +218,7 @@ export default function EditRecruiter() {
                   ref={uploadRef}
                   type="hidden"
                   role="uploadcare-uploader"
-                  data-public-key={import.meta.env.VITE_UPLOADCARE_PUBLIC_KEY}
+                  data-public-key={import.meta.env.VITE_UPLOADCARE_PUBLIC_KEY || window.UPLOADCARE_PUBLIC_KEY}
                   data-images-only="true"
                   data-crop="1:1"
                   data-image-shrink="512x512"

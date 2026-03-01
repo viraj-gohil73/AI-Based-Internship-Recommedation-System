@@ -35,7 +35,7 @@ const formatRelative = (value) => {
 
 export default function Overview() {
   const { company, loading: companyLoading } = useCompany();
-  const { current, entitlements, usage, loading: subLoading } = useSubscription();
+  const { current, entitlements, loading: subLoading } = useSubscription();
 
   const [internships, setInternships] = useState([]);
   const [recruitersCount, setRecruitersCount] = useState(0);
@@ -99,18 +99,23 @@ export default function Overview() {
   const data = useMemo(() => {
     const totalInternships = internships.length;
     const activeInternships = internships.filter((item) => item?.intern_status === "ACTIVE").length;
+    const activePublishedInternships = internships.filter((item) => {
+      const status = String(item?.intern_status || "").toUpperCase();
+      const published = String(item?.is_published || "").toLowerCase();
+      return status === "ACTIVE" && published === "true";
+    }).length;
     const totalApplications = internships.reduce(
       (sum, item) => sum + Number(item?.applicationsCount || 0),
       0
     );
 
-    const activePostingsUsed = Number(usage?.activePostingsCount ?? activeInternships) || 0;
+    const activePostingsUsed = activePublishedInternships || activeInternships;
     const postingsLimit = entitlements?.limits?.maxActivePostings ?? current?.maxActivePostings ?? null;
     const remainingPosts =
       postingsLimit === null ? "Unlimited" : Math.max(postingsLimit - activePostingsUsed, 0);
 
     return {
-      totalRecruiters: Number(usage?.recruitersCount ?? recruitersCount) || 0,
+      totalRecruiters: Number(recruitersCount) || 0,
       totalInternships,
       activeInternships,
       totalApplications,
@@ -118,7 +123,7 @@ export default function Overview() {
       remainingPosts,
       postingsLimit,
     };
-  }, [internships, recruitersCount, usage, entitlements, current]);
+  }, [internships, recruitersCount, entitlements, current]);
 
   const stats = [
     {

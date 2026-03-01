@@ -23,6 +23,7 @@ const toCompanyInternship = (doc, applicationsCountMap = new Map()) => ({
   duration: doc.duration ?? 0,
   employment_type: doc.employment_type || "",
   intern_status: doc.intern_status || "DRAFT",
+  is_published: doc.is_published || "false",
   starting_date: doc.starting_date || null,
   deadline_at: doc.deadline_at || null,
   skill_req: Array.isArray(doc.skill_req) ? doc.skill_req : [],
