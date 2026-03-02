@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, BookmarkCheck, BookmarkPlus, Briefcase, Clock3, MapPin, Users, Wallet } from "lucide-react";
 import { Link, useLocation, useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import StudentLayout from "../../layout/StudentLayout";
 import ResumeSelectionModal from "../../components/ResumeSelectionModal";
 import { useResumePickerModal } from "../../hooks/useResumePickerModal";
@@ -181,9 +182,17 @@ export default function InternshipDetails() {
   const applyInternship = async () => {
     const internshipId = internship?.id || String(id);
     const token = localStorage.getItem("token");
-    if (!token) return setError("Please login to apply internships.");
+    if (!token) {
+      const message = "Please login to apply internships.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
     if (isMonthlyLimitReached) {
-      return setError(`Monthly application limit reached (${applyLimit.monthlyApplicationLimit}).`);
+      const message = `Monthly application limit reached (${applyLimit.monthlyApplicationLimit}).`;
+      setError(message);
+      toast.error(message);
+      return;
     }
 
     const key = `apply:${internshipId}`;
@@ -205,14 +214,15 @@ export default function InternshipDetails() {
       if (!response.ok) throw new Error(data?.message || "Failed to apply internship");
 
       setAppliedIds((prev) => new Set(prev).add(internshipId));
-      setSavedIds((prev) => new Set(prev).add(internshipId));
       setApplyLimit((prev) => ({
         ...prev,
         appliedThisMonth: prev.appliedThisMonth + 1,
         remainingThisMonth: Math.max(0, prev.remainingThisMonth - 1),
       }));
     } catch (err) {
-      setError(err?.message || "Failed to apply internship");
+      const message = err?.message || "Failed to apply internship";
+      setError(message);
+      toast.error(message);
     } finally {
       setBusy(key, false);
     }

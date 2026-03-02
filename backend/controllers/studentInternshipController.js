@@ -343,7 +343,7 @@ export const applyInternship = async (req, res) => {
     }
 
     const student = await Student.findById(req.studentId).select(
-      "fname lname resume resumes appliedInternships savedInternships"
+      "fname lname resume resumes appliedInternships"
     );
     if (!student) {
       return res.status(404).json({ success: false, message: "Student not found" });
@@ -448,13 +448,6 @@ export const applyInternship = async (req, res) => {
         resumeName: selectedResume.name || getFileNameFromUrl(selectedResume.url),
       },
     ];
-
-    const isSaved = (student.savedInternships || []).some(
-      (id) => String(id) === internshipId
-    );
-    if (!isSaved) {
-      student.savedInternships = [...(student.savedInternships || []), internship._id];
-    }
 
     await student.save();
 

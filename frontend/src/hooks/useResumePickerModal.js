@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchResumeOptions } from "../utils/resumePicker";
+import toast from "react-hot-toast";
 
 export const useResumePickerModal = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,7 +20,10 @@ export const useResumePickerModal = () => {
   const requestResumeSelection = useCallback(async (apiBaseUrl, token) => {
     const resumeOptions = await fetchResumeOptions(apiBaseUrl, token);
     if (!resumeOptions.length) {
-      throw new Error("Please upload a resume before applying.");
+      const error = new Error("Please upload a resume before applying.");
+      toast.error(error.message);
+      error.code = "RESUME_REQUIRED";
+      throw error;
     }
 
     if (resumeOptions.length === 1) {
