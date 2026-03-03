@@ -91,7 +91,11 @@ export default function StudentProfileRequiredRoute({ children, requireCompletio
       signal: controller.signal,
     })
       .then((res) => {
-        if (!res.ok) throw new Error("Profile fetch failed");
+        if (!res.ok) {
+          const err = new Error("Profile fetch failed");
+          err.status = res.status;
+          throw err;
+        }
         return res.json();
       })
       .then((data) => {
@@ -104,11 +108,22 @@ export default function StudentProfileRequiredRoute({ children, requireCompletio
           missingFields: completion.missingFields,
         });
       })
-      .catch(() => {
+      .catch((error) => {
+        if (error?.status === 401 || error?.status === 403) {
+          setState({
+            loading: false,
+            authenticated: false,
+            complete: false,
+            missingFields: [],
+          });
+          return;
+        }
+
+        // Avoid hard redirecting to profile on transient API failures during refresh.
         setState({
           loading: false,
           authenticated: true,
-          complete: false,
+          complete: true,
           missingFields: [],
         });
       });

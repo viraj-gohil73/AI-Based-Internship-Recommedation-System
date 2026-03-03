@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { BookmarkX, Briefcase, Clock3, Eye, MapPin, Search, Users, Wallet } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import StudentLayout from "../../layout/StudentLayout";
 import ResumeSelectionModal from "../../components/ResumeSelectionModal";
 import { useResumePickerModal } from "../../hooks/useResumePickerModal";
@@ -38,6 +38,8 @@ const clampText = (value, limit = 140) => {
 };
 
 export default function SavedInternshipsPro() {
+  const locationState = useLocation();
+  const currentRoute = `${locationState.pathname}${locationState.search || ""}`;
   const [savedInternships, setSavedInternships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -348,7 +350,7 @@ export default function SavedInternshipsPro() {
                     <div className="flex flex-wrap gap-2">
                       <Link
                         to={`/student/explore/${item.id}`}
-                        state={{ internship: item }}
+                        state={{ internship: item, from: currentRoute }}
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700"
                       >
                         <Eye size={15} />

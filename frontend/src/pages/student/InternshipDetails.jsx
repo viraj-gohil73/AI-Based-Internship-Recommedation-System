@@ -47,6 +47,7 @@ const normalizeInternship = (item) => ({
 export default function InternshipDetails() {
   const { id } = useParams();
   const location = useLocation();
+  const backTo = location.state?.from || "/student/explore";
 
   const initialInternship = useMemo(() => {
     const item = location.state?.internship;
@@ -237,9 +238,9 @@ export default function InternshipDetails() {
   return (
     <StudentLayout title="Internship Details">
       <div className="min-h-full bg-slate-50 p-4 md:p-6">
-        <Link to="/student/explore" className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:text-blue-800">
+        <Link to={backTo} className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:text-blue-800">
           <ArrowLeft size={16} />
-          Back to Explore
+          Back
         </Link>
 
         {error ? (

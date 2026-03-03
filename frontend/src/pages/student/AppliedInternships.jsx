@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Briefcase, CalendarDays, Clock3, Eye, MapPin, Search, Star, Users, Wallet, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import StudentLayout from "../../layout/StudentLayout";
 
 const API_BASE_URL = "http://localhost:5000";
@@ -75,6 +75,8 @@ const normalizeInternship = (item) => ({
 });
 
 export default function AppliedInternships() {
+  const locationState = useLocation();
+  const currentRoute = `${locationState.pathname}${locationState.search || ""}`;
   const [internships, setInternships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -378,7 +380,7 @@ export default function AppliedInternships() {
                       <div className="flex flex-wrap items-center gap-2">
                         <Link
                           to={`/student/explore/${item.id}`}
-                          state={{ internship: item }}
+                          state={{ internship: item, from: currentRoute }}
                           className="inline-flex items-center gap-1 rounded-xl border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100"
                         >
                           <Eye size={15} />

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { BookmarkCheck, BookmarkPlus, Briefcase, Clock3, Eye, MapPin, Search, Users, Wallet } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import StudentLayout from "../../layout/StudentLayout";
 import ResumeSelectionModal from "../../components/ResumeSelectionModal";
@@ -40,6 +40,8 @@ const clampText = (value, limit = 160) => {
 };
 
 export default function ExploreInternships() {
+  const locationState = useLocation();
+  const currentRoute = `${locationState.pathname}${locationState.search || ""}`;
   const [internships, setInternships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -470,7 +472,7 @@ export default function ExploreInternships() {
                       <div className="flex flex-wrap gap-2">
                         <Link
                           to={`/student/explore/${item.id}`}
-                          state={{ internship: item }}
+                          state={{ internship: item, from: currentRoute }}
                           className="inline-flex items-center gap-1 rounded-xl border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100"
                         >
                           <Eye size={15} />

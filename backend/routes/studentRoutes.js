@@ -14,12 +14,14 @@ import {
   unsaveInternship,
 } from "../controllers/studentInternshipController.js";
 import { submitInternshipFeedback } from "../controllers/feedbackController.js";
+import { getStudentRecommendations } from "../controllers/studentRecommendationController.js";
 
 const router = express.Router();
 
 router.get("/profile", studentAuth, getStudentProfile);
 router.put("/profile", studentAuth, updateStudentProfile);
 router.post("/change-password", studentAuth, changeStudentPassword);
+router.get("/recommendations", studentAuth, getStudentRecommendations);
 router.get("/internships/status", studentAuth, getStudentInternshipStatus);
 router.get("/internships/saved", studentAuth, getSavedInternships);
 router.get("/internships/applied", studentAuth, getAppliedInternships);
