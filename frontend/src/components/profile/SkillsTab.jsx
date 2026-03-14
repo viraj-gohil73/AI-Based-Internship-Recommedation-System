@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus, X, Save, CodeXml, Sparkles, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
+import StudentLoadingCard from "../common/StudentLoadingCard";
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -8,6 +9,7 @@ export default function SkillsTab() {
   const [skills, setSkills] = useState([]);
   const [skillInput, setSkillInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const suggestions = [
     "Objectivity",
@@ -36,7 +38,10 @@ export default function SkillsTab() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
 
     fetch(`${API_BASE_URL}/api/student/profile`, {
       headers: {
@@ -113,6 +118,8 @@ export default function SkillsTab() {
         </div>
       </section>
 
+
+      {isLoading ? <StudentLoadingCard message="Loading skills..." /> : null}
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6 space-y-6">
         <div>
           <label className="text-sm font-medium text-slate-700">Add a new skill</label>
@@ -206,3 +213,6 @@ function SuggestionChip({ label, onAdd }) {
     </button>
   );
 }
+
+
+

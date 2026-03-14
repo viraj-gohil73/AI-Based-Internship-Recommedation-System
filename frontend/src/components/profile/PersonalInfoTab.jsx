@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { useLocation, useNavigate } from "react-router-dom";
 import Input from "../profile/shared/Input";
 import GenderSelect from "../profile/shared/GenderSelect";
+import StudentLoadingCard from "../common/StudentLoadingCard";
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -25,6 +26,7 @@ export default function PersonalInfoTab() {
   const [dpUploading, setDpUploading] = useState(false);
   const [dpSaving, setDpSaving] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [profile, setProfile] = useState({
     dp: "",
@@ -181,7 +183,10 @@ export default function PersonalInfoTab() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
 
     fetch(`${API_BASE_URL}/api/student/profile`, {
       headers: {
@@ -221,7 +226,10 @@ export default function PersonalInfoTab() {
           avatar: profileData.dp || "",
         });
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -260,6 +268,9 @@ export default function PersonalInfoTab() {
         </div>
       </section>
 
+      {isLoading ? <StudentLoadingCard message="Loading personal details..." /> : null}
+
+      {!isLoading ? (
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6 lg:p-8 space-y-6">
         <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
           <p className="text-sm font-semibold text-slate-800">Profile Picture</p>
@@ -438,16 +449,24 @@ export default function PersonalInfoTab() {
           </div>
         </div>
       </section>
+      ) : null}
 
-      <div className="flex justify-center sm:justify-end">
-        <button
-          onClick={handleSave}
-          disabled={isSaving || dpUploading}
-          className="flex justify-center gap-2 px-7 py-3 rounded-lg text-sm font-medium transition cursor-pointer bg-gradient-to-r from-blue-600 to-blue-700 text-white w-full sm:w-auto hover:from-blue-700 hover:to-blue-800 shadow-sm disabled:opacity-50"
-        >
-          <Save size={18} /> {isSaving ? "Saving..." : "Save Changes"}
-        </button>
-      </div>
+      {!isLoading ? (
+        <div className="flex justify-center sm:justify-end">
+          <button
+            onClick={handleSave}
+            disabled={isSaving || dpUploading}
+            className="flex justify-center gap-2 px-7 py-3 rounded-lg text-sm font-medium transition cursor-pointer bg-gradient-to-r from-blue-600 to-blue-700 text-white w-full sm:w-auto hover:from-blue-700 hover:to-blue-800 shadow-sm disabled:opacity-50"
+          >
+            <Save size={18} /> {isSaving ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
+
+
+
+
+

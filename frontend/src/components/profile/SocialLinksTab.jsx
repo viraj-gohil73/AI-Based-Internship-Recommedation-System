@@ -17,6 +17,7 @@ import {
 import toast from "react-hot-toast";
 import Input from "../profile/shared/Input";
 import Select from "../profile/shared/Select";
+import StudentLoadingCard from "../common/StudentLoadingCard";
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -220,11 +221,7 @@ export default function SocialLinksTab() {
         {socials.length} link{socials.length !== 1 ? "s" : ""} added
       </div>
 
-      {loadingLinks && !isFormVisible && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 sm:p-10 text-center">
-          <p className="text-sm text-slate-500">Loading social links...</p>
-        </div>
-      )}
+      {loadingLinks && !isFormVisible && <StudentLoadingCard message="Loading social links..." className="sm:p-10" />}
 
       {!loadingLinks && socials.length === 0 && !isFormVisible && (
         <div className="rounded-2xl border border-dashed border-blue-200 bg-gradient-to-b from-blue-50/70 to-white p-8 sm:p-10 text-center space-y-4">
@@ -354,3 +351,5 @@ export default function SocialLinksTab() {
     </div>
   );
 }
+
+

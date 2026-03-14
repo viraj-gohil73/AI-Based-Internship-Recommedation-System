@@ -3,6 +3,7 @@ import { AlertCircle, Download, Eye, FileText, Trash2, Upload } from "lucide-rea
 import toast from "react-hot-toast";
 import StudentLayout from "../../layout/StudentLayout";
 import { supabase } from "../../utils/supabaseClient";
+import StudentLoadingCard from "../../components/common/StudentLoadingCard";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 const ACCEPT_ATTR = ".pdf,.doc,.docx";
@@ -310,9 +311,10 @@ export default function MyResume() {
             )}
 
             {loading ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-                Loading resume...
-              </div>
+              <StudentLoadingCard
+                className="border-slate-200 bg-slate-50"
+                message="Loading resume..."
+              />
             ) : sortedResumes.length ? (
               <div className="space-y-3">
                 {sortedResumes.map((item) => {
@@ -393,3 +395,5 @@ export default function MyResume() {
     </StudentLayout>
   );
 }
+
+

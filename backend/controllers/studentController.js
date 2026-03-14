@@ -131,24 +131,52 @@ const validateNewPassword = (password) => {
   return "";
 };
 
+const normalizeEducationGrade = (item = {}) => {
+  const explicitType = String(item?.gradeType || "").trim();
+  const explicitValue = String(item?.gradeValue || "").trim();
+  const legacyCgpa = String(item?.cgpa || "").trim();
+  const legacyGrade = String(item?.grade || "").trim();
+
+  const gradeValue = explicitValue || legacyCgpa || legacyGrade;
+  if (!gradeValue) return { gradeType: "", gradeValue: "" };
+
+  if (explicitType) return { gradeType: explicitType, gradeValue };
+  if (legacyCgpa) return { gradeType: "CGPA", gradeValue };
+  if (legacyGrade) return { gradeType: "Percentage", gradeValue };
+
+  const numeric = Number.parseFloat(gradeValue);
+  if (Number.isFinite(numeric)) {
+    return {
+      gradeType: numeric <= 10 ? "CGPA" : "Percentage",
+      gradeValue,
+    };
+  }
+
+  return { gradeType: "", gradeValue };
+};
+
 const normalizeEducations = (educations) => {
   if (!Array.isArray(educations)) return [];
 
-  return educations.map((item) => ({
-    instituteName: item?.instituteName || "",
-    boardOrUniversity: item?.boardOrUniversity || "",
-    degreeType: item?.degreeType || "",
-    fieldOfStudy: item?.fieldOfStudy || "",
-    specialization: item?.specialization || "",
-    startYear: item?.startYear || "",
-    endYear: item?.endYear || "",
-    status: item?.status || "pursuing",
-    courseType: item?.courseType || "",
-    gradeType: item?.gradeType || "",
-    gradeValue: item?.gradeValue || "",
-    location: item?.location || "",
-    description: item?.description || "",
-  }));
+  return educations.map((item) => {
+    const { gradeType, gradeValue } = normalizeEducationGrade(item);
+
+    return {
+      instituteName: item?.instituteName || "",
+      boardOrUniversity: item?.boardOrUniversity || "",
+      degreeType: item?.degreeType || "",
+      fieldOfStudy: item?.fieldOfStudy || "",
+      specialization: item?.specialization || "",
+      startYear: item?.startYear || "",
+      endYear: item?.endYear || "",
+      status: item?.status || "pursuing",
+      courseType: item?.courseType || "",
+      gradeType,
+      gradeValue,
+      location: item?.location || "",
+      description: item?.description || "",
+    };
+  });
 };
 
 const normalizeCertificates = (certificates) => {
@@ -244,6 +272,8 @@ export const getStudentProfile = async (req, res) => {
         lastName: student.lname || "",
         gender: student.gender || "",
         dob: student.dob ? student.dob.toISOString().split("T")[0] : "",
+        currentCourse: student.currentCourse || "",
+        cgpa: student.cgpa || "",
         phone: student.phone_no || "",
         email: student.email || "",
         address1: student.address1 || "",
@@ -360,6 +390,8 @@ export const updateStudentProfile = async (req, res) => {
       lastName,
       gender,
       dob,
+      currentCourse,
+      cgpa,
       phone,
       address1,
       address2,
@@ -383,6 +415,8 @@ export const updateStudentProfile = async (req, res) => {
     if (Object.prototype.hasOwnProperty.call(req.body, "lastName")) student.lname = lastName || "";
     if (Object.prototype.hasOwnProperty.call(req.body, "gender")) student.gender = gender || undefined;
     if (Object.prototype.hasOwnProperty.call(req.body, "dob")) student.dob = dob || undefined;
+    if (Object.prototype.hasOwnProperty.call(req.body, "currentCourse")) student.currentCourse = currentCourse || "";
+    if (Object.prototype.hasOwnProperty.call(req.body, "cgpa")) student.cgpa = cgpa || undefined;
     if (Object.prototype.hasOwnProperty.call(req.body, "phone")) student.phone_no = phone || "";
     if (Object.prototype.hasOwnProperty.call(req.body, "address1")) student.address1 = address1 || "";
     if (Object.prototype.hasOwnProperty.call(req.body, "address2")) student.address2 = address2 || "";
@@ -462,6 +496,8 @@ export const updateStudentProfile = async (req, res) => {
       message: "Profile updated successfully",
       profile: {
         dp: student.profilePic || "",
+        currentCourse: student.currentCourse || "",
+        cgpa: student.cgpa || "",
         skills: normalizeSkills(student.skills),
         certificates: normalizeCertificates(student.certificates),
         projects: normalizeProjects(student.projects),

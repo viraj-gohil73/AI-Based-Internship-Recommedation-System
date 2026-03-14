@@ -1,13 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Brain, Briefcase, Clock3, MapPin, RefreshCcw, Sparkles, Users, Wallet } from "lucide-react";
+import {
+  BadgeCheck,
+  Brain,
+  Briefcase,
+  Clock3,
+  Filter,
+  MapPin,
+  RefreshCcw,
+  Sparkles,
+  Users,
+  Wallet,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import StudentLayout from "../../layout/StudentLayout";
 import ResumeSelectionModal from "../../components/ResumeSelectionModal";
 import { useResumePickerModal } from "../../hooks/useResumePickerModal";
+import StudentLoadingCard from "../../components/common/StudentLoadingCard";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-const MIN_RECOMMENDATION_SCORE = 60;
+const MIN_RECOMMENDATION_SCORE = 50;
 const TOP_RECOMMENDATION_LIMIT = 10;
 
 const REASON_LABELS = {
@@ -15,6 +27,13 @@ const REASON_LABELS = {
   LOCATION_MATCH: "Location match",
   RECENT_POST: "Recent post",
   POPULAR_ROLE: "Popular role",
+  ELIGIBILITY_MATCH: "Eligibility match",
+  CERTIFICATE_RELEVANCE: "Certificate relevance",
+  POPULARITY_BOOST: "Popular internship",
+  RECENCY_BOOST: "Recently posted",
+  EDUCATION_MATCH: "Education match",
+  PROJECT_RELEVANCE: "Project relevance",
+  CGPA_ELIGIBLE: "CGPA eligible",
 };
 
 const formatStipend = (min, max) => {
@@ -50,9 +69,79 @@ const normalizeInternshipForDetails = (item) => ({
   deadline_at: item?.deadline_at || item?.apply_by_date || "",
 });
 
+const formatDate = (value) => {
+  if (!value) return "Not specified";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not specified";
+  return date.toLocaleDateString();
+};
+
+const getRoleBasedFallbacks = (title = "") => {
+  const role = String(title || "").toLowerCase();
+
+  if (role.includes("frontend")) {
+    return {
+      about:
+        "Build and improve responsive UI components, integrate APIs, and support reusable frontend architecture.",
+      whoCanApply:
+        "Students with HTML, CSS, JavaScript, and React fundamentals who can build real project interfaces.",
+      skills: ["HTML", "CSS", "JavaScript", "React", "Git"],
+    };
+  }
+
+  if (role.includes("backend")) {
+    return {
+      about:
+        "Develop and maintain APIs, handle database operations, and improve backend performance and security.",
+      whoCanApply:
+        "Students with Node.js or similar backend knowledge, database basics, and API development understanding.",
+      skills: ["Node.js", "Express", "MongoDB", "REST API", "Git"],
+    };
+  }
+
+  if (role.includes("data")) {
+    return {
+      about:
+        "Work on data cleaning, reporting, dashboards, and insights generation for business and product teams.",
+      whoCanApply:
+        "Students with strong analytical thinking and hands-on SQL, Excel, or Python data analysis basics.",
+      skills: ["SQL", "Excel", "Python", "Power BI", "Statistics"],
+    };
+  }
+
+  if (role.includes("ui") || role.includes("ux") || role.includes("design")) {
+    return {
+      about:
+        "Create user-centered wireframes and prototypes, collaborate on design systems, and improve usability.",
+      whoCanApply:
+        "Students with design portfolio, Figma proficiency, and understanding of user research and interaction design.",
+      skills: ["Figma", "Wireframing", "Prototyping", "Design Systems", "User Research"],
+    };
+  }
+
+  if (role.includes("ai") || role.includes("ml")) {
+    return {
+      about:
+        "Build and evaluate ML models, prepare datasets, and improve recommendation or prediction workflows.",
+      whoCanApply:
+        "Students with ML fundamentals, Python programming, and project experience in model training and evaluation.",
+      skills: ["Python", "Pandas", "Scikit-learn", "Machine Learning", "Model Evaluation"],
+    };
+  }
+
+  return {
+    about:
+      "Contribute to real product features, collaborate with cross-functional teams, and deliver measurable outcomes.",
+    whoCanApply:
+      "Students with relevant academic background, problem-solving skills, and ability to work in a team environment.",
+    skills: ["Communication", "Problem Solving", "Teamwork", "Time Management"],
+  };
+};
+
 export default function AIRecommend() {
   const locationState = useLocation();
   const currentRoute = `${locationState.pathname}${locationState.search || ""}`;
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
@@ -60,11 +149,14 @@ export default function AIRecommend() {
   const [meta, setMeta] = useState({ generatedAt: "", source: "", modelVersion: "" });
   const [appliedIds, setAppliedIds] = useState(new Set());
   const [busyIds, setBusyIds] = useState(new Set());
+  const [selectedMode, setSelectedMode] = useState("All");
+
   const [applyLimit, setApplyLimit] = useState({
     monthlyApplicationLimit: 0,
     appliedThisMonth: 0,
     remainingThisMonth: 0,
   });
+
   const {
     isOpen: isResumeModalOpen,
     options: resumeOptions,
@@ -140,7 +232,7 @@ export default function AIRecommend() {
     return date.toLocaleString();
   }, [meta.generatedAt]);
 
-  const visibleItems = useMemo(
+  const topItems = useMemo(
     () =>
       (Array.isArray(items) ? items : [])
         .filter((item) => Number(item?.score || 0) >= MIN_RECOMMENDATION_SCORE)
@@ -148,6 +240,20 @@ export default function AIRecommend() {
         .slice(0, TOP_RECOMMENDATION_LIMIT),
     [items]
   );
+
+  const modeOptions = useMemo(() => {
+    const modes = new Set(["All"]);
+    topItems.forEach((item) => {
+      const mode = item?.internship?.workmode || item?.internship?.mode;
+      if (mode) modes.add(mode);
+    });
+    return Array.from(modes);
+  }, [topItems]);
+
+  const visibleItems = useMemo(() => {
+    if (selectedMode === "All") return topItems;
+    return topItems.filter((item) => (item?.internship?.workmode || item?.internship?.mode) === selectedMode);
+  }, [selectedMode, topItems]);
 
   const isMonthlyLimitReached =
     applyLimit.monthlyApplicationLimit > 0 && applyLimit.remainingThisMonth <= 0;
@@ -184,6 +290,7 @@ export default function AIRecommend() {
       const selectedResume = await requestResumeSelection(API_BASE_URL, token);
       if (!selectedResume) return;
       setBusy(key, true);
+
       const response = await fetch(`${API_BASE_URL}/api/student/internships/${id}/apply`, {
         method: "POST",
         headers: {
@@ -192,6 +299,7 @@ export default function AIRecommend() {
         },
         body: JSON.stringify({ resumeUrl: selectedResume.url }),
       });
+
       const data = await response.json();
       if (!response.ok) throw new Error(data?.message || "Failed to apply internship");
 
@@ -213,86 +321,109 @@ export default function AIRecommend() {
 
   return (
     <StudentLayout title="AI Recommendations">
-      <div className="min-h-full bg-gradient-to-b from-indigo-50 via-blue-50 to-slate-100 p-4 md:p-6">
-        <section className="rounded-2xl border border-indigo-200 bg-white shadow-md">
-          <div className="bg-gradient-to-r from-indigo-700 via-blue-600 to-cyan-600 p-5 text-white">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="min-h-full bg-gradient-to-br from-sky-50 via-white to-indigo-100 p-4 md:p-6">
+        <section className="overflow-hidden rounded-3xl border border-indigo-200 bg-white shadow-md">
+          <div className="bg-gradient-to-r from-indigo-700 via-blue-700 to-cyan-600 p-5 text-white md:p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="text-xl font-semibold md:text-2xl">AI Internship Recommendations</h1>
-                <p className="mt-1 text-sm text-blue-50">
-                  Personalized rankings based on your profile and internship signals.
+                <h1 className="text-2xl font-bold">AI Internship Recommendations</h1>
+                <p className="mt-1 text-sm text-blue-100">
+                  Curated matches based on your profile, skills, and internship demand signals.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => fetchRecommendations({ refresh: true })}
                 disabled={refreshing || loading}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/35 bg-white/20 px-4 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-white/30 disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/40 bg-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/25 disabled:opacity-60"
               >
                 <RefreshCcw size={15} className={refreshing ? "animate-spin" : ""} />
-                {refreshing ? "Refreshing..." : "Refresh recommendations"}
+                {refreshing ? "Refreshing" : "Refresh"}
               </button>
             </div>
           </div>
 
-          <div className="border-t border-indigo-100 px-5 py-3 text-xs text-slate-600">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 font-medium text-indigo-700">
-                <Brain size={13} /> {meta.modelVersion || "-"}
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 font-medium text-blue-700">
-                <Sparkles size={13} /> source: {meta.source || "-"}
-              </span>
-              {updatedAt ? (
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-medium text-slate-700">
-                  generated: {updatedAt}
-                </span>
-              ) : null}
-              <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 font-medium text-violet-700">
-                showing top {TOP_RECOMMENDATION_LIMIT} (score {MIN_RECOMMENDATION_SCORE}+)
-              </span>
-              {applyLimit.monthlyApplicationLimit > 0 ? (
-                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 font-medium text-emerald-700">
-                  applications left: {applyLimit.remainingThisMonth}/{applyLimit.monthlyApplicationLimit}
-                </span>
-              ) : null}
+          <div className="grid gap-3 border-t border-indigo-100 bg-white p-4 md:grid-cols-4 md:p-5">
+            <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Model</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">{meta.modelVersion || "-"}</p>
+            </div>
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Source</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">{meta.source || "-"}</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Applications Left</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">
+                {applyLimit.monthlyApplicationLimit > 0
+                  ? `${applyLimit.remainingThisMonth}/${applyLimit.monthlyApplicationLimit}`
+                  : "Unlimited"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-violet-200 bg-violet-50 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Generated</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">{updatedAt || "-"}</p>
             </div>
           </div>
         </section>
 
-        {loading ? (
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-            Loading recommendations...
+        <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 md:p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+              <Filter size={13} /> Work mode
+            </span>
+            {modeOptions.map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setSelectedMode(mode)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  selectedMode === mode
+                    ? "bg-indigo-600 text-white"
+                    : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
           </div>
-        ) : null}
+        </section>
+
+        {loading ? <StudentLoadingCard className="mt-4" message="Loading recommendations..." /> : null}
 
         {!loading && error ? (
-          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-            {error}
-          </div>
+          <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
         ) : null}
 
         {!loading && !error && visibleItems.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-            No high-match recommendations found (score {MIN_RECOMMENDATION_SCORE}+). Add more skills in profile and refresh.
+            No high-match recommendations found for selected filter.
           </div>
         ) : null}
 
         {!loading && !error && visibleItems.length > 0 ? (
           <div className="mt-4 space-y-4">
-            {visibleItems.map((item) => {
+            {visibleItems.map((item, index) => {
               const internship = item?.internship || {};
-              const internshipId = String(item?.internshipId || internship?._id || "");
+              const internshipId = String(item?.internshipId || internship?._id || `row-${index}`);
               const reasons = Array.isArray(item?.reasons) ? item.reasons : [];
               const missingSkills = Array.isArray(item?.missingSkills) ? item.missingSkills : [];
               const detailsState = normalizeInternshipForDetails(internship);
               const applyBusy = busyIds.has(`apply:${internshipId}`);
               const isApplied = appliedIds.has(internshipId);
+              const fallbacks = getRoleBasedFallbacks(internship?.title);
+              const requiredSkills = Array.isArray(internship?.skill_req)
+                ? internship.skill_req
+                : Array.isArray(internship?.skills)
+                  ? internship.skills
+                  : fallbacks.skills;
+              const aboutInternship = internship?.about_work || fallbacks.about;
+              const whoCanApply = internship?.who_can_apply || fallbacks.whoCanApply;
 
               return (
                 <article
                   key={internshipId}
-                  className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-blue-50 p-5 shadow-sm"
+                  className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-cyan-50 p-5 shadow-sm"
                 >
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
@@ -304,7 +435,7 @@ export default function AIRecommend() {
                       </div>
 
                       <span className="inline-flex w-fit items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
-                        Score: {Number(item?.score || 0).toFixed(1)}
+                        <Sparkles size={14} className="mr-1" /> Score: {Number(item?.score || 0).toFixed(1)}
                       </span>
                     </div>
 
@@ -313,7 +444,8 @@ export default function AIRecommend() {
                         <MapPin size={14} /> {internship?.location || "Location not specified"}
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800">
-                        <Briefcase size={14} /> {internship?.workmode || internship?.mode || "Remote"} / {internship?.employment_type || "Full Time"}
+                        <Briefcase size={14} /> {internship?.workmode || internship?.mode || "Remote"} /{" "}
+                        {internship?.employment_type || "Full Time"}
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800">
                         <Clock3 size={14} /> {Number(internship?.duration || internship?.duration_months || 0)} months
@@ -326,29 +458,61 @@ export default function AIRecommend() {
                       </span>
                     </div>
 
-                    {reasons.length ? (
+                    {reasons.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {reasons.map((reason) => (
                           <span
                             key={`${internshipId}-${reason}`}
                             className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700"
                           >
+                            <Brain size={12} className="mr-1 inline" />
                             {reasonText(reason)}
                           </span>
                         ))}
                       </div>
                     ) : null}
 
-                    {missingSkills.length ? (
+                    {missingSkills.length > 0 ? (
                       <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
                         Suggested missing skills: <span className="font-semibold">{missingSkills.slice(0, 5).join(", ")}</span>
                       </p>
                     ) : null}
 
+                    {/* <div className="grid gap-3 md:grid-cols-3">
+                      <div className="rounded-xl border border-slate-200 bg-white p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          About Internship
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-slate-700">{aboutInternship}</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-white p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          Who Can Apply
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-slate-700">{whoCanApply}</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-white p-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                          Required Skills
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {requiredSkills.slice(0, 8).map((skill) => (
+                            <span
+                              key={`${internshipId}-skill-${skill}`}
+                              className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-0.5 text-[11px] font-medium text-cyan-800"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div> */}
+
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-indigo-100 pt-3">
-                      <p className="text-xs font-medium text-slate-500">
-                        Apply by: {internship?.deadline_at ? new Date(internship.deadline_at).toLocaleDateString() : "Not specified"}
-                      </p>
+                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                        <BadgeCheck size={13} /> Apply by: {formatDate(internship?.deadline_at)}
+                      </div>
+
                       <div className="flex items-center gap-2">
                         <Link
                           to={`/student/explore/${internshipId}`}
@@ -390,3 +554,6 @@ export default function AIRecommend() {
     </StudentLayout>
   );
 }
+
+
+

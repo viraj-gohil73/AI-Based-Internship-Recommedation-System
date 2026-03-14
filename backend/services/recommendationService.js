@@ -1,13 +1,35 @@
 import crypto from "node:crypto";
 
-const DEFAULT_LIMIT = 3;
-const MAX_TOP_K = 3;
+const DEFAULT_LIMIT = 10;
+const MAX_TOP_K = 20;
 const DEFAULT_ML_TIMEOUT_MS = 1200;
 const DEFAULT_CACHE_TTL_MIN = 30;
 const DEFAULT_CGPA_NEUTRAL_SCORE = 0.5;
 const DEFAULT_CGPA_UNKNOWN_SCORE = 0.3;
 const DEFAULT_EDUCATION_NEUTRAL_SCORE = 0.5;
-const MODEL_VERSION = "rule-hybrid-v1";
+const DEFAULT_LOCATION_UNKNOWN_SCORE = 0.4;
+const DEFAULT_ELIGIBILITY_NEUTRAL_SCORE = 0.6;
+const MODEL_VERSION = "rule-hybrid-v2";
+
+const SCORE_WEIGHTS = Object.freeze({
+  skills: 35,
+  project: 15,
+  certificate: 10,
+  education: 10,
+  location: 10,
+  eligibility: 15,
+  popularityRecency: 5,
+});
+
+const COLD_START_WEIGHTS = Object.freeze({
+  skills: 20,
+  project: 8,
+  certificate: 5,
+  education: 5,
+  location: 7,
+  eligibility: 20,
+  popularityRecency: 35,
+});
 
 const toLower = (value = "") => String(value || "").trim().toLowerCase();
 const toWords = (value = "") =>
@@ -45,6 +67,20 @@ const getCgpaUnknownScore = () =>
 const getEducationNeutralScore = () =>
   clamp(
     toFiniteOr(process.env.RECOMMENDATION_EDUCATION_NEUTRAL_SCORE, DEFAULT_EDUCATION_NEUTRAL_SCORE),
+    0,
+    1
+  );
+
+const getLocationUnknownScore = () =>
+  clamp(
+    toFiniteOr(process.env.RECOMMENDATION_LOCATION_UNKNOWN_SCORE, DEFAULT_LOCATION_UNKNOWN_SCORE),
+    0,
+    1
+  );
+
+const getEligibilityNeutralScore = () =>
+  clamp(
+    toFiniteOr(process.env.RECOMMENDATION_ELIGIBILITY_NEUTRAL_SCORE, DEFAULT_ELIGIBILITY_NEUTRAL_SCORE),
     0,
     1
   );
@@ -167,6 +203,32 @@ const getStudentEducationTokens = (student = {}) => {
   );
 };
 
+const getStudentLocationTokens = (student = {}) =>
+  uniq(
+    toWords(
+      [
+        student.preferredLocation || "",
+        student.city || "",
+        student.state || "",
+      ].join(" ")
+    )
+  );
+
+const getStudentCertificateTokens = (student = {}) => {
+  const certificates = Array.isArray(student.certificates) ? student.certificates : [];
+  const combined = certificates
+    .map((cert) =>
+      [
+        cert?.name || "",
+        cert?.certificateType || "",
+        cert?.description || "",
+        Array.isArray(cert?.techStack) ? cert.techStack.join(" ") : "",
+      ].join(" ")
+    )
+    .join(" ");
+  return uniq(toWords(combined));
+};
+
 const EDUCATION_KEYWORDS = [
   "btech",
   "be",
@@ -204,6 +266,59 @@ const evaluateEducationMatch = (student = {}, internship = {}) => {
   };
 };
 
+const evaluateLocationMatch = (student = {}, internship = {}) => {
+  const workMode = toLower(internship.workmode || internship.mode || "");
+  if (workMode.includes("remote")) {
+    return { locationMatch: true, locationFactor: 1, locationEligible: true };
+  }
+
+  const internshipLocationText = toLower(internship.location || "");
+  if (!internshipLocationText) {
+    return { locationMatch: null, locationFactor: getLocationUnknownScore(), locationEligible: null };
+  }
+
+  const studentLocationTokens = getStudentLocationTokens(student);
+  if (!studentLocationTokens.length) {
+    return { locationMatch: null, locationFactor: getLocationUnknownScore(), locationEligible: null };
+  }
+
+  const exactTokens = [
+    toLower(student.preferredLocation || ""),
+    toLower(student.city || ""),
+    toLower(student.state || ""),
+  ].filter(Boolean);
+
+  const exactMatch = exactTokens.some((token) => token && internshipLocationText.includes(token));
+  if (exactMatch) {
+    return { locationMatch: true, locationFactor: 1, locationEligible: true };
+  }
+
+  const internshipTokens = new Set(toWords(internshipLocationText));
+  let overlap = 0;
+  for (const token of studentLocationTokens) {
+    if (internshipTokens.has(token)) overlap += 1;
+  }
+
+  if (overlap > 0) {
+    return { locationMatch: true, locationFactor: 0.6, locationEligible: true };
+  }
+
+  return { locationMatch: false, locationFactor: 0, locationEligible: false };
+};
+
+const computeTokenOverlapRatio = (sourceTokens = [], targetTokens = []) => {
+  const sourceSet = new Set(sourceTokens);
+  const targetSet = new Set(targetTokens);
+  if (!sourceSet.size || !targetSet.size) return 0;
+
+  let overlap = 0;
+  for (const token of sourceSet) {
+    if (targetSet.has(token)) overlap += 1;
+  }
+  const denom = Math.max(1, Math.min(targetSet.size, 24));
+  return clamp(overlap / denom, 0, 1);
+};
+
 const computeProjectRelevance = (student = {}, internship = {}) => {
   const internshipTokens = new Set(toWords(getInternshipRequirementText(internship)));
   if (!internshipTokens.size) return 0;
@@ -237,6 +352,12 @@ const computeProjectRelevance = (student = {}, internship = {}) => {
   return Number(clamp(maxRelevance, 0, 1).toFixed(4));
 };
 
+const computeCertificateRelevance = (student = {}, internship = {}) => {
+  const internshipTokens = toWords(getInternshipRequirementText(internship));
+  const certificateTokens = getStudentCertificateTokens(student);
+  return Number(computeTokenOverlapRatio(certificateTokens, internshipTokens).toFixed(4));
+};
+
 const evaluateCgpaEligibility = (student = {}, internship = {}) => {
   const minCgpa = parseCgpaThreshold(internship);
   const studentCgpa = extractStudentCgpa(student);
@@ -268,17 +389,124 @@ const evaluateCgpaEligibility = (student = {}, internship = {}) => {
   };
 };
 
+const evaluateEligibility = (student = {}, internship = {}) => {
+  const { educationMatch, educationFactor } = evaluateEducationMatch(student, internship);
+  const { cgpaEligible, cgpaFactor, minCgpa, studentCgpa } = evaluateCgpaEligibility(student, internship);
+
+  const noExplicitEligibility = educationMatch === null && minCgpa === null;
+  const eligibilityFactor = noExplicitEligibility
+    ? getEligibilityNeutralScore()
+    : clamp((educationFactor + cgpaFactor) / 2, 0, 1);
+  const hasHardFail = educationMatch === false || cgpaEligible === false;
+  const hasPositive = educationMatch === true || cgpaEligible === true;
+
+  return {
+    educationMatch,
+    educationFactor,
+    cgpaEligible,
+    cgpaFactor,
+    minCgpa,
+    studentCgpa,
+    eligibilityMatch: hasHardFail ? false : hasPositive ? true : null,
+    eligibilityFactor: hasHardFail ? Math.min(eligibilityFactor, 0.5) : eligibilityFactor,
+  };
+};
+
+const parseCreatedAtMs = (internship = {}) => {
+  const raw = internship?.createdAt;
+  if (!raw) return 0;
+  const ms = new Date(raw).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+};
+
+const buildPopularityRecencyStats = (internships = []) => {
+  let maxApplications = 0;
+  let minCreatedAtMs = Number.POSITIVE_INFINITY;
+  let maxCreatedAtMs = 0;
+
+  for (const internship of internships) {
+    const applications = Number(internship?.applicationsCount || 0);
+    if (Number.isFinite(applications)) {
+      maxApplications = Math.max(maxApplications, applications);
+    }
+
+    const createdAtMs = parseCreatedAtMs(internship);
+    if (createdAtMs > 0) {
+      minCreatedAtMs = Math.min(minCreatedAtMs, createdAtMs);
+      maxCreatedAtMs = Math.max(maxCreatedAtMs, createdAtMs);
+    }
+  }
+
+  return {
+    maxApplications,
+    minCreatedAtMs: Number.isFinite(minCreatedAtMs) ? minCreatedAtMs : 0,
+    maxCreatedAtMs,
+  };
+};
+
+const computePopularityRecency = (internship = {}, stats = {}) => {
+  const maxApplications = Number(stats?.maxApplications || 0);
+  const minCreatedAtMs = Number(stats?.minCreatedAtMs || 0);
+  const maxCreatedAtMs = Number(stats?.maxCreatedAtMs || 0);
+
+  const applicationCount = Math.max(0, Number(internship?.applicationsCount || 0));
+  const popularityFactor = maxApplications > 0 ? clamp(applicationCount / maxApplications, 0, 1) : 0;
+
+  const createdAtMs = parseCreatedAtMs(internship);
+  let recencyFactor = 0.5;
+  if (createdAtMs > 0 && maxCreatedAtMs > 0) {
+    if (maxCreatedAtMs === minCreatedAtMs) recencyFactor = 1;
+    else recencyFactor = clamp((createdAtMs - minCreatedAtMs) / (maxCreatedAtMs - minCreatedAtMs), 0, 1);
+  }
+
+  const popularityRecencyFactor = Number((0.6 * popularityFactor + 0.4 * recencyFactor).toFixed(4));
+  return {
+    popularityFactor: Number(popularityFactor.toFixed(4)),
+    recencyFactor: Number(recencyFactor.toFixed(4)),
+    popularityRecencyFactor,
+  };
+};
+
+const isColdStartStudent = (student = {}) => {
+  const hasSkills = getStudentSkills(student).length > 0;
+  const hasEducation = getStudentEducationTokens(student).length > 0;
+  const hasCertificates = getStudentCertificateTokens(student).length > 0;
+  const hasProjects = Array.isArray(student.projects)
+    ? student.projects.some((project) =>
+        toWords(
+          [
+            project?.title || "",
+            project?.description || "",
+            Array.isArray(project?.techStack) ? project.techStack.join(" ") : "",
+          ].join(" ")
+        ).length > 0
+      )
+    : false;
+
+  return !(hasSkills || hasEducation || hasCertificates || hasProjects);
+};
+
 const buildReasonTags = ({
   matchedSkills = [],
+  locationMatch = null,
   educationMatch = null,
   projectRelevance = 0,
+  certificateRelevance = 0,
   cgpaEligible = null,
+  eligibilityMatch = null,
+  popularityFactor = 0,
+  recencyFactor = 0,
 }) => {
   const tags = [];
   if (matchedSkills.length > 0) tags.push("SKILL_MATCH");
+  if (locationMatch === true) tags.push("LOCATION_MATCH");
   if (educationMatch === true) tags.push("EDUCATION_MATCH");
   if (projectRelevance >= 0.2) tags.push("PROJECT_RELEVANCE");
+  if (certificateRelevance >= 0.2) tags.push("CERTIFICATE_RELEVANCE");
   if (cgpaEligible === true) tags.push("CGPA_ELIGIBLE");
+  if (eligibilityMatch === true) tags.push("ELIGIBILITY_MATCH");
+  if (popularityFactor >= 0.6) tags.push("POPULARITY_BOOST");
+  if (recencyFactor >= 0.6) tags.push("RECENCY_BOOST");
   return tags;
 };
 
@@ -286,29 +514,24 @@ const buildFallbackExplanation = ({
   score,
   matchedSkills,
   missingSkills,
-  educationMatch,
-  projectRelevance,
-  cgpaEligible,
+  locationMatch,
+  eligibilityMatch,
 }) => {
-  const pieces = [];
-  pieces.push(`Score ${score.toFixed(1)} based on profile-fit signals.`);
-
-  if (matchedSkills.length) pieces.push(`Matched skills: ${matchedSkills.slice(0, 4).join(", ")}.`);
-  else pieces.push("No strong required-skill overlap found.");
-
-  if (educationMatch === true) pieces.push("Education requirement appears aligned.");
-  else if (educationMatch === false) pieces.push("Education requirement mismatch detected.");
-  else pieces.push("Education criteria not explicitly specified.");
-
-  pieces.push(`Project relevance: ${(projectRelevance * 100).toFixed(0)}%.`);
-
-  if (cgpaEligible === true) pieces.push("CGPA criteria satisfied.");
-  else if (cgpaEligible === false) pieces.push("CGPA criteria not satisfied.");
-  else pieces.push("CGPA criteria unavailable or incomplete.");
-
-  if (missingSkills.length) pieces.push(`Missing skills: ${missingSkills.slice(0, 4).join(", ")}.`);
-
-  return pieces.join(" ");
+  const skillText = matchedSkills.length
+    ? `matched skills ${matchedSkills.slice(0, 3).join(", ")}`
+    : "limited skill overlap";
+  const locationText =
+    locationMatch === true ? "location aligned" : locationMatch === false ? "location mismatch" : "location neutral";
+  const eligibilityText =
+    eligibilityMatch === true
+      ? "eligibility aligned"
+      : eligibilityMatch === false
+        ? "eligibility partial mismatch"
+        : "eligibility neutral";
+  const missingText = missingSkills.length
+    ? `missing ${missingSkills.slice(0, 3).join(", ")}`
+    : "no major skill gaps";
+  return `Score ${score.toFixed(1)}: ${skillText}, ${eligibilityText}, ${locationText}; ${missingText}.`;
 };
 
 const isLlmExplanationEnabled = () =>
@@ -361,13 +584,12 @@ ${internshipList}
 
 Task:
 1. Compare student skills with required skills.
-2. Check education match.
-3. Check project relevance.
-4. Check CGPA eligibility.
+2. Check education and eligibility match.
+3. Check project and certificate relevance.
+4. Check location compatibility.
 5. Give match score (0-100).
-6. Recommend top 3 internships.
-7. Mention missing skills.
-8. Provide short explanation for each recommendation.
+6. Mention missing skills.
+7. Provide short explanation for the recommendation.
 
 Current computed details:
 - score: ${score.toFixed(1)}
@@ -453,11 +675,23 @@ export const buildStudentFeatureText = (student = {}) => {
         .filter(Boolean)
         .join(", ")
     : "";
+  const projects = Array.isArray(student.projects)
+    ? student.projects.map((item) => item?.title || "").filter(Boolean).join(", ")
+    : "";
+  const certificates = Array.isArray(student.certificates)
+    ? student.certificates.map((item) => item?.name || "").filter(Boolean).join(", ")
+    : "";
+  const location = [student.preferredLocation || "", student.city || "", student.state || ""]
+    .filter(Boolean)
+    .join(", ");
 
   return [
     `Student: ${name || "unknown"}`,
     `Skills: ${skills || "not specified"}`,
     `Education: ${education || "not specified"}`,
+    `Projects: ${projects || "not specified"}`,
+    `Certificates: ${certificates || "not specified"}`,
+    `Preferred location: ${location || "not specified"}`,
   ].join("\n");
 };
 
@@ -470,6 +704,7 @@ export const buildCandidateText = (internship = {}) => {
     `Title: ${title}`,
     `Company: ${company}`,
     `Skills: ${skills || "Not specified"}`,
+    `Location: ${internship.location || "Not specified"} (${internship.workmode || internship.mode || "mode not specified"})`,
     `About: ${internship.aboutWork || internship.about_work || "Not specified"}`,
     `Who can apply: ${internship.who_can_apply || internship.whoCanApply || "Not specified"}`,
     `Other requirements: ${internship.other_req || internship.otherReq || "Not specified"}`,
@@ -523,6 +758,9 @@ export const callMlRankService = async (payload) => {
 
 const rankByRules = async (student = {}, internships = [], limit = DEFAULT_LIMIT) => {
   const studentSkills = getStudentSkills(student);
+  const coldStart = isColdStartStudent(student);
+  const weights = coldStart ? COLD_START_WEIGHTS : SCORE_WEIGHTS;
+  const popularityRecencyStats = buildPopularityRecencyStats(internships);
 
   const scored = internships.map((internship) => {
     const internshipSkills = getInternshipSkills(internship);
@@ -530,26 +768,57 @@ const rankByRules = async (student = {}, internships = [], limit = DEFAULT_LIMIT
     const matchedSet = new Set(matchedSkills.map(toLower));
     const missingSkills = internshipSkills.filter((skill) => !matchedSet.has(toLower(skill)));
 
-    const skillFactor = internshipSkills.length
-      ? matchedSkills.length / internshipSkills.length
-      : 0.5;
-    const skillScore = clamp(skillFactor, 0, 1) * 50;
-
-    const { educationMatch, educationFactor } = evaluateEducationMatch(student, internship);
-    const educationScore = clamp(educationFactor, 0, 1) * 20;
+    const skillFactor = internshipSkills.length ? matchedSkills.length / internshipSkills.length : 0.5;
+    const skillScore = clamp(skillFactor, 0, 1) * weights.skills;
 
     const projectRelevance = computeProjectRelevance(student, internship);
-    const projectScore = clamp(projectRelevance, 0, 1) * 20;
+    const projectScore = clamp(projectRelevance, 0, 1) * weights.project;
 
-    const { cgpaEligible, cgpaFactor } = evaluateCgpaEligibility(student, internship);
-    const cgpaScore = clamp(cgpaFactor, 0, 1) * 10;
+    const certificateRelevance = computeCertificateRelevance(student, internship);
+    const certificateScore = clamp(certificateRelevance, 0, 1) * weights.certificate;
 
-    const finalScore = Number(clamp(skillScore + educationScore + projectScore + cgpaScore, 0, 100).toFixed(2));
+    const { locationMatch, locationFactor, locationEligible } = evaluateLocationMatch(student, internship);
+    const locationScore = clamp(locationFactor, 0, 1) * weights.location;
+
+    const {
+      educationMatch,
+      educationFactor,
+      cgpaEligible,
+      eligibilityMatch,
+      eligibilityFactor,
+    } = evaluateEligibility(student, internship);
+    const educationScore = clamp(educationFactor, 0, 1) * weights.education;
+    const eligibilityScore = clamp(eligibilityFactor, 0, 1) * weights.eligibility;
+
+    const { popularityFactor, recencyFactor, popularityRecencyFactor } = computePopularityRecency(
+      internship,
+      popularityRecencyStats
+    );
+    const popularityRecencyScore = clamp(popularityRecencyFactor, 0, 1) * weights.popularityRecency;
+
+    const finalScore = Number(
+      clamp(
+        skillScore +
+          projectScore +
+          certificateScore +
+          educationScore +
+          locationScore +
+          eligibilityScore +
+          popularityRecencyScore,
+        0,
+        100
+      ).toFixed(2)
+    );
     const reasons = buildReasonTags({
       matchedSkills,
+      locationMatch,
       educationMatch,
       projectRelevance,
+      certificateRelevance,
       cgpaEligible,
+      eligibilityMatch,
+      popularityFactor,
+      recencyFactor,
     });
 
     return {
@@ -558,16 +827,35 @@ const rankByRules = async (student = {}, internships = [], limit = DEFAULT_LIMIT
       reasons,
       matchedSkills: matchedSkills.slice(0, 8),
       missingSkills: missingSkills.slice(0, 8),
+      locationMatch,
+      locationEligible,
       educationMatch,
       projectRelevance: Number(projectRelevance.toFixed(4)),
+      certificateRelevance: Number(certificateRelevance.toFixed(4)),
       cgpaEligible,
+      eligibilityMatch,
+      popularityFactor,
+      recencyFactor,
       explanation: "",
       internship,
     };
   });
 
   const topRanked = scored
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => {
+      const scoreDiff = b.score - a.score;
+      if (scoreDiff !== 0) return scoreDiff;
+
+      const eligibilityA = a.eligibilityMatch === true ? 1 : a.eligibilityMatch === false ? 0 : 0.5;
+      const eligibilityB = b.eligibilityMatch === true ? 1 : b.eligibilityMatch === false ? 0 : 0.5;
+      if (eligibilityB !== eligibilityA) return eligibilityB - eligibilityA;
+
+      if (b.matchedSkills.length !== a.matchedSkills.length) {
+        return b.matchedSkills.length - a.matchedSkills.length;
+      }
+
+      return Number(b.recencyFactor || 0) - Number(a.recencyFactor || 0);
+    })
     .slice(0, clamp(Number(limit || DEFAULT_LIMIT), 1, MAX_TOP_K));
 
   const withExplanations = [];

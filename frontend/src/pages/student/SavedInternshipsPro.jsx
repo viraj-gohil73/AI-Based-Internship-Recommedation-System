@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import StudentLayout from "../../layout/StudentLayout";
 import ResumeSelectionModal from "../../components/ResumeSelectionModal";
 import { useResumePickerModal } from "../../hooks/useResumePickerModal";
+import StudentLoadingCard from "../../components/common/StudentLoadingCard";
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -284,7 +285,7 @@ export default function SavedInternshipsPro() {
       </div>
 
       <div className="mt-4">
-        {loading ? <div className="rounded-xl border bg-white p-8 text-center text-slate-500">Loading saved internships...</div> : null}
+        {loading ? <StudentLoadingCard message="Loading saved internships..." /> : null}
 
         {!loading && filtered.length === 0 ? (
           <div className="rounded-xl border bg-white p-8 text-center text-slate-500">
@@ -397,3 +398,5 @@ export default function SavedInternshipsPro() {
     </StudentLayout>
   );
 }
+
+

@@ -11,7 +11,7 @@ const recommendationSnapshotSchema = new mongoose.Schema(
     limit: {
       type: Number,
       required: true,
-      default: 3,
+      default: 10,
     },
     candidateCount: {
       type: Number,
@@ -43,6 +43,10 @@ const recommendationSnapshotSchema = new mongoose.Schema(
                 "EDUCATION_MATCH",
                 "PROJECT_RELEVANCE",
                 "CGPA_ELIGIBLE",
+                "ELIGIBILITY_MATCH",
+                "CERTIFICATE_RELEVANCE",
+                "POPULARITY_BOOST",
+                "RECENCY_BOOST",
               ],
             },
           ],
@@ -88,7 +92,7 @@ const recommendationSnapshotSchema = new mongoose.Schema(
     },
     modelVersion: {
       type: String,
-      default: "rule-hybrid-v1",
+      default: "rule-hybrid-v2",
       required: true,
     },
     latencyMs: {

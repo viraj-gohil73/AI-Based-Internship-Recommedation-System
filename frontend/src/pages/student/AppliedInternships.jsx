@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Briefcase, CalendarDays, Clock3, Eye, MapPin, Search, Star, Users, Wallet, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import StudentLayout from "../../layout/StudentLayout";
+import StudentLoadingCard from "../../components/common/StudentLoadingCard";
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -324,7 +325,7 @@ export default function AppliedInternships() {
         </section>
 
         <div className="mt-4">
-          {loading ? <div className="rounded-2xl border bg-white p-8 text-center text-slate-500">Loading applied internships...</div> : null}
+          {loading ? <StudentLoadingCard message="Loading applied internships..." /> : null}
 
           {!loading && filtered.length === 0 ? (
             <div className="rounded-2xl border bg-white p-8 text-center text-slate-500">No applied internships found.</div>
@@ -493,3 +494,5 @@ export default function AppliedInternships() {
     </StudentLayout>
   );
 }
+
+

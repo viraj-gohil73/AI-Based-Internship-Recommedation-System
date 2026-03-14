@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, Save, Trophy, Sparkles, CheckCircle2, ExternalLin
 import toast from "react-hot-toast";
 import Input from "../profile/shared/Input";
 import Select from "../profile/shared/Select";
+import StudentLoadingCard from "../common/StudentLoadingCard";
 
 const EMPTY_CERT = {
   name: "",
@@ -279,11 +280,7 @@ export default function CertificatesTab() {
         )}
       </div>
 
-      {loadingCertificates && editingIndex === null && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 sm:p-10 text-center">
-          <p className="text-sm text-slate-500">Loading certificates...</p>
-        </div>
-      )}
+      {loadingCertificates && editingIndex === null && <StudentLoadingCard message="Loading certificates..." className="sm:p-10" />}
 
       {!loadingCertificates && certificates.length === 0 && editingIndex === null && (
         <div className="rounded-2xl border border-dashed border-blue-200 bg-gradient-to-b from-blue-50/70 to-white p-8 sm:p-10 text-center space-y-4">
@@ -583,3 +580,5 @@ export default function CertificatesTab() {
     </div>
   );
 }
+
+

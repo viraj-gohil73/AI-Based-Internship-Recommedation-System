@@ -5,8 +5,8 @@ import RecommendationSnapshot from "../models/RecommendationSnapshot.js";
 import { toClientInternship } from "./studentInternshipController.js";
 import { getCachedOrFreshRecommendations } from "../services/recommendationService.js";
 
-const DEFAULT_LIMIT = 3;
-const MAX_LIMIT = 3;
+const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 20;
 const DEFAULT_MIN_SCORE = 0;
 const DEFAULT_CANDIDATE_CAP = 150;
 
@@ -30,6 +30,15 @@ const normalizeMinScore = (value) => {
 const getCandidateCap = () => {
   const raw = toNumberOr(process.env.RECOMMENDATION_MAX_CANDIDATES, DEFAULT_CANDIDATE_CAP);
   return Math.max(25, raw);
+};
+
+const isStrictLocationMismatch = (item = {}) => {
+  const workmode = String(item?.internship?.workmode || item?.internship?.mode || "")
+    .trim()
+    .toLowerCase();
+  if (!workmode || workmode.includes("remote")) return false;
+  if (item?.locationEligible === false) return true;
+  return item?.locationMatch === false;
 };
 
 const normalizeInternships = (internships = [], applicationsMap = new Map()) =>
@@ -136,6 +145,7 @@ export const getStudentRecommendations = async (req, res) => {
     });
 
     const filteredItems = (Array.isArray(recommendationData.items) ? recommendationData.items : [])
+      .filter((item) => !isStrictLocationMismatch(item))
       .filter((item) => Number(item?.score || 0) >= minScore)
       .slice(0, limit);
 

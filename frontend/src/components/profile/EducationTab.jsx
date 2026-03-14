@@ -17,6 +17,7 @@ import {
 import toast from "react-hot-toast";
 import Input from "../profile/shared/Input";
 import Select from "../profile/shared/Select";
+import StudentLoadingCard from "../common/StudentLoadingCard";
 
 const API_BASE_URL = "http://localhost:5000";
 
@@ -211,9 +212,7 @@ export default function EducationTab() {
         )}
       </div>
 
-      {isLoading && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-600">Loading education details...</div>
-      )}
+      {isLoading && <StudentLoadingCard message="Loading education details..." className="p-5" />}
 
       {!isLoading && isFormVisible && (
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 sm:p-6 space-y-5">
@@ -293,6 +292,21 @@ export default function EducationTab() {
                 label="Specialization"
                 value={formData.specialization}
                 onChange={(e) => handleChange("specialization", e.target.value)}
+              />
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select
+                label="Percentage or CGPA"
+                value={formData.gradeType}
+                options={["Percentage", "CGPA"]}
+                onChange={(val) => handleChange("gradeType", val)}
+              />
+              <Input
+                label={formData.gradeType === "Percentage" ? "Percentage" : "CGPA / Score"}
+                placeholder={formData.gradeType === "Percentage" ? "Eg. 82.5" : "Eg. 8.4"}
+                value={formData.gradeValue}
+                onChange={(e) => handleChange("gradeValue", e.target.value)}
               />
             </div>
           </section>
@@ -408,7 +422,7 @@ export default function EducationTab() {
               <div className="flex flex-wrap gap-2 mt-2">
                 {edu.gradeValue && (
                   <span className="px-2.5 py-1 text-xs rounded-full bg-blue-50 text-blue-700 font-medium">
-                    {edu.gradeType}: {edu.gradeValue}
+                    {(edu.gradeType || "Score")}: {edu.gradeValue}
                   </span>
                 )}
                 {edu.courseType && (
@@ -468,3 +482,6 @@ export default function EducationTab() {
     </div>
   );
 }
+
+
+

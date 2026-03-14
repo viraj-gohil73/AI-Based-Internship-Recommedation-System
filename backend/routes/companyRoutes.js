@@ -3,6 +3,7 @@ import passport from "passport";
 import { companyAuth } from "../middlewares/companyAuth.js";
 import { getMyCompany, submitVerification } from "../controllers/company.js";
 import { sendOtp } from "../api/auth/sendotpCompany.js";
+import { verifyOtp } from "../api/auth/verify-otp.js";
 import { updateCompany, updateCompanyLogo, getApprovalCompanies } from "../controllers/companyController.js";
 import { createRecruiter } from "../controllers/recruitercontroller.js";
 import { getRecruiters } from "../controllers/recruitercontroller.js";
@@ -23,6 +24,10 @@ const router = express.Router();
 
 /* ================= OTP ================= */
 router.post("/auth/send-otp", sendOtp);
+router.post("/auth/verify-otp", (req, res) => {
+  req.body = { ...req.body, role: "company" };
+  return verifyOtp(req, res);
+});
 
 router.get("/me", companyAuth, getMyCompany);
 /* ========== COMPANY GOOGLE ========== */

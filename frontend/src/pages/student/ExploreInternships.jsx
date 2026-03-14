@@ -1,18 +1,34 @@
 import { useEffect, useMemo, useState } from "react";
-import { BookmarkCheck, BookmarkPlus, Briefcase, Clock3, Eye, MapPin, Search, Users, Wallet } from "lucide-react";
+import {
+  BookmarkCheck,
+  BookmarkPlus,
+  Briefcase,
+  Clock3,
+  Eye,
+  Filter,
+  MapPin,
+  Search,
+  SlidersHorizontal,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import StudentLayout from "../../layout/StudentLayout";
 import ResumeSelectionModal from "../../components/ResumeSelectionModal";
 import { useResumePickerModal } from "../../hooks/useResumePickerModal";
+import StudentLoadingCard from "../../components/common/StudentLoadingCard";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 const PAGE_SIZE = 8;
 
 const formatStipend = (min, max) => {
-  if (!min && !max) return "Unpaid";
+  const minNum = Number(min || 0);
+  const maxNum = Number(max || 0);
+  if (!minNum && !maxNum) return "Unpaid";
+
   const n = new Intl.NumberFormat("en-IN");
-  return `INR ${n.format(min || 0)} - INR ${n.format(max || 0)} / month`;
+  return `INR ${n.format(minNum)} - INR ${n.format(maxNum)} / month`;
 };
 
 const normalizeInternship = (item) => ({
@@ -33,7 +49,9 @@ const normalizeInternship = (item) => ({
   deadlineAt: item?.deadline_at || "",
 });
 
-const clampText = (value, limit = 160) => {
+const normalize = (value) => String(value || "").trim().toLowerCase();
+
+const clampText = (value, limit = 180) => {
   if (!value) return "No additional description shared yet.";
   if (value.length <= limit) return value;
   return `${value.slice(0, limit).trim()}...`;
@@ -42,6 +60,7 @@ const clampText = (value, limit = 160) => {
 export default function ExploreInternships() {
   const locationState = useLocation();
   const currentRoute = `${locationState.pathname}${locationState.search || ""}`;
+
   const [internships, setInternships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -65,6 +84,7 @@ export default function ExploreInternships() {
     appliedThisMonth: 0,
     remainingThisMonth: 0,
   });
+
   const {
     isOpen: isResumeModalOpen,
     options: resumeOptions,
@@ -131,30 +151,40 @@ export default function ExploreInternships() {
     setPage(1);
   }, [query, location, mode, type, minStipend, maxDuration, minOpenings, skillFilter, sortBy]);
 
+  const resetFilters = () => {
+    setQuery("");
+    setLocation("");
+    setMode("all");
+    setType("all");
+    setMinStipend("0");
+    setMaxDuration("all");
+    setMinOpenings("0");
+    setSkillFilter("");
+    setSortBy("newest");
+  };
+
   const locationSuggestions = useMemo(
-    () =>
-      [...new Set(internships.map((i) => i.location).filter(Boolean))]
-        .sort((a, b) => a.localeCompare(b)),
+    () => [...new Set(internships.map((i) => i.location).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
     [internships]
   );
 
   const filtered = useMemo(() => {
     let list = [...internships];
-    const normalize = (value) => String(value || "").trim().toLowerCase();
 
     if (query.trim()) {
       const q = query.trim().toLowerCase();
-      list = list.filter((i) =>
-        i.title.toLowerCase().includes(q) ||
-        i.company.toLowerCase().includes(q) ||
-        i.id.toLowerCase().includes(q) ||
-        i.skills.some((s) => s.toLowerCase().includes(q))
+      list = list.filter(
+        (i) =>
+          i.title.toLowerCase().includes(q) ||
+          i.company.toLowerCase().includes(q) ||
+          i.id.toLowerCase().includes(q) ||
+          i.skills.some((s) => s.toLowerCase().includes(q))
       );
     }
 
     if (location.trim()) {
-      const l = location.trim().toLowerCase();
-      list = list.filter((i) => i.location.toLowerCase().includes(l));
+      const loc = location.trim().toLowerCase();
+      list = list.filter((i) => i.location.toLowerCase().includes(loc));
     }
 
     if (mode !== "all") list = list.filter((i) => normalize(i.workmode) === normalize(mode));
@@ -166,14 +196,12 @@ export default function ExploreInternships() {
     }
 
     if (maxDuration !== "all") {
-      const durationValue = Number(maxDuration);
-      list = list.filter((i) => i.duration > 0 && i.duration <= durationValue);
+      const duration = Number(maxDuration);
+      list = list.filter((i) => i.duration > 0 && i.duration <= duration);
     }
 
-    const minOpeningsValue = Number(minOpenings || 0);
-    if (minOpeningsValue > 0) {
-      list = list.filter((i) => (i.openings || 0) >= minOpeningsValue);
-    }
+    const openings = Number(minOpenings || 0);
+    if (openings > 0) list = list.filter((i) => (i.openings || 0) >= openings);
 
     if (skillFilter.trim()) {
       const skill = skillFilter.trim().toLowerCase();
@@ -188,7 +216,9 @@ export default function ExploreInternships() {
   }, [internships, query, location, mode, type, minStipend, maxDuration, minOpenings, skillFilter, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const safePage = Math.min(page, totalPages);
+  const pageItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   const activeFiltersCount = [
     location.trim(),
     mode !== "all",
@@ -198,6 +228,7 @@ export default function ExploreInternships() {
     Number(minOpenings) > 0,
     skillFilter.trim(),
   ].filter(Boolean).length;
+
   const isMonthlyLimitReached =
     applyLimit.monthlyApplicationLimit > 0 &&
     applyLimit.appliedThisMonth >= applyLimit.monthlyApplicationLimit;
@@ -234,8 +265,11 @@ export default function ExploreInternships() {
         else next.add(id);
         return next;
       });
+      toast.success(alreadySaved ? "Removed from saved" : "Saved internship");
     } catch (err) {
-      setError(err?.message || "Failed to save internship");
+      const message = err?.message || "Failed to save internship";
+      setError(message);
+      toast.error(message);
     } finally {
       setBusy(key, false);
     }
@@ -249,6 +283,7 @@ export default function ExploreInternships() {
       toast.error(message);
       return;
     }
+
     if (isMonthlyLimitReached) {
       const message = `Monthly application limit reached (${applyLimit.monthlyApplicationLimit}).`;
       setError(message);
@@ -262,6 +297,7 @@ export default function ExploreInternships() {
     try {
       const selectedResume = await requestResumeSelection(API_BASE_URL, token);
       if (!selectedResume) return;
+
       setBusy(key, true);
       const response = await fetch(`${API_BASE_URL}/api/student/internships/${id}/apply`, {
         method: "POST",
@@ -271,6 +307,7 @@ export default function ExploreInternships() {
         },
         body: JSON.stringify({ resumeUrl: selectedResume.url }),
       });
+
       const data = await response.json();
       if (!response.ok) throw new Error(data?.message || "Failed to apply internship");
 
@@ -280,6 +317,7 @@ export default function ExploreInternships() {
         appliedThisMonth: prev.appliedThisMonth + 1,
         remainingThisMonth: Math.max(0, prev.remainingThisMonth - 1),
       }));
+      toast.success("Applied successfully");
     } catch (err) {
       const message = err?.message || "Failed to apply internship";
       setError(message);
@@ -291,90 +329,93 @@ export default function ExploreInternships() {
 
   return (
     <StudentLayout title="Explore Internships">
-      <div className="min-h-full bg-gradient-to-b from-blue-50 via-indigo-50 to-slate-100 p-4 md:p-6">
+      <div className="min-h-full bg-gradient-to-br from-blue-50 via-white to-indigo-100 p-4 md:p-6">
         {error ? (
-          <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+          <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {error}
+          </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-2xl border border-indigo-200 bg-white shadow-md">
-          <div className="bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-600 p-4 text-white md:p-5">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <section className="overflow-hidden rounded-3xl border border-indigo-200 bg-white shadow-md">
+          <div className="bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-600 p-5 text-white md:p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h2 className="text-lg font-semibold md:text-xl">Find Your Next Internship</h2>
-                <p className="text-sm text-indigo-50">Browse active roles and apply quickly.</p>
+                <h2 className="text-xl font-bold md:text-2xl">Explore Internships</h2>
+                <p className="mt-1 text-sm text-blue-50">Find active opportunities that match your skills and goals.</p>
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="rounded-full bg-white/20 px-3 py-1 font-medium text-white backdrop-blur">{filtered.length} results</span>
-                <span className="rounded-full bg-white/20 px-3 py-1 font-medium text-white backdrop-blur">{activeFiltersCount} active filters</span>
+              <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                <span className="rounded-full bg-white/20 px-3 py-1.5">{filtered.length} results</span>
+                <span className="rounded-full bg-white/20 px-3 py-1.5">{activeFiltersCount} filters</span>
                 {applyLimit.monthlyApplicationLimit > 0 ? (
-                  <span className="rounded-full bg-white/20 px-3 py-1 font-medium text-white backdrop-blur">
-                    {applyLimit.remainingThisMonth} / {applyLimit.monthlyApplicationLimit} applications left this month
+                  <span className="rounded-full bg-white/20 px-3 py-1.5">
+                    {applyLimit.remainingThisMonth}/{applyLimit.monthlyApplicationLimit} applies left
                   </span>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuery("");
-                    setLocation("");
-                    setMode("all");
-                    setType("all");
-                    setMinStipend("0");
-                    setMaxDuration("all");
-                    setMinOpenings("0");
-                    setSkillFilter("");
-                    setSortBy("newest");
-                  }}
-                  className="rounded-xl border border-white/40 bg-white/20 px-3 py-1.5 font-medium text-white transition hover:bg-white/30"
-                >
-                  Reset
-                </button>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="sticky top-0 z-20 mt-4 rounded-2xl border border-blue-200 bg-white/90 p-4 shadow-md backdrop-blur">
+        <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <SlidersHorizontal size={16} /> Search & Filters
+            </p>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+            >
+              Reset
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-7">
-            <label className="lg:col-span-2 flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200">
-              <Search size={16} className="text-slate-500" />
+            <label className="lg:col-span-2 flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200">
+              <Search size={15} className="text-slate-500" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search role, company, skill"
+                placeholder="Search role, company, skills"
                 className="w-full bg-transparent text-sm outline-none"
               />
             </label>
+
             <input
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Location"
-              list="location-suggestions"
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
+              list="explore-location-suggestions"
+              className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
             />
-            <datalist id="location-suggestions">
+            <datalist id="explore-location-suggestions">
               {locationSuggestions.map((loc) => (
                 <option key={loc} value={loc} />
               ))}
             </datalist>
-            <select value={mode} onChange={(e) => setMode(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
+
+            <select value={mode} onChange={(e) => setMode(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
               <option value="all">All modes</option>
               <option value="Remote">Remote</option>
               <option value="Hybrid">Hybrid</option>
               <option value="Onsite">Onsite</option>
             </select>
-            <select value={type} onChange={(e) => setType(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
+
+            <select value={type} onChange={(e) => setType(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
               <option value="all">All types</option>
               <option value="Full Time">Full Time</option>
               <option value="Part Time">Part Time</option>
             </select>
-            <select value={minStipend} onChange={(e) => setMinStipend(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
+
+            <select value={minStipend} onChange={(e) => setMinStipend(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
               <option value="0">Any stipend</option>
               <option value="5000">INR 5,000+</option>
               <option value="10000">INR 10,000+</option>
               <option value="15000">INR 15,000+</option>
-              <option value="20000">INR 20,000+</option>
+              <option value="25000">INR 25,000+</option>
             </select>
-            <select value={maxDuration} onChange={(e) => setMaxDuration(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
+
+            <select value={maxDuration} onChange={(e) => setMaxDuration(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
               <option value="all">Any duration</option>
               <option value="3">Up to 3 months</option>
               <option value="6">Up to 6 months</option>
@@ -383,22 +424,24 @@ export default function ExploreInternships() {
           </div>
 
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <label className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200">
-              <Search size={16} className="text-slate-500" />
+            <label className="flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200">
+              <Filter size={15} className="text-slate-500" />
               <input
                 value={skillFilter}
                 onChange={(e) => setSkillFilter(e.target.value)}
-                placeholder="Filter by skill (React, Java...)"
+                placeholder="Filter by skill"
                 className="w-full bg-transparent text-sm outline-none"
               />
             </label>
-            <select value={minOpenings} onChange={(e) => setMinOpenings(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
+
+            <select value={minOpenings} onChange={(e) => setMinOpenings(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
               <option value="0">Any openings</option>
               <option value="1">1+ openings</option>
               <option value="3">3+ openings</option>
               <option value="5">5+ openings</option>
             </select>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
+
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
               <option value="newest">Sort: Newest</option>
               <option value="deadline">Sort: Closest deadline</option>
               <option value="stipend">Sort: Highest stipend</option>
@@ -406,34 +449,35 @@ export default function ExploreInternships() {
           </div>
         </section>
 
-        <div className="mt-4">
-          {loading ? <div className="rounded-2xl border bg-white p-8 text-center text-slate-500">Loading internships...</div> : null}
+        <div className="mt-4 space-y-4">
+          {loading ? <StudentLoadingCard message="Loading internships..." /> : null}
 
           {!loading && pageItems.length === 0 ? (
-            <div className="rounded-2xl border bg-white p-8 text-center text-slate-500">No internships found.</div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+              No internships found for current filters.
+            </div>
           ) : null}
 
-          {!loading ? (
-            <div className="space-y-4">
-              {pageItems.map((item) => {
+          {!loading
+            ? pageItems.map((item) => {
                 const saveKey = `save:${item.id}`;
                 const applyKey = `apply:${item.id}`;
                 const saveBusy = busyIds.has(saveKey);
                 const applyBusy = busyIds.has(applyKey);
                 const isApplied = appliedIds.has(item.id);
-                const cardTone = isApplied
-                  ? "border-blue-200 bg-gradient-to-br from-blue-50 via-white to-indigo-50"
-                  : "border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-blue-50";
 
                 return (
-                  <article key={item.id} className={`rounded-2xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${cardTone}`}>
+                  <article
+                    key={item.id}
+                    className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-5 shadow-sm"
+                  >
                     <div className="flex flex-col gap-4">
                       <div className="flex items-start gap-3">
-                        <div className="h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br from-slate-100 to-slate-200">
+                        <div className="h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
                           {item.companyLogo ? (
                             <img src={item.companyLogo} alt={`${item.company} logo`} className="h-full w-full object-cover" />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-500">
+                            <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-600">
                               {item.company.slice(0, 1).toUpperCase()}
                             </div>
                           )}
@@ -442,57 +486,71 @@ export default function ExploreInternships() {
                         <div className="min-w-0 flex-1">
                           <h3 className="truncate text-lg font-semibold text-slate-900">{item.title}</h3>
                           <p className="truncate text-sm text-slate-600">{item.company}</p>
-                          <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-700">
-                            <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800"><MapPin size={14} /> {item.location}</span>
-                            <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800"><Briefcase size={14} /> {item.workmode} / {item.employmentType}</span>
-                            <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800"><Wallet size={14} /> {formatStipend(item.stipendMin, item.stipendMax)}</span>
-                            <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800"><Clock3 size={14} /> {item.duration || 0} months</span>
-                            <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800"><Users size={14} /> {item.openings || 0} openings</span>
-                          </div>
                         </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 text-sm text-slate-700">
+                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800">
+                          <MapPin size={14} /> {item.location}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800">
+                          <Briefcase size={14} /> {item.workmode} / {item.employmentType}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800">
+                          <Wallet size={14} /> {formatStipend(item.stipendMin, item.stipendMax)}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800">
+                          <Clock3 size={14} /> {item.duration || 0} months
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-blue-800">
+                          <Users size={14} /> {item.openings || 0} openings
+                        </span>
                       </div>
 
                       <p className="text-sm leading-6 text-slate-600">{clampText(item.aboutWork)}</p>
 
                       {item.skills.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
-                          {item.skills.slice(0, 5).map((skill, index) => (
-                            <span key={`${item.id}-skill-${index}`} className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                          {item.skills.slice(0, 6).map((skill, idx) => (
+                            <span key={`${item.id}-skill-${idx}`} className="rounded-full border border-indigo-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
                               {skill}
                             </span>
                           ))}
-                          {item.skills.length > 5 ? (
-                            <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
-                              +{item.skills.length - 5} more
+                          {item.skills.length > 6 ? (
+                            <span className="rounded-full border border-indigo-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                              +{item.skills.length - 6} more
                             </span>
                           ) : null}
                         </div>
                       ) : null}
 
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-2 border-t border-blue-100 pt-3">
                         <Link
                           to={`/student/explore/${item.id}`}
                           state={{ internship: item, from: currentRoute }}
-                          className="inline-flex items-center gap-1 rounded-xl border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 transition hover:bg-indigo-100"
+                          className="inline-flex items-center gap-1 rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
                         >
-                          <Eye size={15} />
-                          View Details
+                          <Eye size={15} /> Details
                         </Link>
+
                         <button
                           type="button"
                           onClick={() => applyInternship(item.id)}
                           disabled={isApplied || applyBusy || isMonthlyLimitReached}
-                          className={`rounded-xl px-3 py-2 text-sm font-medium ${
-                            isApplied ? "border border-blue-300 bg-blue-100 text-blue-700" : "bg-blue-600 text-white hover:bg-blue-700"
+                          className={`rounded-xl px-3 py-2 text-sm font-semibold text-white transition ${
+                            isApplied
+                              ? "cursor-not-allowed bg-emerald-300"
+                              : "bg-emerald-600 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
                           }`}
                         >
                           {applyBusy ? "Applying..." : isApplied ? "Applied" : "Apply"}
                         </button>
+
                         <button
                           type="button"
                           onClick={() => toggleSave(item.id)}
                           disabled={saveBusy}
-                          className="inline-flex items-center gap-1 rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-100"
+                          className="inline-flex items-center gap-1 rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
                         >
                           {savedIds.has(item.id) ? <BookmarkCheck size={15} className="text-blue-600" /> : <BookmarkPlus size={15} />}
                           {saveBusy ? "Saving..." : savedIds.has(item.id) ? "Saved" : "Save"}
@@ -501,28 +559,27 @@ export default function ExploreInternships() {
                     </div>
                   </article>
                 );
-              })}
-            </div>
-          ) : null}
+              })
+            : null}
         </div>
 
         {!loading ? (
-          <div className="mt-4 flex items-center justify-between rounded-2xl border border-indigo-200 bg-white px-4 py-3 text-sm shadow-sm">
-            <p className="text-slate-600">Page {page} of {totalPages}</p>
+          <div className="mt-4 flex items-center justify-between rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm shadow-sm">
+            <p className="text-slate-600">Page {safePage} of {totalPages}</p>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 font-medium text-indigo-700 disabled:opacity-50"
+                disabled={safePage === 1}
+                className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700 disabled:opacity-50"
               >
                 Prev
               </button>
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 font-medium text-indigo-700 disabled:opacity-50"
+                disabled={safePage === totalPages}
+                className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700 disabled:opacity-50"
               >
                 Next
               </button>
@@ -530,6 +587,7 @@ export default function ExploreInternships() {
           </div>
         ) : null}
       </div>
+
       <ResumeSelectionModal
         open={isResumeModalOpen}
         options={resumeOptions}
@@ -541,3 +599,5 @@ export default function ExploreInternships() {
     </StudentLayout>
   );
 }
+
+

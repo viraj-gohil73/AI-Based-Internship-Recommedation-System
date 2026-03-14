@@ -51,6 +51,12 @@ const studentSchema = new mongoose.Schema({
         type: String,
         enum: ['Male', 'Female', 'Other'],
     },
+    currentCourse: {
+        type: String,
+    },
+    cgpa: {
+        type: String,
+    },
     phone_no:{
         type: String,
     },
