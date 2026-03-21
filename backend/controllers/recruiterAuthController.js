@@ -213,6 +213,12 @@ export const getRecruiterApplicants = async (req, res) => {
           internshipTitle: internshipTitleMap.get(internshipId) || "Internship",
           status: entry?.status || "APPLIED",
           appliedAt: entry?.appliedAt || null,
+          statusUpdatedAt: entry?.statusUpdatedAt || null,
+          shortlistedAt: entry?.shortlistedAt || null,
+          interviewAt: entry?.interviewAt || null,
+          selectedAt: entry?.selectedAt || null,
+          rejectedAt: entry?.rejectedAt || null,
+          statusHistory: Array.isArray(entry?.statusHistory) ? entry.statusHistory : [],
           student: {
             name: studentName || "Unnamed Student",
             email: student.email || "",
@@ -266,17 +272,37 @@ export const updateApplicationStatus = async (req, res) => {
       return res.status(404).json({ message: "Internship not found" });
     }
 
-    const applicationUpdate = { "appliedInternships.$.status": status };
+    const now = new Date();
+    const applicationUpdate = {
+      "appliedInternships.$.status": status,
+      "appliedInternships.$.statusUpdatedAt": now,
+    };
 
+    if (status === "SHORTLISTED") {
+      applicationUpdate["appliedInternships.$.shortlistedAt"] = now;
+    }
+    if (status === "INTERVIEW") {
+      applicationUpdate["appliedInternships.$.interviewAt"] = now;
+    }
+    if (status === "SELECTED") {
+      applicationUpdate["appliedInternships.$.selectedAt"] = now;
+    }
     if (status === "REJECTED") {
-      applicationUpdate["appliedInternships.$.rejectedAt"] = new Date();
-    } else {
-      applicationUpdate["appliedInternships.$.rejectedAt"] = null;
+      applicationUpdate["appliedInternships.$.rejectedAt"] = now;
     }
 
     const updateResult = await Student.updateOne(
       { _id: studentId, "appliedInternships.internship": internshipId },
-      { $set: applicationUpdate }
+      {
+        $set: applicationUpdate,
+        $push: {
+          "appliedInternships.$.statusHistory": {
+            status,
+            changedAt: now,
+            changedByRecruiter: req.recruiter?._id || null,
+          },
+        },
+      }
     );
 
     if (!updateResult.matchedCount) {
@@ -516,12 +542,21 @@ export const createRecruiterInterview = async (req, res) => {
       status: "SCHEDULED",
     });
 
+    const now = new Date();
     await Student.updateOne(
       { _id: studentId, "appliedInternships.internship": internshipId },
       {
         $set: {
           "appliedInternships.$.status": "INTERVIEW",
-          "appliedInternships.$.rejectedAt": null,
+          "appliedInternships.$.statusUpdatedAt": now,
+          "appliedInternships.$.interviewAt": now,
+        },
+        $push: {
+          "appliedInternships.$.statusHistory": {
+            status: "INTERVIEW",
+            changedAt: now,
+            changedByRecruiter: req.recruiter?._id || null,
+          },
         },
       }
     );
@@ -632,4 +667,8 @@ export const updateRecruiterInterview = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+
+
+
 

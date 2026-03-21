@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { BookmarkX, Briefcase, Clock3, Eye, MapPin, Search, Users, Wallet } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import StudentLayout from "../../layout/StudentLayout";
@@ -213,6 +213,7 @@ export default function SavedInternshipsPro() {
         appliedThisMonth: prev.appliedThisMonth + 1,
         remainingThisMonth: Math.max(0, prev.remainingThisMonth - 1),
       }));
+      window.dispatchEvent(new Event("student-application-status-updated"));
     } catch (err) {
       setError(err?.message || "Failed to apply internship");
     } finally {
@@ -363,7 +364,7 @@ export default function SavedInternshipsPro() {
                         onClick={() => applyInternship(item.id)}
                         disabled={appliedIds.has(item.id) || applyBusy || isMonthlyLimitReached}
                         className={`rounded-lg px-3 py-2 text-sm font-medium ${
-                          appliedIds.has(item.id) ? "bg-emerald-100 text-emerald-700" : "bg-emerald-600 text-white"
+                          appliedIds.has(item.id) ? "bg-blue-100 text-blue-700" : "bg-blue-600 text-white hover:bg-blue-700"
                         }`}
                       >
                         {applyBusy ? "Applying..." : appliedIds.has(item.id) ? "Applied" : "Apply"}
@@ -398,5 +399,9 @@ export default function SavedInternshipsPro() {
     </StudentLayout>
   );
 }
+
+
+
+
 
 

@@ -57,6 +57,37 @@ const clampText = (value, limit = 180) => {
   return `${value.slice(0, limit).trim()}...`;
 };
 
+const formatDate = (value) => {
+  if (!value) return "No deadline";
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return "No deadline";
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(dt);
+};
+
+const getDeadlineState = (value) => {
+  if (!value) return { label: "No deadline", tone: "neutral" };
+  const deadline = new Date(value);
+  if (Number.isNaN(deadline.getTime())) return { label: "No deadline", tone: "neutral" };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const deadlineEnd = new Date(deadline);
+  deadlineEnd.setHours(23, 59, 59, 999);
+
+  const dayDiff = Math.ceil((deadlineEnd.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (dayDiff < 0) return { label: "Closed", tone: "closed" };
+  if (dayDiff === 0) return { label: "Last day to apply", tone: "urgent" };
+  if (dayDiff === 1) return { label: "1 day left", tone: "warning" };
+  if (dayDiff <= 3) return { label: `${dayDiff} days left`, tone: "warning" };
+  return { label: `${dayDiff} days left`, tone: "safe" };
+};
+
 export default function ExploreInternships() {
   const locationState = useLocation();
   const currentRoute = `${locationState.pathname}${locationState.search || ""}`;
@@ -317,6 +348,7 @@ export default function ExploreInternships() {
         appliedThisMonth: prev.appliedThisMonth + 1,
         remainingThisMonth: Math.max(0, prev.remainingThisMonth - 1),
       }));
+      window.dispatchEvent(new Event("student-application-status-updated"));
       toast.success("Applied successfully");
     } catch (err) {
       const message = err?.message || "Failed to apply internship";
@@ -336,7 +368,7 @@ export default function ExploreInternships() {
           </div>
         ) : null}
 
-        <section className="overflow-hidden rounded-3xl border border-indigo-200 bg-white shadow-md">
+        {/* <section className="overflow-hidden rounded-3xl border border-indigo-200 bg-white shadow-md">
           <div className="bg-gradient-to-r from-blue-700 via-indigo-600 to-blue-600 p-5 text-white md:p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
@@ -354,9 +386,9 @@ export default function ExploreInternships() {
               </div>
             </div>
           </div>
-        </section>
+        </section> */}
 
-        <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <section className=" rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <p className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
               <SlidersHorizontal size={16} /> Search & Filters
@@ -465,6 +497,17 @@ export default function ExploreInternships() {
                 const saveBusy = busyIds.has(saveKey);
                 const applyBusy = busyIds.has(applyKey);
                 const isApplied = appliedIds.has(item.id);
+                const deadlineState = getDeadlineState(item.deadlineAt);
+                const deadlineToneClass =
+                  deadlineState.tone === "closed"
+                    ? "border-rose-200 bg-rose-50 text-rose-700"
+                    : deadlineState.tone === "urgent"
+                    ? "border-rose-200 bg-rose-50 text-rose-700"
+                    : deadlineState.tone === "warning"
+                    ? "border-amber-200 bg-amber-50 text-amber-700"
+                    : deadlineState.tone === "safe"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-slate-200 bg-slate-50 text-slate-700";
 
                 return (
                   <article
@@ -524,37 +567,48 @@ export default function ExploreInternships() {
                         </div>
                       ) : null}
 
-                      <div className="flex flex-wrap gap-2 border-t border-blue-100 pt-3">
-                        <Link
-                          to={`/student/explore/${item.id}`}
-                          state={{ internship: item, from: currentRoute }}
-                          className="inline-flex items-center gap-1 rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
-                        >
-                          <Eye size={15} /> Details
-                        </Link>
+                      <div className="flex flex-col gap-3 border-t border-blue-100 pt-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${deadlineToneClass}`}>
+                            <Clock3 size={13} /> {deadlineState.label}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700">
+                            Apply by: {formatDate(item.deadlineAt)}
+                          </span>
+                        </div>
 
-                        <button
-                          type="button"
-                          onClick={() => applyInternship(item.id)}
-                          disabled={isApplied || applyBusy || isMonthlyLimitReached}
-                          className={`rounded-xl px-3 py-2 text-sm font-semibold text-white transition ${
-                            isApplied
-                              ? "cursor-not-allowed bg-emerald-300"
-                              : "bg-emerald-600 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
-                          }`}
-                        >
-                          {applyBusy ? "Applying..." : isApplied ? "Applied" : "Apply"}
-                        </button>
+                        <div className="flex flex-wrap gap-2">
+                          <Link
+                            to={`/student/explore/${item.id}`}
+                            state={{ internship: item, from: currentRoute }}
+                            className="inline-flex items-center gap-1 rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+                          >
+                            <Eye size={15} /> Details
+                          </Link>
 
-                        <button
-                          type="button"
-                          onClick={() => toggleSave(item.id)}
-                          disabled={saveBusy}
-                          className="inline-flex items-center gap-1 rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
-                        >
-                          {savedIds.has(item.id) ? <BookmarkCheck size={15} className="text-blue-600" /> : <BookmarkPlus size={15} />}
-                          {saveBusy ? "Saving..." : savedIds.has(item.id) ? "Saved" : "Save"}
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => applyInternship(item.id)}
+                            disabled={isApplied || applyBusy || isMonthlyLimitReached}
+                            className={`rounded-xl px-3 py-2 text-sm font-semibold text-white transition ${
+                              isApplied
+                                ? "cursor-not-allowed bg-blue-300"
+                                : "bg-blue-600 hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                            }`}
+                          >
+                            {applyBusy ? "Applying..." : isApplied ? "Applied" : "Apply"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => toggleSave(item.id)}
+                            disabled={saveBusy}
+                            className="inline-flex items-center gap-1 rounded-xl border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
+                          >
+                            {savedIds.has(item.id) ? <BookmarkCheck size={15} className="text-blue-600" /> : <BookmarkPlus size={15} />}
+                            {saveBusy ? "Saving..." : savedIds.has(item.id) ? "Saved" : "Save"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </article>
@@ -599,5 +653,4 @@ export default function ExploreInternships() {
     </StudentLayout>
   );
 }
-
 

@@ -1,6 +1,7 @@
-import Student from "../models/Student.js";
+﻿import Student from "../models/Student.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import { normalizeSkillArray } from "../utils/skillNormalization.js";
 
 const MAX_RESUME_COUNT = 3;
 
@@ -103,19 +104,7 @@ const splitCommaSeparated = (value) => {
     .filter(Boolean);
 };
 
-const normalizeSkills = (skills) => {
-  if (Array.isArray(skills)) {
-    return skills
-      .map((item) => String(item || "").trim())
-      .filter(Boolean);
-  }
-
-  if (typeof skills === "string") {
-    return splitCommaSeparated(skills);
-  }
-
-  return [];
-};
+const normalizeSkills = (skills) => normalizeSkillArray(skills);
 
 const validateNewPassword = (password) => {
   const value = String(password || "");
@@ -186,7 +175,7 @@ const normalizeCertificates = (certificates) => {
     name: item?.name || "",
     organization: item?.organization || "",
     certificateType: item?.certificateType || "",
-    techStack: Array.isArray(item?.techStack) ? item.techStack.filter((tech) => typeof tech === "string") : [],
+    techStack: normalizeSkillArray(item?.techStack),
     issueDate: item?.issueDate || "",
     expiryDate: item?.expiryDate || "",
     hasExpiry: Boolean(item?.hasExpiry),
@@ -206,7 +195,7 @@ const normalizeProjects = (projects) => {
     title: item?.title || "",
     description: item?.description || "",
     projectType: item?.projectType || "",
-    techStack: Array.isArray(item?.techStack) ? item.techStack.filter((tech) => typeof tech === "string") : [],
+    techStack: normalizeSkillArray(item?.techStack),
     startDate: item?.startDate || "",
     endDate: item?.endDate || "",
     liveUrl: item?.liveUrl || "",
@@ -510,3 +499,5 @@ export const updateStudentProfile = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+

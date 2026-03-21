@@ -438,12 +438,21 @@ export const applyInternship = async (req, res) => {
       });
     }
 
+    const now = new Date();
     student.appliedInternships = [
       ...(student.appliedInternships || []),
       {
         internship: internship._id,
         status: "APPLIED",
-        appliedAt: new Date(),
+        appliedAt: now,
+        statusUpdatedAt: now,
+        statusHistory: [
+          {
+            status: "APPLIED",
+            changedAt: now,
+            changedByRecruiter: null,
+          },
+        ],
         resumeUrl: selectedResume.url,
         resumeName: selectedResume.name || getFileNameFromUrl(selectedResume.url),
       },
@@ -494,3 +503,4 @@ export const applyInternship = async (req, res) => {
 };
 
 export { toClientInternship };
+

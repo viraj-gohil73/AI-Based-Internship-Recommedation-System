@@ -1,10 +1,17 @@
-import { Bell, CheckCheck, Menu, Trash2 } from "lucide-react";
+import { Bell, BriefcaseBusiness, CheckCheck, Menu, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-export default function Header({ onMenuClick }) {
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
+export default function Header({ onMenuClick, title = "Student" }) {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [applyStatus, setApplyStatus] = useState({
+    monthlyApplicationLimit: 0,
+    appliedThisMonth: 0,
+    remainingThisMonth: 0,
+  });
   const ref = useRef(null);
 
   const unreadCount = useMemo(
@@ -18,7 +25,7 @@ export default function Header({ onMenuClick }) {
 
     try {
       setNotificationsLoading(true);
-      const res = await fetch("http://localhost:5000/api/notifications?limit=50", {
+      const res = await fetch(`${API_BASE_URL}/api/notifications?limit=50`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -31,9 +38,31 @@ export default function Header({ onMenuClick }) {
     }
   }, []);
 
+  const loadApplyStatus = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/student/internships/status`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setApplyStatus({
+        monthlyApplicationLimit: Number(data?.monthlyApplicationLimit || 0),
+        appliedThisMonth: Number(data?.appliedThisMonth || 0),
+        remainingThisMonth: Number(data?.remainingThisMonth || 0),
+      });
+    } catch (error) {
+      console.error("Failed to load student application status:", error);
+    }
+  }, []);
+
   useEffect(() => {
     loadNotifications();
-  }, [loadNotifications]);
+    loadApplyStatus();
+  }, [loadNotifications, loadApplyStatus]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -55,6 +84,18 @@ export default function Header({ onMenuClick }) {
     };
   }, []);
 
+  useEffect(() => {
+    const syncStatus = () => loadApplyStatus();
+
+    window.addEventListener("focus", syncStatus);
+    window.addEventListener("student-application-status-updated", syncStatus);
+
+    return () => {
+      window.removeEventListener("focus", syncStatus);
+      window.removeEventListener("student-application-status-updated", syncStatus);
+    };
+  }, [loadApplyStatus]);
+
   const markOneRead = async (id) => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -64,7 +105,7 @@ export default function Header({ onMenuClick }) {
     );
 
     try {
-      await fetch(`http://localhost:5000/api/notifications/${id}/read`, {
+      await fetch(`${API_BASE_URL}/api/notifications/${id}/read`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -80,7 +121,7 @@ export default function Header({ onMenuClick }) {
     setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
 
     try {
-      await fetch("http://localhost:5000/api/notifications/read-all", {
+      await fetch(`${API_BASE_URL}/api/notifications/read-all`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -96,7 +137,7 @@ export default function Header({ onMenuClick }) {
     setNotifications([]);
 
     try {
-      await fetch("http://localhost:5000/api/notifications/clear-all", {
+      await fetch(`${API_BASE_URL}/api/notifications/clear-all`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -105,19 +146,43 @@ export default function Header({ onMenuClick }) {
     }
   };
 
+  const applyLimitLabel =
+    applyStatus.monthlyApplicationLimit > 0
+      ? `${applyStatus.remainingThisMonth}/${applyStatus.monthlyApplicationLimit} applies left`
+      : "Unlimited applies";
+
+  const isLimitReached =
+    applyStatus.monthlyApplicationLimit > 0 && applyStatus.remainingThisMonth <= 0;
+
   return (
-    <header className="sticky top-0 z-30 bg-gradient-to-r from-white via-blue-50 to-white border-b border-blue-200 shadow-md px-4 sm:px-6 py-2">
+    <header className="sticky top-0 z-30 border-b border-blue-200 bg-gradient-to-r from-white via-blue-50 to-white px-4 py-2 shadow-md sm:px-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <button
             onClick={onMenuClick}
-            className="lg:hidden p-2 rounded-lg hover:bg-blue-100 text-gray-700 hover:text-blue-600 transition"
+            className="rounded-lg p-2 text-gray-700 transition hover:bg-blue-100 hover:text-blue-600 lg:hidden"
           >
             <Menu size={22} />
           </button>
+
+          <div className="hidden md:block">
+            <p className="text-sm font-semibold text-slate-700">{title}</p>
+          </div>
+
+          <div
+            className={`hidden items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold sm:inline-flex ${
+              isLimitReached
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+            }`}
+            title="Monthly internship application balance"
+          >
+            <BriefcaseBusiness size={14} />
+            {applyLimitLabel}
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 relative" ref={ref}>
+        <div className="relative flex items-center gap-3" ref={ref}>
           <button
             onClick={async () => {
               const next = !open;
@@ -125,27 +190,27 @@ export default function Header({ onMenuClick }) {
               if (next) await loadNotifications();
             }}
             aria-label="Show notifications"
-            className="relative p-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 hover:bg-blue-100 text-gray-700 hover:text-blue-600 transition group"
+            className="group relative rounded-lg p-2.5 text-gray-700 transition hover:bg-blue-100 hover:text-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
           >
-            <Bell size={22} className="group-hover:scale-110 transition-transform" />
+            <Bell size={22} className="transition-transform group-hover:scale-110" />
 
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center border-2 border-white">
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-600 px-1 text-[11px] font-bold text-white">
                 {unreadCount > 99 ? "99+" : unreadCount}
               </span>
             )}
           </button>
 
           {open && (
-            <div className="absolute right-0 top-full mt-3 z-50 w-[340px] rounded-xl shadow-2xl border border-blue-100 bg-white overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <div className="absolute right-0 top-full z-50 mt-3 w-[340px] overflow-hidden rounded-xl border border-blue-100 bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
                 <h3 className="text-sm font-semibold text-slate-800">Notifications</h3>
                 {notifications.length > 0 && (
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={markAllRead}
-                      className="p-1.5 rounded-md hover:bg-slate-100 text-slate-500"
+                      className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"
                       title="Mark all as read"
                     >
                       <CheckCheck size={16} />
@@ -153,7 +218,7 @@ export default function Header({ onMenuClick }) {
                     <button
                       type="button"
                       onClick={clearAllNotifications}
-                      className="p-1.5 rounded-md hover:bg-slate-100 text-red-500"
+                      className="rounded-md p-1.5 text-red-500 hover:bg-slate-100"
                       title="Clear all notifications"
                     >
                       <Trash2 size={16} />
@@ -164,33 +229,29 @@ export default function Header({ onMenuClick }) {
 
               <div className="max-h-[380px] overflow-y-auto">
                 {notificationsLoading ? (
-                  <div className="px-4 py-10 text-center text-sm text-slate-500">
-                    Loading...
-                  </div>
+                  <div className="px-4 py-10 text-center text-sm text-slate-500">Loading...</div>
                 ) : notifications.length === 0 ? (
-                  <div className="px-4 py-10 text-center text-sm text-slate-500">
-                    No notifications
-                  </div>
+                  <div className="px-4 py-10 text-center text-sm text-slate-500">No notifications</div>
                 ) : (
                   notifications.map((item) => (
                     <button
                       key={item.id}
                       type="button"
                       onClick={() => markOneRead(item.id)}
-                      className={`w-full text-left px-4 py-3 border-b border-slate-100 hover:bg-slate-50 transition ${
+                      className={`w-full border-b border-slate-100 px-4 py-3 text-left transition hover:bg-slate-50 ${
                         item.read ? "bg-white" : "bg-blue-50"
                       }`}
                     >
                       <div className="flex items-start gap-3">
                         <span
-                          className={`mt-1.5 w-2 h-2 rounded-full ${
+                          className={`mt-1.5 h-2 w-2 rounded-full ${
                             item.read ? "bg-slate-300" : "bg-blue-600"
                           }`}
                         />
                         <div>
                           <p className="text-sm font-medium text-slate-800">{item.title}</p>
-                          <p className="text-xs text-slate-600 mt-0.5">{item.message}</p>
-                          <p className="text-[11px] text-slate-400 mt-1">
+                          <p className="mt-0.5 text-xs text-slate-600">{item.message}</p>
+                          <p className="mt-1 text-[11px] text-slate-400">
                             {new Date(item.createdAt).toLocaleString()}
                           </p>
                         </div>
@@ -202,7 +263,7 @@ export default function Header({ onMenuClick }) {
             </div>
           )}
 
-          <div className="lg:hidden w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-blue-600 text-white flex items-center justify-center font-bold text-sm overflow-hidden border-2 border-blue-300 shadow-md">
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border-2 border-blue-300 bg-gradient-to-br from-indigo-600 to-blue-600 text-sm font-bold text-white shadow-md lg:hidden">
             V
           </div>
         </div>

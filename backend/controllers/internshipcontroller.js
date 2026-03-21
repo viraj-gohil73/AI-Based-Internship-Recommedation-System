@@ -1,8 +1,9 @@
-import Internship from "../models/Internship.js";
+﻿import Internship from "../models/Internship.js";
 import {
   createNotification,
   runNotificationTask,
 } from "../services/notificationService.js";
+import { normalizeSkillArray } from "../utils/skillNormalization.js";
 
 const MAX_INTERNSHIPS_PER_COMPANY_PER_MONTH = 5;
 
@@ -134,7 +135,7 @@ export const createInternship = async (req, res) => {
       stipend_max,
 
       /* SKILLS & PERKS */
-      skill_req,
+      skill_req: normalizeSkillArray(skill_req),
       perks,
 
       /* CONTENT */
@@ -198,4 +199,9 @@ export const getExploreInternships = async (req, res) => {
     });
   }
 };
+
+
+
+
+
 

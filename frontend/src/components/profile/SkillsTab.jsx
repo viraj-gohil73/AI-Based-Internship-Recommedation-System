@@ -119,7 +119,7 @@ export default function SkillsTab() {
       </section>
 
 
-      {isLoading ? <StudentLoadingCard message="Loading skills..." /> : null}
+      
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6 space-y-6">
         <div>
           <label className="text-sm font-medium text-slate-700">Add a new skill</label>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -247,6 +247,7 @@ export default function InternshipDetails() {
         appliedThisMonth: prev.appliedThisMonth + 1,
         remainingThisMonth: Math.max(0, prev.remainingThisMonth - 1),
       }));
+      window.dispatchEvent(new Event("student-application-status-updated"));
       toast.success("Applied successfully");
     } catch (err) {
       const message = err?.message || "Failed to apply internship";
@@ -315,8 +316,8 @@ export default function InternshipDetails() {
                       disabled={isApplied || applyBusy || isMonthlyLimitReached}
                       className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
                         isApplied
-                          ? "cursor-not-allowed bg-emerald-200 text-emerald-800"
-                          : "bg-emerald-600 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                          ? "cursor-not-allowed bg-blue-200 text-blue-800"
+                          : "bg-blue-600 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
                       }`}
                     >
                       {applyBusy ? "Applying..." : isApplied ? "Applied" : "Apply"}
@@ -423,3 +424,6 @@ export default function InternshipDetails() {
     </StudentLayout>
   );
 }
+
+
+

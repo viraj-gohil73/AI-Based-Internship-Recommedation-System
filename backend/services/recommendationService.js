@@ -1,4 +1,5 @@
-import crypto from "node:crypto";
+﻿import crypto from "node:crypto";
+import { normalizeSkillArray } from "../utils/skillNormalization.js";
 
 const DEFAULT_LIMIT = 10;
 const MAX_TOP_K = 20;
@@ -12,13 +13,13 @@ const DEFAULT_ELIGIBILITY_NEUTRAL_SCORE = 0.6;
 const MODEL_VERSION = "rule-hybrid-v2";
 
 const SCORE_WEIGHTS = Object.freeze({
-  skills: 35,
-  project: 15,
-  certificate: 10,
-  education: 10,
+  skills: 43,
+  project: 10,
+  certificate: 3,
+  education: 14,
   location: 10,
-  eligibility: 15,
-  popularityRecency: 5,
+  eligibility: 10,
+  popularityRecency: 13,
 });
 
 const COLD_START_WEIGHTS = Object.freeze({
@@ -102,11 +103,7 @@ const getStudentSkills = (student = {}) => {
     ? student.certificates.flatMap((cert) => (Array.isArray(cert?.techStack) ? cert.techStack : []))
     : [];
 
-  return uniq(
-    [...directSkills, ...projectSkills, ...certificateSkills].map((skill) =>
-      String(skill || "").trim()
-    )
-  );
+  return normalizeSkillArray([...directSkills, ...projectSkills, ...certificateSkills]);
 };
 
 const getInternshipSkills = (internship = {}) => {
@@ -115,7 +112,7 @@ const getInternshipSkills = (internship = {}) => {
     : Array.isArray(internship.skill_req)
       ? internship.skill_req
       : [];
-  return uniq(raw.map((item) => String(item || "").trim()));
+  return normalizeSkillArray(raw);
 };
 
 const calculateSkillOverlap = (studentSkills, internshipSkills) => {
@@ -957,3 +954,5 @@ export const getCachedOrFreshRecommendations = async ({
     rankingError,
   };
 };
+
+

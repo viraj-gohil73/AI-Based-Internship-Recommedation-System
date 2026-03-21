@@ -21,13 +21,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000
 
 const STATUS_OPTIONS = ["ALL", "APPLIED", "SHORTLISTED", "INTERVIEW", "SELECTED", "REJECTED"];
 
-const STATUS_ACTIONS = [
-  { label: "Shortlist", value: "SHORTLISTED" },
-  { label: "Interview", value: "INTERVIEW" },
-  { label: "Select", value: "SELECTED" },
-  { label: "Reject", value: "REJECTED" },
-  { label: "Reset", value: "APPLIED" },
-];
+const STATUS_UPDATE_OPTIONS = ["APPLIED", "SHORTLISTED", "INTERVIEW", "SELECTED", "REJECTED"];
 
 const PROFILE_BUTTON_CLASS =
   "group inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-gradient-to-r from-indigo-50 to-blue-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 transition hover:from-indigo-100 hover:to-blue-100";
@@ -51,6 +45,18 @@ const formatDate = (value) => {
   if (!value) return "-";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString();
+};
+
+const actionTimelineRows = (applicant = {}) => {
+  const rows = [{ label: "Applied", value: formatDate(applicant?.appliedAt) }];
+
+  if (applicant?.shortlistedAt) rows.push({ label: "Shortlisted", value: formatDate(applicant.shortlistedAt) });
+  if (applicant?.interviewAt) rows.push({ label: "Interview", value: formatDate(applicant.interviewAt) });
+  if (applicant?.selectedAt) rows.push({ label: "Selected", value: formatDate(applicant.selectedAt) });
+  if (applicant?.rejectedAt) rows.push({ label: "Rejected", value: formatDate(applicant.rejectedAt) });
+  if (applicant?.statusUpdatedAt) rows.push({ label: "Updated", value: formatDate(applicant.statusUpdatedAt) });
+
+  return rows;
 };
 
 const toArray = (value) => (Array.isArray(value) ? value : []);
@@ -130,6 +136,8 @@ export default function Applicants() {
   const [statusFilter, setStatusFilter] = useState("ALL");
 
   const [busyKey, setBusyKey] = useState("");
+  const [pendingStatusByApplication, setPendingStatusByApplication] = useState({});
+  const [openTrackId, setOpenTrackId] = useState("");
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [loadingStudentProfile, setLoadingStudentProfile] = useState(false);
 
@@ -198,6 +206,7 @@ export default function Applicants() {
   useEffect(() => {
     setSearch("");
     setStatusFilter("ALL");
+    setOpenTrackId("");
   }, [selectedInternshipId]);
 
   const applicantsBySelectedInternship = useMemo(() => {
@@ -259,11 +268,27 @@ export default function Applicants() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to update status");
 
+      const nowIso = new Date().toISOString();
       setApplicants((prev) =>
-        prev.map((item) =>
-          item.applicationId === applicant.applicationId ? { ...item, status } : item
-        )
+        prev.map((item) => {
+          if (item.applicationId !== applicant.applicationId) return item;
+
+          const next = {
+            ...item,
+            status,
+            statusUpdatedAt: nowIso,
+          };
+
+          if (status === "SHORTLISTED") next.shortlistedAt = nowIso;
+          if (status === "INTERVIEW") next.interviewAt = nowIso;
+          if (status === "SELECTED") next.selectedAt = nowIso;
+          if (status === "REJECTED") next.rejectedAt = nowIso;
+
+          return next;
+        })
       );
+
+      setPendingStatusByApplication((prev) => ({ ...prev, [applicant.applicationId]: status }));
       toast.success(`Status updated to ${status}`);
     } catch (error) {
       toast.error(error.message || "Unable to update status");
@@ -414,32 +439,33 @@ export default function Applicants() {
                   <th className="px-4 py-3 text-left">Student</th>
                   <th className="px-4 py-3 text-left">Applied On</th>
                   <th className="px-4 py-3 text-left">Status</th>
-                  <th className="px-4 py-3 text-left">Actions</th>
+                  <th className="px-4 py-3 text-left w-[240px]">Action Track</th>
+                  <th className="px-6 py-3 text-left w-[380px]">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                       Loading applicants...
                     </td>
                   </tr>
                 ) : !selectedInternshipId ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                       Select an internship to view applicants.
                     </td>
                   </tr>
                 ) : filteredApplicants.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                       No applicants found for this internship.
                     </td>
                   </tr>
                 ) : (
                   filteredApplicants.map((applicant) => (
                     <tr key={applicant.applicationId} className="border-t border-slate-100 hover:bg-blue-50/50">
-                      <td className="px-4 py-3">
+                      <td className="px-6 py-3">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center">
                             {applicant.student.profilePic ? (
@@ -459,37 +485,84 @@ export default function Applicants() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-slate-700">{formatDate(applicant.appliedAt)}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-6 py-3">
                         <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusClasses(applicant.status)}`}>
                           {applicant.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <button onClick={() => openStudentProfile(applicant)} className={PROFILE_BUTTON_CLASS}>
+
+                      <td className="px-4 py-3 align-top">
+                        <div className="space-y-2">
+                          <button
+                            type="button"
+                            onClick={() => setOpenTrackId((prev) => (prev === applicant.applicationId ? "" : applicant.applicationId))}
+                            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-blue-300 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                          >
+                            <Clock3 size={13} />
+                            Action Track
+                          </button>
+
+                          {openTrackId === applicant.applicationId ? (
+                            <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs">
+                              <div className="space-y-1.5">
+                                {actionTimelineRows(applicant).map((row) => (
+                                  <div key={`${applicant.applicationId}-${row.label}`} className="inline-flex w-full items-center gap-1.5 text-slate-600">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                                    <span className="font-semibold text-slate-700">{row.label}:</span>
+                                    <span>{row.value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-3">
+                        <div className="flex flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                          <button onClick={() => openStudentProfile(applicant)} className={`${PROFILE_BUTTON_CLASS} whitespace-nowrap`}>
                             <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
                               <Eye size={12} />
                             </span>
                             View Profile
                           </button>
 
-                          <Link
-                            to={`/recruiter/applicants/${applicant.internshipId}/${applicant.studentId}`}
-                            className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
-                          >
-                            Details
-                          </Link>
-
-                          {STATUS_ACTIONS.map((action) => (
-                            <button
-                              key={action.value}
-                              onClick={() => updateStatus(applicant, action.value)}
-                              disabled={busyKey === `${applicant.studentId}-${applicant.internshipId}-${action.value}`}
-                              className="rounded-md border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                          <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 whitespace-nowrap">
+                            <select
+                              value={pendingStatusByApplication[applicant.applicationId] || applicant.status}
+                              onChange={(e) =>
+                                setPendingStatusByApplication((prev) => ({
+                                  ...prev,
+                                  [applicant.applicationId]: e.target.value,
+                                }))
+                              }
+                              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 outline-none"
                             >
-                              {action.label}
+                              {STATUS_UPDATE_OPTIONS.map((status) => (
+                                <option key={status} value={status}>
+                                  {status}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() =>
+                                updateStatus(
+                                  applicant,
+                                  pendingStatusByApplication[applicant.applicationId] || applicant.status
+                                )
+                              }
+                              disabled={
+                                busyKey ===
+                                  `${applicant.studentId}-${applicant.internshipId}-${
+                                    pendingStatusByApplication[applicant.applicationId] || applicant.status
+                                  }` ||
+                                (pendingStatusByApplication[applicant.applicationId] || applicant.status) === applicant.status
+                              }
+                              className="rounded-md border border-blue-300 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                            >
+                              Update
                             </button>
-                          ))}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -689,3 +762,11 @@ export default function Applicants() {
     </div>
   );
 }
+
+
+
+
+
+
+
+

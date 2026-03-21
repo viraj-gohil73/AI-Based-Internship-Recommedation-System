@@ -250,7 +250,7 @@ export default function PersonalInfoTab() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-indigo-50 p-5 sm:p-6">
+      {/* <section className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-indigo-50 p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="inline-flex items-center gap-1 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
@@ -266,7 +266,7 @@ export default function PersonalInfoTab() {
             Profile details updated
           </div>
         </div>
-      </section>
+      </section> */}
 
       {isLoading ? <StudentLoadingCard message="Loading personal details..." /> : null}
 

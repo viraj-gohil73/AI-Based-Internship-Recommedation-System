@@ -169,10 +169,43 @@ const studentSchema = new mongoose.Schema({
                 enum: ["APPLIED", "SHORTLISTED", "INTERVIEW", "SELECTED", "REJECTED"],
                 default: "APPLIED",
             },
+            statusUpdatedAt: {
+                type: Date,
+                default: Date.now,
+            },
+            shortlistedAt: {
+                type: Date,
+                default: null,
+            },
+            interviewAt: {
+                type: Date,
+                default: null,
+            },
+            selectedAt: {
+                type: Date,
+                default: null,
+            },
             rejectedAt: {
                 type: Date,
                 default: null,
             },
+            statusHistory: [
+                {
+                    status: {
+                        type: String,
+                        enum: ["APPLIED", "SHORTLISTED", "INTERVIEW", "SELECTED", "REJECTED"],
+                    },
+                    changedAt: {
+                        type: Date,
+                        default: Date.now,
+                    },
+                    changedByRecruiter: {
+                        type: mongoose.Schema.Types.ObjectId,
+                        ref: "Recruiter",
+                        default: null,
+                    },
+                },
+            ],
             resumeUrl: {
                 type: String,
                 default: "",
@@ -190,3 +223,4 @@ const studentSchema = new mongoose.Schema({
 },{timestamps: true});
 
 export default mongoose.model("Student", studentSchema);
+

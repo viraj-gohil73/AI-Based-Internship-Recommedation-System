@@ -1,8 +1,21 @@
 import mongoose from "mongoose";
 import Internship from "../models/Internship.js";
 import Student from "../models/Student.js";
+import { normalizeSkillArray } from "../utils/skillNormalization.js";
 
 const ALLOWED_STATUSES = ["ACTIVE", "CLOSED", "DRAFT"];
+
+
+const normalizeStringArrayInput = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
 
 const toCompanyInternship = (doc, applicationsCountMap = new Map()) => ({
   _id: doc._id,
@@ -146,40 +159,77 @@ export const updateCompanyInternship = async (req, res) => {
     }
 
     const updates = {};
-    const fields = [
-      "title",
-      "employment_type",
-      "workmode",
-      "location",
-      "duration",
-      "openings",
-      "stipend_min",
-      "stipend_max",
-      "starting_date",
-      "deadline_at",
-      "about_work",
-      "who_can_apply",
-      "other_req",
-      "intern_status",
-    ];
+    const {
+      title,
+      employment_type,
+      workmode,
+      mode,
+      location,
+      duration,
+      duration_months,
+      openings,
+      stipend_min,
+      stipend_max,
+      starting_date,
+      start_date,
+      deadline_at,
+      apply_by_date,
+      about_work,
+      who_can_apply,
+      other_req,
+      other_requirements,
+      intern_status,
+      skill_req,
+      perks,
+    } = req.body;
 
-    for (const field of fields) {
-      if (typeof req.body[field] !== "undefined") {
-        updates[field] = req.body[field];
-      }
+    if (typeof title !== "undefined") updates.title = title;
+    if (typeof employment_type !== "undefined") updates.employment_type = employment_type;
+    if (typeof workmode !== "undefined" || typeof mode !== "undefined") {
+      updates.workmode = typeof workmode !== "undefined" ? workmode : mode;
+    }
+    if (typeof location !== "undefined") updates.location = location;
+    if (typeof duration !== "undefined" || typeof duration_months !== "undefined") {
+      updates.duration = typeof duration !== "undefined" ? duration : duration_months;
+    }
+    if (typeof openings !== "undefined") updates.openings = openings;
+    if (typeof stipend_min !== "undefined") updates.stipend_min = stipend_min;
+    if (typeof stipend_max !== "undefined") updates.stipend_max = stipend_max;
+    if (typeof starting_date !== "undefined" || typeof start_date !== "undefined") {
+      updates.starting_date =
+        typeof starting_date !== "undefined" ? starting_date : start_date;
+    }
+    if (typeof deadline_at !== "undefined" || typeof apply_by_date !== "undefined") {
+      updates.deadline_at =
+        typeof deadline_at !== "undefined" ? deadline_at : apply_by_date;
+    }
+    if (typeof about_work !== "undefined") updates.about_work = about_work;
+    if (typeof who_can_apply !== "undefined") updates.who_can_apply = who_can_apply;
+    if (typeof other_req !== "undefined" || typeof other_requirements !== "undefined") {
+      updates.other_req =
+        typeof other_req !== "undefined" ? other_req : other_requirements;
+    }
+    if (typeof intern_status !== "undefined") updates.intern_status = intern_status;
+    if (typeof skill_req !== "undefined") {
+      updates.skill_req = normalizeSkillArray(skill_req);
+    }
+    if (typeof perks !== "undefined") {
+      updates.perks = normalizeStringArrayInput(perks);
     }
 
-    if (Array.isArray(req.body.skill_req)) {
-      updates.skill_req = req.body.skill_req;
-    }
-    if (Array.isArray(req.body.perks)) {
-      updates.perks = req.body.perks;
-    }
+    const nextStipendMin =
+      typeof updates.stipend_min !== "undefined"
+        ? Number(updates.stipend_min)
+        : Number(internship.stipend_min || 0);
+    const nextStipendMax =
+      typeof updates.stipend_max !== "undefined"
+        ? Number(updates.stipend_max)
+        : Number(internship.stipend_max || 0);
 
     if (
-      typeof updates.stipend_min !== "undefined" &&
-      typeof updates.stipend_max !== "undefined" &&
-      Number(updates.stipend_min) > Number(updates.stipend_max)
+      Number.isFinite(nextStipendMin) &&
+      Number.isFinite(nextStipendMax) &&
+      nextStipendMin > nextStipendMax
     ) {
       return res.status(400).json({
         success: false,

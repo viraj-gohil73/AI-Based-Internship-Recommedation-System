@@ -1,14 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
+  Award,
   BadgeCheck,
   Brain,
   Briefcase,
   Clock3,
+  Code2,
   Filter,
+  GraduationCap,
   MapPin,
   RefreshCcw,
+  ShieldCheck,
   Sparkles,
+  TrendingUp,
   Users,
   Wallet,
 } from "lucide-react";
@@ -19,7 +24,7 @@ import { useResumePickerModal } from "../../hooks/useResumePickerModal";
 import StudentLoadingCard from "../../components/common/StudentLoadingCard";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-const MIN_RECOMMENDATION_SCORE = 50;
+const MIN_RECOMMENDATION_SCORE = 10;
 const TOP_RECOMMENDATION_LIMIT = 10;
 
 const REASON_LABELS = {
@@ -36,6 +41,20 @@ const REASON_LABELS = {
   CGPA_ELIGIBLE: "CGPA eligible",
 };
 
+const REASON_ICONS = {
+  SKILL_MATCH: Code2,
+  LOCATION_MATCH: MapPin,
+  EDUCATION_MATCH: GraduationCap,
+  PROJECT_RELEVANCE: Sparkles,
+  ELIGIBILITY_MATCH: ShieldCheck,
+  RECENT_POST: Clock3,
+  RECENCY_BOOST: Clock3,
+  POPULAR_ROLE: TrendingUp,
+  POPULARITY_BOOST: TrendingUp,
+  CERTIFICATE_RELEVANCE: Award,
+  CGPA_ELIGIBLE: BadgeCheck,
+};
+
 const formatStipend = (min, max) => {
   const minNum = Number(min || 0);
   const maxNum = Number(max || 0);
@@ -49,6 +68,7 @@ const formatStipend = (min, max) => {
 };
 
 const reasonText = (reason) => REASON_LABELS[reason] || reason;
+const reasonIcon = (reason) => REASON_ICONS[reason] || Brain;
 
 const normalizeInternshipForDetails = (item) => ({
   id: String(item?._id || item?.id || ""),
@@ -73,7 +93,11 @@ const formatDate = (value) => {
   if (!value) return "Not specified";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Not specified";
-  return date.toLocaleDateString();
+  return date.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 };
 
 const getRoleBasedFallbacks = (title = "") => {
@@ -199,7 +223,6 @@ export default function AIRecommend() {
       if (!recommendationRes.ok || data?.success === false) {
         throw new Error(data?.message || "Failed to load recommendations");
       }
-
       setItems(Array.isArray(data?.items) ? data.items : []);
       setMeta({
         generatedAt: data?.generatedAt || "",
@@ -222,7 +245,7 @@ export default function AIRecommend() {
   };
 
   useEffect(() => {
-    fetchRecommendations();
+    fetchRecommendations({ refresh: true });
   }, []);
 
   const updatedAt = useMemo(() => {
@@ -309,6 +332,7 @@ export default function AIRecommend() {
         appliedThisMonth: prev.appliedThisMonth + 1,
         remainingThisMonth: Math.max(0, prev.remainingThisMonth - 1),
       }));
+      window.dispatchEvent(new Event("student-application-status-updated"));
       toast.success("Applied successfully");
     } catch (err) {
       const message = err?.message || "Failed to apply internship";
@@ -322,7 +346,7 @@ export default function AIRecommend() {
   return (
     <StudentLayout title="AI Recommendations">
       <div className="min-h-full bg-gradient-to-br from-sky-50 via-white to-indigo-100 p-4 md:p-6">
-        <section className="overflow-hidden rounded-3xl border border-indigo-200 bg-white shadow-md">
+        <section className="overflow-hidden rounded-2xl border border-indigo-200 bg-white shadow-md">
           <div className="bg-gradient-to-r from-indigo-700 via-blue-700 to-cyan-600 p-5 text-white md:p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
@@ -343,7 +367,7 @@ export default function AIRecommend() {
             </div>
           </div>
 
-          <div className="grid gap-3 border-t border-indigo-100 bg-white p-4 md:grid-cols-4 md:p-5">
+          {/* <div className="grid gap-3 border-t border-indigo-100 bg-white p-4 md:grid-cols-4 md:p-5">
             <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Model</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">{meta.modelVersion || "-"}</p>
@@ -364,7 +388,7 @@ export default function AIRecommend() {
               <p className="text-xs font-semibold uppercase tracking-wide text-violet-700">Generated</p>
               <p className="mt-1 text-sm font-semibold text-slate-800">{updatedAt || "-"}</p>
             </div>
-          </div>
+          </div> */}
         </section>
 
         <section className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 md:p-4">
@@ -460,15 +484,18 @@ export default function AIRecommend() {
 
                     {reasons.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
-                        {reasons.map((reason) => (
-                          <span
-                            key={`${internshipId}-${reason}`}
-                            className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700"
-                          >
-                            <Brain size={12} className="mr-1 inline" />
-                            {reasonText(reason)}
-                          </span>
-                        ))}
+                        {reasons.map((reason) => {
+                          const ReasonIcon = reasonIcon(reason);
+                          return (
+                            <span
+                              key={`${internshipId}-${reason}`}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-xs font-medium leading-none text-indigo-700"
+                            >
+                              <ReasonIcon size={12} className="shrink-0" />
+                              {reasonText(reason)}
+                            </span>
+                          );
+                        })}
                       </div>
                     ) : null}
 
@@ -527,8 +554,8 @@ export default function AIRecommend() {
                           disabled={isApplied || applyBusy || isMonthlyLimitReached}
                           className={`rounded-lg px-3 py-2 text-xs font-semibold text-white transition ${
                             isApplied
-                              ? "cursor-not-allowed bg-emerald-300"
-                              : "bg-emerald-600 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                              ? "cursor-not-allowed bg-blue-300"
+                              : "bg-blue-600 hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
                           }`}
                         >
                           {applyBusy ? "Applying..." : isApplied ? "Applied" : "Apply"}
@@ -554,6 +581,10 @@ export default function AIRecommend() {
     </StudentLayout>
   );
 }
+
+
+
+
 
 
 

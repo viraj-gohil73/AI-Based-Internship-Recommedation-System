@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, Save, Trophy, Sparkles, CheckCircle2, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, Trophy, Sparkles, CheckCircle2, ExternalLink, X } from "lucide-react";
 import toast from "react-hot-toast";
 import Input from "../profile/shared/Input";
 import Select from "../profile/shared/Select";
 import StudentLoadingCard from "../common/StudentLoadingCard";
+import { normalizeSkillArray } from "../../utils/skillNormalization";
 
 const EMPTY_CERT = {
   name: "",
@@ -27,7 +28,7 @@ const normalizeCertificate = (cert = {}) => ({
   name: cert.name || "",
   organization: cert.organization || "",
   certificateType: cert.certificateType || "",
-  techStack: Array.isArray(cert.techStack) ? cert.techStack : [],
+  techStack: normalizeSkillArray(Array.isArray(cert.techStack) ? cert.techStack : []),
   issueDate: cert.issueDate || "",
   expiryDate: cert.expiryDate || "",
   hasExpiry: Boolean(cert.hasExpiry),
@@ -110,10 +111,15 @@ export default function CertificatesTab() {
       return;
     }
 
+    const certificateToPersist = normalizeCertificate({
+      ...formData,
+      techStack: normalizeSkillArray(formData.techStack),
+    });
+
     const nextCertificates =
       editingIndex === certificates.length
-        ? [...certificates, normalizeCertificate(formData)]
-        : certificates.map((cert, index) => (index === editingIndex ? normalizeCertificate(formData) : cert));
+        ? [...certificates, certificateToPersist]
+        : certificates.map((cert, index) => (index === editingIndex ? certificateToPersist : cert));
 
     try {
       await saveCertificatesToDb(
@@ -181,14 +187,17 @@ export default function CertificatesTab() {
   }, []);
 
   const addTech = () => {
-    const tech = techInput.trim();
-    if (!tech) return;
-    if (formData.techStack.some((item) => item.toLowerCase() === tech.toLowerCase())) return;
+    const rawInput = techInput.trim();
+    if (!rawInput) return;
 
-    handleChange("techStack", [...formData.techStack, tech]);
+    const normalizedTechStack = normalizeSkillArray([
+      ...formData.techStack,
+      ...rawInput.split(","),
+    ]);
+
+    handleChange("techStack", normalizedTechStack);
     setTechInput("");
   };
-
   const validateCertificateFile = (file) => {
     if (!file) return false;
 
@@ -473,7 +482,12 @@ export default function CertificatesTab() {
           />
 
           <div className="flex justify-end gap-3 pt-2">
-            <button onClick={handleCancel} className="px-4 py-2 text-sm border rounded-lg hover:bg-slate-50">
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            >
+              <X size={15} />
               Cancel
             </button>
 
@@ -580,5 +594,9 @@ export default function CertificatesTab() {
     </div>
   );
 }
+
+
+
+
 
 
