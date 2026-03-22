@@ -15,7 +15,7 @@ function formatDate(value) {
   if (!value) return "-";
   const dt = new Date(value);
   if (Number.isNaN(dt.getTime())) return "-";
-  return dt.toLocaleDateString();
+  return dt.toLocaleDateString("en-IN");
 }
 
 function clamp(value, min, max) {
@@ -351,3 +351,4 @@ export default function Reviews() {
     </div>
   );
 }
+

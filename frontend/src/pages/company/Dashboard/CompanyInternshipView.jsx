@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -15,7 +15,7 @@ import {
 
 function formatDate(value) {
   if (!value) return "-";
-  return new Date(value).toLocaleDateString();
+  return new Date(value).toLocaleDateString("en-IN");
 }
 
 function formatMoney(value) {
@@ -278,3 +278,4 @@ function TagCard({ title, items, emptyText, tone = "blue" }) {
     </section>
   );
 }
+

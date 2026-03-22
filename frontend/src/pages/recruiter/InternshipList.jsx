@@ -142,7 +142,7 @@ export default function InternshipList() {
 
   const formatDate = (value) => {
     if (!value) return "-";
-    return new Date(value).toLocaleDateString();
+    return new Date(value).toLocaleDateString("en-IN");
   };
 
   const updateInternshipStatus = async (internship) => {
@@ -580,3 +580,4 @@ export default function InternshipList() {
     </div>
   );
 }
+

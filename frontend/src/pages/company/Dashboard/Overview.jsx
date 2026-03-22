@@ -17,7 +17,7 @@ const formatDate = (value) => {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString();
+  return date.toLocaleDateString("en-IN");
 };
 
 const formatRelative = (value) => {
@@ -308,3 +308,4 @@ export default function Overview() {
     </div>
   );
 }
+

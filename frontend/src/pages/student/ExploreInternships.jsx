@@ -118,6 +118,7 @@ export default function ExploreInternships() {
 
   const {
     isOpen: isResumeModalOpen,
+    modalMode: resumeModalMode,
     options: resumeOptions,
     selectedResumeUrl,
     setSelectedResumeUrl,
@@ -567,7 +568,7 @@ export default function ExploreInternships() {
                         </div>
                       ) : null}
 
-                      <div className="flex flex-col gap-3 border-t border-blue-100 pt-3">
+                      <div className="flex flex-col gap-3 border-t border-blue-100 pt-3 md:flex-row md:items-center md:justify-between">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${deadlineToneClass}`}>
                             <Clock3 size={13} /> {deadlineState.label}
@@ -577,7 +578,7 @@ export default function ExploreInternships() {
                           </span>
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap items-center gap-2 md:justify-end">
                           <Link
                             to={`/student/explore/${item.id}`}
                             state={{ internship: item, from: currentRoute }}
@@ -644,6 +645,7 @@ export default function ExploreInternships() {
 
       <ResumeSelectionModal
         open={isResumeModalOpen}
+        mode={resumeModalMode}
         options={resumeOptions}
         selectedResumeUrl={selectedResumeUrl}
         onSelect={setSelectedResumeUrl}
@@ -653,4 +655,3 @@ export default function ExploreInternships() {
     </StudentLayout>
   );
 }
-

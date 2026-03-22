@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { m } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ArrowRight,
   BadgeCheck,
@@ -23,7 +23,7 @@ import {
   X,
 } from "lucide-react";
 
-const Motion = m;
+const Motion = motion;
 const navLinks = [
   { label: "Features", href: "#features" },
   { label: "Workflow", href: "#workflow" },
@@ -119,6 +119,8 @@ const metrics = [
   { label: "Hires completed", value: "2,300+" },
 ];
 
+const trustedBy = ["IIT students", "Startup teams", "Hiring managers", "Campus cells"];
+
 const plans = [
   {
     name: "Starter",
@@ -175,9 +177,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#eef7ff] text-slate-900">
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_20%_10%,rgba(125,211,252,0.32),transparent_30%),radial-gradient(circle_at_80%_15%,rgba(74,222,128,0.22),transparent_26%),radial-gradient(circle_at_50%_90%,rgba(59,130,246,0.16),transparent_34%)]" />
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_12%_8%,rgba(56,189,248,0.2),transparent_30%),radial-gradient(circle_at_88%_12%,rgba(14,165,233,0.14),transparent_26%),radial-gradient(circle_at_50%_94%,rgba(37,99,235,0.12),transparent_34%)]" />
 
-      <header className="sticky top-0 z-50 border-b border-cyan-100/60 bg-white/75 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-cyan-100/70 bg-white/85 backdrop-blur-xl">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
           <Link to="/" className="inline-flex items-center gap-2 text-xl font-black tracking-tight text-slate-900 sm:text-2xl">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 text-white">
@@ -212,6 +214,7 @@ export default function Home() {
           </div>
 
           <button
+            type="button"
             onClick={() => setIsMenuOpen((prev) => !prev)}
             className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-200 bg-white text-slate-700 md:hidden"
             aria-label="Toggle menu"
@@ -224,12 +227,20 @@ export default function Home() {
           <div className="border-t border-cyan-100 bg-white px-6 py-4 md:hidden">
             <div className="flex flex-col gap-3 text-sm font-semibold text-slate-700">
               {navLinks.map((link) => (
-                <a key={link.href} href={link.href} onClick={() => setIsMenuOpen(false)}>
+                <a key={link.href} href={link.href} onClick={() => setIsMenuOpen(false)} className="hover:text-cyan-700">
                   {link.label}
                 </a>
               ))}
               <Link
+                to="/choose-login"
+                onClick={() => setIsMenuOpen(false)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-200 bg-white px-4 py-2 text-cyan-700"
+              >
+                Log in
+              </Link>
+              <Link
                 to="/choose-register"
+                onClick={() => setIsMenuOpen(false)}
                 className="mt-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2 text-white"
               >
                 Start free <ArrowRight size={16} />
@@ -240,7 +251,7 @@ export default function Home() {
       </header>
 
       <main>
-        <section className="relative px-6 pb-24 pt-16 sm:pt-24">
+        <section className="relative px-6 pb-24 pt-14 sm:pt-20">
           <Motion.div
             initial="hidden"
             animate="show"
@@ -260,6 +271,16 @@ export default function Home() {
               <Motion.p variants={fadeUp} className="mt-6 max-w-2xl text-base text-slate-600 sm:text-lg">
                 AInternMatch connects student project portfolios with internship teams that hire on real signal, clear communication, and transparent progress.
               </Motion.p>
+              <Motion.div variants={fadeUp} className="mt-6 flex flex-wrap gap-2">
+                {trustedBy.map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full border border-cyan-100 bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </Motion.div>
 
               <Motion.div variants={fadeUp} className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <Link
@@ -297,7 +318,7 @@ export default function Home() {
                     <p className="text-base font-bold text-slate-900">Full Stack Intern</p>
                     <span className="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-semibold text-white">Open</span>
                   </div>
-                  <p className="mt-1 text-sm text-slate-600">SaaS Studio â€¢ Remote â€¢ 8 weeks</p>
+                  <p className="mt-1 text-sm text-slate-600">SaaS Studio - Remote - 8 weeks</p>
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     <div className="rounded-xl border border-white bg-white p-3">
@@ -310,7 +331,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <button className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2 text-sm font-semibold text-white">
+                  <button type="button" className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2 text-sm font-semibold text-white">
                     View details <ArrowRight size={16} />
                   </button>
                 </div>

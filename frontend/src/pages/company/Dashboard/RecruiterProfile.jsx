@@ -143,7 +143,7 @@ export default function RecruiterProfile() {
               <Detail
                 icon={Calendar}
                 label="Joined On"
-                value={new Date(recruiter.createdAt).toLocaleDateString()}
+                value={new Date(recruiter.createdAt).toLocaleDateString("en-IN")}
               />
               <Detail
                 icon={LogIn}
@@ -173,3 +173,4 @@ function Detail({ icon: Icon, label, value }) {
     </div>
   );
 }
+

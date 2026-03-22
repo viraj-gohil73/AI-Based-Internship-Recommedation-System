@@ -14,7 +14,7 @@ import {
 
 function formatDate(value) {
   if (!value) return "-";
-  return new Date(value).toLocaleDateString();
+  return new Date(value).toLocaleDateString("en-IN");
 }
 
 function formatMoney(value) {
@@ -285,5 +285,6 @@ export default function RecruiterInternshipView() {
     </div>
   );
 }
+
 
 

@@ -20,8 +20,9 @@ const buildPlanPayload = (body, { partial = false } = {}) => {
   };
 
   if (!partial || body.code !== undefined) {
-    const code = normalizePlanCode(body.code);
-    if (!code) throw new Error("Invalid plan code");
+    const rawCode = body.code !== undefined ? body.code : body.name;
+    const code = normalizePlanCode(rawCode);
+    if (!code) throw new Error("Plan name is required");
     assign("code", code);
   }
   assign("name", body.name);
@@ -80,7 +81,7 @@ export const createAdminPlan = async (req, res) => {
     const payload = buildPlanPayload(req.body, { partial: false });
     const exists = await Plan.findOne({ code: payload.code });
     if (exists) {
-      return res.status(409).json({ success: false, message: "Plan code already exists" });
+      return res.status(409).json({ success: false, message: "Plan already exists" });
     }
     const plan = await Plan.create(payload);
     return res.status(201).json({

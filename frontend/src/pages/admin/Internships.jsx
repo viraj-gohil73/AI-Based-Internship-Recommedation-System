@@ -72,7 +72,7 @@ export default function Internships() {
   const formatDate = (value) => {
     if (!value) return "-";
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString();
+    return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString("en-IN");
   };
 
   const formatDateTime = (value) => {
@@ -160,7 +160,6 @@ export default function Internships() {
             <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
               <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">Total: {summary.total}</span>
               <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">Active: {summary.active}</span>
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-700">Draft: {summary.draft}</span>
               <span className="rounded-full bg-rose-100 px-3 py-1 text-rose-700">Closed: {summary.closed}</span>
             </div>
           </div>
@@ -184,7 +183,6 @@ export default function Internships() {
               >
                 <option value="ALL">All Status</option>
                 <option value="ACTIVE">Active</option>
-                <option value="DRAFT">Draft</option>
                 <option value="CLOSED">Closed</option>
               </select>
             </div>
@@ -462,3 +460,4 @@ export default function Internships() {
     </div>
   );
 }
+

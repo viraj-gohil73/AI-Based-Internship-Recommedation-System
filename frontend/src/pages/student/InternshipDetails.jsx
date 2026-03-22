@@ -85,6 +85,7 @@ export default function InternshipDetails() {
 
   const {
     isOpen: isResumeModalOpen,
+    modalMode: resumeModalMode,
     options: resumeOptions,
     selectedResumeUrl,
     setSelectedResumeUrl,
@@ -415,6 +416,7 @@ export default function InternshipDetails() {
 
       <ResumeSelectionModal
         open={isResumeModalOpen}
+        mode={resumeModalMode}
         options={resumeOptions}
         selectedResumeUrl={selectedResumeUrl}
         onSelect={setSelectedResumeUrl}

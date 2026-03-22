@@ -18,6 +18,8 @@ import {
   getAdmins,
   createAdmin,
   toggleAdminActive,
+  getAdminMe,
+  updateAdminMe,
   getReportsSummary,
   getAuditLogs
 } from "../controllers/admincontrol.js";
@@ -33,6 +35,8 @@ import {
 const router = express.Router();
 router.post("/login", adminLogin);
 router.use(adminAuth);
+router.get("/me", getAdminMe);
+router.patch("/me", updateAdminMe);
 
 /* =========================================
    GET approval companies

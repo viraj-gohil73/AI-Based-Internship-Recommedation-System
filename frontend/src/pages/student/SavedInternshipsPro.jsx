@@ -59,6 +59,7 @@ export default function SavedInternshipsPro() {
   });
   const {
     isOpen: isResumeModalOpen,
+    modalMode: resumeModalMode,
     options: resumeOptions,
     selectedResumeUrl,
     setSelectedResumeUrl,
@@ -390,6 +391,7 @@ export default function SavedInternshipsPro() {
       </div>
       <ResumeSelectionModal
         open={isResumeModalOpen}
+        mode={resumeModalMode}
         options={resumeOptions}
         selectedResumeUrl={selectedResumeUrl}
         onSelect={setSelectedResumeUrl}

@@ -21,11 +21,14 @@ const formatDate = (value) => {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleDateString();
+  return date.toLocaleDateString("en-IN");
 };
 
 const getRenewalDate = (sub) =>
   sub.periodEnd || sub.currentPeriodEnd || sub.trialEndsAt || sub.renewsOn;
+
+const getPlanLabel = (sub) =>
+  sub.planName || sub.plan?.name || sub.plan || "-";
 
 export default function SubscriptionManagement() {
   const [subscriptions, setSubscriptions] = useState([]);
@@ -82,7 +85,7 @@ export default function SubscriptionManagement() {
         company.includes(search.toLowerCase()) ||
         email.includes(search.toLowerCase());
 
-      const planValue = sub.planCode || sub.planCodeSnapshot || sub.plan;
+      const planValue = getPlanLabel(sub);
       const matchPlan = planFilter === "ALL" ? true : planValue === planFilter;
       const matchStatus =
         statusFilter === "ALL" ? true : sub.status === statusFilter;
@@ -90,6 +93,15 @@ export default function SubscriptionManagement() {
       return matchSearch && matchPlan && matchStatus;
     });
   }, [subscriptions, search, planFilter, statusFilter]);
+
+  const planOptions = useMemo(() => {
+    const unique = new Set();
+    subscriptions.forEach((sub) => {
+      const label = getPlanLabel(sub);
+      if (label && label !== "-") unique.add(label);
+    });
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [subscriptions]);
 
   const summary = useMemo(() => {
     const active = subscriptions.filter((s) => s.status === "ACTIVE").length;
@@ -202,9 +214,9 @@ export default function SubscriptionManagement() {
               className="rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
             >
               <option value="ALL">All plans</option>
-              <option value="Starter">Starter</option>
-              <option value="Pro">Pro</option>
-              <option value="Edge">Edge</option>
+              {planOptions.map((plan) => (
+                <option key={plan} value={plan}>{plan}</option>
+              ))}
             </select>
           </div>
 
@@ -265,7 +277,7 @@ export default function SubscriptionManagement() {
                     <p className="text-xs text-slate-500">{getCompanyEmail(sub)}</p>
                   </td>
                   <td className="p-4 text-slate-700">
-                    {sub.planCode || sub.planCodeSnapshot || sub.plan || "-"}
+                    {getPlanLabel(sub)}
                   </td>
                   <td className="p-4">
                     <span className={`rounded-full px-2.5 py-1 text-xs ${statusBadge(sub.status)}`}>
@@ -319,7 +331,7 @@ export default function SubscriptionManagement() {
                   {readableStatus(sub.status)}
                 </span>
                 <span className="text-xs font-medium text-slate-600">
-                  {sub.planCode || sub.planCodeSnapshot || sub.plan || "-"}
+                  {getPlanLabel(sub)}
                 </span>
               </div>
 
@@ -364,7 +376,7 @@ export default function SubscriptionManagement() {
                   <p className="mt-1 truncate text-sm text-white/85">{getCompanyEmail(selected)}</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-white/20 px-2.5 py-1 text-xs font-medium">
-                      {selected.planCode || selected.planCodeSnapshot || selected.plan || "-"}
+                      {getPlanLabel(selected)}
                     </span>
                     <span className={`rounded-full px-2.5 py-1 text-xs ${statusBadge(selected.status)}`}>
                       {readableStatus(selected.status)}
@@ -390,7 +402,7 @@ export default function SubscriptionManagement() {
               <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subscription Details</p>
                 <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-                  <p><span className="font-semibold text-slate-900">Plan:</span> {selected.planCode || selected.planCodeSnapshot || selected.plan || "-"}</p>
+                  <p><span className="font-semibold text-slate-900">Plan:</span> {getPlanLabel(selected)}</p>
                   <p><span className="font-semibold text-slate-900">Billing Cycle:</span> {selected.billingCycle || "-"}</p>
                   <p><span className="font-semibold text-slate-900">Seats:</span> {selected.totalRecruiterSeats || selected.seats || 0}</p>
                   <p><span className="font-semibold text-slate-900">Amount:</span> {formatCurrency(selected.totalAmount || selected.amount)}</p>
@@ -483,3 +495,4 @@ function MetricCard({ label, value }) {
     </div>
   );
 }
+

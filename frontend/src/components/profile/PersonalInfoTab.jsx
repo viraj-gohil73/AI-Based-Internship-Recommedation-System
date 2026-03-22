@@ -12,6 +12,7 @@ export default function PersonalInfoTab() {
   const navigate = useNavigate();
   const location = useLocation();
   const uploadRef = useRef(null);
+  const uploadWidgetInitializedRef = useRef(false);
   const syncUserStorage = (patch = {}) => {
     try {
       const raw = localStorage.getItem("user");
@@ -91,6 +92,10 @@ export default function PersonalInfoTab() {
   };
 
   const openUploader = () => {
+    if (!window.uploadcare) {
+      toast.error("Uploader is not ready yet. Please try again.");
+      return;
+    }
     uploadRef.current?.click();
   };
 
@@ -233,19 +238,46 @@ export default function PersonalInfoTab() {
   }, []);
 
   useEffect(() => {
-    if (!uploadRef.current || !window.uploadcare) return;
+    let retryTimer = null;
 
-    const widget = window.uploadcare.Widget(uploadRef.current);
+    const attachUploadcareWidget = () => {
+      if (!uploadRef.current || !window.uploadcare || uploadWidgetInitializedRef.current) return false;
 
-    widget.onChange(() => {
-      setDpUploading(true);
-    });
+      const widget = window.uploadcare.Widget(uploadRef.current);
+      uploadWidgetInitializedRef.current = true;
 
-    widget.onUploadComplete((fileInfo) => {
-      setDpUploading(false);
-      handleChange("dp", fileInfo.cdnUrl);
-      autoSaveDp(fileInfo.cdnUrl);
-    });
+      widget.onChange((file) => {
+        setDpUploading(Boolean(file));
+      });
+
+      widget.onUploadComplete((fileInfo) => {
+        setDpUploading(false);
+        handleChange("dp", fileInfo.cdnUrl);
+        autoSaveDp(fileInfo.cdnUrl);
+      });
+
+      if (typeof widget.onUploadFailed === "function") {
+        widget.onUploadFailed(() => {
+          setDpUploading(false);
+          toast.error("Profile picture upload failed");
+        });
+      }
+
+      return true;
+    };
+
+    if (!attachUploadcareWidget()) {
+      retryTimer = window.setInterval(() => {
+        if (attachUploadcareWidget() && retryTimer) {
+          window.clearInterval(retryTimer);
+          retryTimer = null;
+        }
+      }, 300);
+    }
+
+    return () => {
+      if (retryTimer) window.clearInterval(retryTimer);
+    };
   }, []);
 
   return (
@@ -292,6 +324,7 @@ export default function PersonalInfoTab() {
                 type="button"
                 className="bg-white text-blue-700 cursor-pointer px-4 py-2 rounded-lg border border-blue-200 w-full sm:w-auto text-center text-sm font-medium hover:bg-blue-50"
                 onClick={openUploader}
+                disabled={dpUploading || dpSaving}
               >
                 {dpUploading ? "Uploading..." : dpSaving ? "Saving..." : "Upload Picture"}
               </button> */}
@@ -465,6 +498,8 @@ export default function PersonalInfoTab() {
     </div>
   );
 }
+
+
 
 
 

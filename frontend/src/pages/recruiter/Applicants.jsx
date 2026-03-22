@@ -44,7 +44,7 @@ const getStatusClasses = (status) => {
 const formatDate = (value) => {
   if (!value) return "-";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString();
+  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString("en-IN");
 };
 
 const actionTimelineRows = (applicant = {}) => {
@@ -762,6 +762,7 @@ export default function Applicants() {
     </div>
   );
 }
+
 
 
 

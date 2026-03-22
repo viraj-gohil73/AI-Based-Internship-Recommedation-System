@@ -38,7 +38,7 @@ const logAdminAction = async ({
 };
 
 /* =====================================================
-   GET कंपनियां जिनका approval pending है
+   GET à¤•à¤‚à¤ªà¤¨à¤¿à¤¯à¤¾à¤‚ à¤œà¤¿à¤¨à¤•à¤¾ approval pending à¤¹à¥ˆ
    (SUBMITTED + RESUBMISSION)
 ===================================================== */
 
@@ -607,6 +607,81 @@ export const toggleAdminActive = async (req, res) => {
   }
 };
 
+export const getAdminMe = async (req, res) => {
+  try {
+    const admin = req.admin;
+    if (!admin) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        id: admin._id,
+        name: admin.name || "",
+        email: admin.email || "",
+        role: admin.role || "ADMIN",
+        active: Boolean(admin.active),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to fetch admin profile" });
+  }
+};
+
+export const updateAdminMe = async (req, res) => {
+  try {
+    const admin = req.admin;
+    if (!admin) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const name = String(req.body?.name || "").trim();
+    const email = String(req.body?.email || "").trim().toLowerCase();
+
+    if (!name || !email) {
+      return res.status(400).json({ success: false, message: "Name and email are required" });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ success: false, message: "Invalid email format" });
+    }
+
+    const existing = await Admin.findOne({ email, _id: { $ne: admin._id } }).select("_id");
+    if (existing) {
+      return res.status(409).json({ success: false, message: "Email already in use" });
+    }
+
+    admin.name = name;
+    admin.email = email;
+    await admin.save();
+
+    await logAdminAction({
+      action: "Admin profile updated",
+      actor: getActor(req),
+      target: admin.email,
+      type: "ADMIN",
+      severity: "LOW",
+      meta: { adminId: admin._id },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated",
+      data: {
+        id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+        active: Boolean(admin.active),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to update profile" });
+  }
+};
+
 /* ================= SUBSCRIPTIONS ================= */
 export const getSubscriptions = async (req, res) => {
   try {
@@ -810,3 +885,4 @@ export const getAuditLogs = async (req, res) => {
     });
   }
 };
+

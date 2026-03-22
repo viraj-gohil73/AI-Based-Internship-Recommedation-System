@@ -285,7 +285,7 @@ export default function RecruiterList() {
                       <td className="px-5 py-3 text-sm text-gray-600">
                         {r.last_login ? (
                           <>
-                            <div>{new Date(r.last_login).toLocaleDateString()}</div>
+                            <div>{new Date(r.last_login).toLocaleDateString("en-IN")}</div>
                             <div className="text-xs text-gray-400">
                               {new Date(r.last_login).toLocaleTimeString()}
                             </div>
@@ -451,4 +451,5 @@ function ActionButtons({ r, navigate, onConfirm }){
     </div>
   );
 }
+
 

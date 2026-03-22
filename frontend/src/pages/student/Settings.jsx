@@ -321,13 +321,6 @@ export default function Settings() {
                   enabled={toggles.dashboardNotifications}
                   onToggle={() => updateToggle("dashboardNotifications")}
                 />
-                <ToggleRow
-                  icon={Bell}
-                  label="Marketing and product emails"
-                  description="Get announcements about new features and offers."
-                  enabled={toggles.marketingEmails}
-                  onToggle={() => updateToggle("marketingEmails")}
-                />
               </div>
               <div className="flex justify-end">
                 <button
@@ -354,13 +347,6 @@ export default function Settings() {
                   description="Allow approved recruiters to view your profile details."
                   enabled={toggles.profileVisibility}
                   onToggle={() => updateToggle("profileVisibility")}
-                />
-                <ToggleRow
-                  icon={UserCheck}
-                  label="Searchable by name"
-                  description="Allow your profile to appear in platform search results."
-                  enabled={toggles.searchableProfile}
-                  onToggle={() => updateToggle("searchableProfile")}
                 />
               </div>
               <div className="flex justify-end">

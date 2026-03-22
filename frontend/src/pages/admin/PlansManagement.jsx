@@ -9,7 +9,6 @@ import {
 import toast from "react-hot-toast";
 
 const emptyForm = {
-  code: "Starter",
   name: "",
   description: "",
   monthlyBasePrice: 0,
@@ -29,16 +28,17 @@ const formatCurrency = (value) => {
   return `INR ${new Intl.NumberFormat("en-IN").format(num)}`;
 };
 
-const getPlanTheme = (code) => {
-  const value = String(code || "").toLowerCase();
-  if (value === "starter") {
+
+const getPlanTheme = (planName) => {
+  const value = String(planName || "").toLowerCase();
+  if (value.includes("starter")) {
     return {
       card: "from-emerald-50 via-white to-lime-50 border-emerald-200",
       chip: "bg-emerald-100 text-emerald-700",
       icon: "text-emerald-600",
     };
   }
-  if (value === "pro") {
+  if (value.includes("pro")) {
     return {
       card: "from-blue-50 via-white to-indigo-50 border-blue-200",
       chip: "bg-blue-100 text-blue-700",
@@ -131,7 +131,23 @@ export default function PlansManagement() {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Action failed");
+
+      if (!res.ok) {
+        const message = data.message || "Action failed";
+        if (!editingId && res.status === 409) {
+          const normalizedName = String(form.name || "").trim().toLowerCase();
+          const existing = plans.find(
+            (plan) => String(plan.name || "").trim().toLowerCase() === normalizedName
+          );
+          if (existing) {
+            startEdit(existing);
+            toast.error("Plan already exists. Opened in edit mode.");
+            return;
+          }
+        }
+        throw new Error(message);
+      }
+
       toast.success(editingId ? "Plan updated" : "Plan created");
       setForm(emptyForm);
       setEditingId(null);
@@ -166,7 +182,6 @@ export default function PlansManagement() {
   const startEdit = (plan) => {
     setEditingId(plan._id);
     setForm({
-      code: plan.code,
       name: plan.name || "",
       description: plan.description || "",
       monthlyBasePrice: plan.monthlyBasePrice || 0,
@@ -223,18 +238,6 @@ export default function PlansManagement() {
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <Field label="Code">
-            <select
-              value={form.code}
-              onChange={(e) => setForm((prev) => ({ ...prev, code: e.target.value }))}
-              className={inputClass}
-              disabled={Boolean(editingId)}
-            >
-              <option value="Starter">Starter</option>
-              <option value="Pro">Pro</option>
-              <option value="Edge">Edge</option>
-            </select>
-          </Field>
           <Field label="Name">
             <input
               value={form.name}
@@ -365,17 +368,17 @@ export default function PlansManagement() {
             {plans.map((plan) => (
               <article
                 key={plan._id}
-                className={`rounded-2xl border bg-gradient-to-br p-4 shadow-sm ${getPlanTheme(plan.code).card}`}
+                className={`rounded-2xl border bg-gradient-to-br p-4 shadow-sm ${getPlanTheme(plan.name).card}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className={`inline-flex items-center gap-1.5 text-sm font-semibold ${getPlanTheme(plan.code).icon}`}>
-                      <Layers size={15} /> {plan.code}
+                    <p className={`inline-flex items-center gap-1.5 text-sm font-semibold ${getPlanTheme(plan.name).icon}`}>
+                      <Layers size={15} /> {plan.name || "Plan"}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">{plan.name || "No public name"}</p>
+                    <p className="mt-1 text-xs text-slate-500">{plan.description || "No description"}</p>
                   </div>
                   <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${plan.isActive ? getPlanTheme(plan.code).chip : "bg-rose-100 text-rose-700"}`}
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${plan.isActive ? getPlanTheme(plan.name).chip : "bg-rose-100 text-rose-700"}`}
                   >
                     {plan.isActive ? "Active" : "Inactive"}
                   </span>

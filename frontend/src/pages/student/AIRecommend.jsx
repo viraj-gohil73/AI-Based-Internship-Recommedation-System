@@ -24,8 +24,8 @@ import { useResumePickerModal } from "../../hooks/useResumePickerModal";
 import StudentLoadingCard from "../../components/common/StudentLoadingCard";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-const MIN_RECOMMENDATION_SCORE = 10;
-const TOP_RECOMMENDATION_LIMIT = 10;
+const MIN_RECOMMENDATION_SCORE = 55;
+const TOP_RECOMMENDATION_LIMIT = 5;
 
 const REASON_LABELS = {
   SKILL_MATCH: "Skill match",
@@ -183,6 +183,7 @@ export default function AIRecommend() {
 
   const {
     isOpen: isResumeModalOpen,
+    modalMode: resumeModalMode,
     options: resumeOptions,
     selectedResumeUrl,
     setSelectedResumeUrl,
@@ -572,6 +573,7 @@ export default function AIRecommend() {
 
       <ResumeSelectionModal
         open={isResumeModalOpen}
+        mode={resumeModalMode}
         options={resumeOptions}
         selectedResumeUrl={selectedResumeUrl}
         onSelect={setSelectedResumeUrl}

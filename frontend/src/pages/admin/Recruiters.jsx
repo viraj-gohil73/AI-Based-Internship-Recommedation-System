@@ -478,7 +478,7 @@ export default function Recruiters() {
                     <Calendar size={14} className="text-slate-400" />
                     Joined:{" "}
                     {selectedRecruiter.createdAt
-                      ? new Date(selectedRecruiter.createdAt).toLocaleDateString()
+                      ? new Date(selectedRecruiter.createdAt).toLocaleDateString("en-IN")
                       : "-"}
                   </div>
                   <div className="flex items-center gap-2">
@@ -614,3 +614,4 @@ export default function Recruiters() {
     </div>
   );
 }
+

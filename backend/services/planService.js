@@ -1,15 +1,25 @@
-import Plan from "../models/Plan.js";
+﻿import Plan from "../models/Plan.js";
 
 export const PLAN_CODES = ["Starter", "Pro", "Edge"];
 export const BILLING_CYCLES = ["monthly", "yearly"];
 
 export const normalizePlanCode = (value) => {
   if (!value) return "";
-  const str = String(value).trim().toLowerCase();
-  if (str === "starter" || str === "free") return "Starter";
-  if (str === "pro" || str === "growth") return "Pro";
-  if (str === "edge" || str === "scale") return "Edge";
-  return "";
+  const raw = String(value).trim();
+  if (!raw) return "";
+
+  const lower = raw.toLowerCase();
+  if (lower === "free") return "Starter";
+  if (lower === "growth") return "Pro";
+  if (lower === "scale") return "Edge";
+
+  const cleaned = raw.replace(/[^a-zA-Z0-9]+/g, " ").trim();
+  if (!cleaned) return "";
+
+  return cleaned
+    .split(/\s+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join("");
 };
 
 export const validateBillingCycle = (value) => {
@@ -91,3 +101,4 @@ export const sanitizePlanForClient = (plan) => ({
   createdAt: plan.createdAt,
   updatedAt: plan.updatedAt,
 });
+

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchResumeOptions } from "../utils/resumePicker";
-import toast from "react-hot-toast";
 
 export const useResumePickerModal = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [modalMode, setModalMode] = useState("select");
   const [options, setOptions] = useState([]);
   const [selectedResumeUrl, setSelectedResumeUrl] = useState("");
   const resolverRef = useRef(null);
@@ -12,6 +12,7 @@ export const useResumePickerModal = () => {
     const resolver = resolverRef.current;
     resolverRef.current = null;
     setIsOpen(false);
+    setModalMode("select");
     setOptions([]);
     setSelectedResumeUrl("");
     if (resolver) resolver(value);
@@ -20,10 +21,11 @@ export const useResumePickerModal = () => {
   const requestResumeSelection = useCallback(async (apiBaseUrl, token) => {
     const resumeOptions = await fetchResumeOptions(apiBaseUrl, token);
     if (!resumeOptions.length) {
-      const error = new Error("Please upload a resume before applying.");
-      toast.error(error.message);
-      error.code = "RESUME_REQUIRED";
-      throw error;
+      setModalMode("required");
+      setOptions([]);
+      setSelectedResumeUrl("");
+      setIsOpen(true);
+      return null;
     }
 
     if (resumeOptions.length === 1) {
@@ -31,6 +33,7 @@ export const useResumePickerModal = () => {
     }
 
     return new Promise((resolve) => {
+      setModalMode("select");
       resolverRef.current = resolve;
       setOptions(resumeOptions);
       setSelectedResumeUrl(resumeOptions[0]?.url || "");
@@ -59,6 +62,7 @@ export const useResumePickerModal = () => {
 
   return {
     isOpen,
+    modalMode,
     options,
     selectedResumeUrl,
     setSelectedResumeUrl,

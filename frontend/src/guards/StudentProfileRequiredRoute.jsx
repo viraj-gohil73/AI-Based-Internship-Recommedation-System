@@ -9,7 +9,6 @@ const REQUIRED_FIELDS = [
   { key: "gender", label: "Gender" },
   { key: "dob", label: "Date of Birth" },
   { key: "phone", label: "Phone" },
-  { key: "email", label: "Email" },
   { key: "city", label: "City" },
   { key: "state", label: "State" },
   { key: "pincode", label: "Pincode" },

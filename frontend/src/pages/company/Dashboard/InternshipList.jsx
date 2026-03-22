@@ -220,7 +220,7 @@ export default function InternshipList() {
                   <td className="px-4 py-3">
                     <p className="font-semibold text-slate-800">{item.title || "-"}</p>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Posted: {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "-"}{" "}
+                      Posted: {item.createdAt ? new Date(item.createdAt).toLocaleDateString("en-IN") : "-"}{" "}
                       | Stipend: {formatMoney(item.stipend_min)} - {formatMoney(item.stipend_max)}
                     </p>
                   </td>
@@ -306,3 +306,4 @@ function StatCard({ label, value, icon: Icon, secondary }) {
     </div>
   );
 }
+

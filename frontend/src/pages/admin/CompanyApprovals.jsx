@@ -193,7 +193,7 @@ export default function CompanyApprovals() {
                 </td>
 
                 <td className="px-5 py-4 text-slate-700">
-                  <HoverEmail email={c.email} className="max-w-[220px]" />
+                  <HoverEmail email={c.email} className="max-w-[100px]" />
                 </td>
 
                 <td className="px-5 py-4 text-slate-700">
@@ -212,7 +212,7 @@ export default function CompanyApprovals() {
                 </td>
 
                 <td className="px-5 py-4 text-right">
-                  <div className="inline-flex items-center gap-2">
+                  <div className="inline-flex items-center gap-3">
                     <ActionBtn
                       icon={<Eye size={14} />}
                       label="View"

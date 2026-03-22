@@ -4,7 +4,6 @@ const planSchema = new mongoose.Schema(
   {
     code: {
       type: String,
-      enum: ["Starter", "Pro", "Edge"],
       required: true,
       unique: true,
       trim: true,

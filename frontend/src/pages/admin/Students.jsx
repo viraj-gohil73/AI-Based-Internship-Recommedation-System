@@ -136,7 +136,7 @@ export default function Students() {
   const formatDate = (value) => {
     if (!value) return "-";
     const dt = new Date(value);
-    return Number.isNaN(dt.getTime()) ? "-" : dt.toLocaleDateString();
+    return Number.isNaN(dt.getTime()) ? "-" : dt.toLocaleDateString("en-IN");
   };
 
   const asArray = (value) => (Array.isArray(value) ? value.filter(Boolean) : []);
@@ -719,3 +719,4 @@ export default function Students() {
     </div>
   );
 }
+

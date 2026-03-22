@@ -14,22 +14,18 @@ const METRIC_STYLES = {
   "Active students": {
     icon: Users,
     tone: "from-sky-50 to-blue-50 text-blue-700",
-    progress: "from-sky-500 to-blue-500",
   },
   "Active companies": {
     icon: Building2,
     tone: "from-blue-50 to-indigo-50 text-blue-700",
-    progress: "from-blue-500 to-indigo-500",
   },
   "Open internships": {
     icon: Briefcase,
     tone: "from-blue-50 to-sky-50 text-sky-700",
-    progress: "from-blue-500 to-sky-500",
   },
   "Active recruiters": {
     icon: TrendingUp,
     tone: "from-indigo-50 to-blue-50 text-indigo-700",
-    progress: "from-indigo-500 to-blue-500",
   },
 };
 
@@ -187,12 +183,12 @@ export default function Dashboard() {
                     <Icon className="h-5 w-5" />
                   </div>
                 </div>
-                <div className="mt-4 h-1.5 w-full rounded-full bg-slate-100">
+                {/* <div className="mt-4 h-1.5 w-full rounded-full bg-slate-100">
                   <div
                     className={`h-full rounded-full bg-gradient-to-r ${card.progress}`}
                     style={{ width: `${Math.min(100, Math.max(18, card.value % 100 || 42))}%` }}
                   />
-                </div>
+                </div> */}
               </div>
             );
           })}
