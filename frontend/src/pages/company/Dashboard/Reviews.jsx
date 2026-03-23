@@ -7,6 +7,7 @@ import {
   Star,
   StarHalf,
   TrendingUp,
+  X,
 } from "lucide-react";
 
 const API_BASE = "http://localhost:5000/api/company";
@@ -38,6 +39,7 @@ function normalizeReview(raw, index) {
   const rating = clamp(Number(raw?.rating || 0), 0, 5);
   const comment = String(raw?.comment || raw?.review || raw?.feedback || "").trim();
   const createdAt = raw?.createdAt || raw?.date || new Date().toISOString();
+  const replyMessage = String(raw?.companyReply?.message || "").trim();
 
   return {
     id,
@@ -46,6 +48,12 @@ function normalizeReview(raw, index) {
     rating,
     comment,
     createdAt,
+    companyReply: replyMessage
+      ? {
+          message: replyMessage,
+          repliedAt: raw?.companyReply?.repliedAt || null,
+        }
+      : null,
   };
 }
 
@@ -74,6 +82,11 @@ export default function Reviews() {
   const [query, setQuery] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [activeReview, setActiveReview] = useState(null);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [replySubmitting, setReplySubmitting] = useState(false);
+  const [replyError, setReplyError] = useState("");
 
   useEffect(() => {
     const loadReviews = async () => {
@@ -114,6 +127,65 @@ export default function Reviews() {
 
     loadReviews();
   }, []);
+
+  const openReplyModal = (item) => {
+    setActiveReview(item);
+    setReplyMessage("");
+    setReplyError("");
+    setReplyOpen(true);
+  };
+
+  const closeReplyModal = () => {
+    setReplyOpen(false);
+    setActiveReview(null);
+    setReplyMessage("");
+    setReplyError("");
+  };
+
+  const submitReply = async () => {
+    if (!activeReview) return;
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      setReplyError("Session expired. Please login again.");
+      return;
+    }
+
+    if (!replyMessage.trim()) {
+      setReplyError("Reply message is required.");
+      return;
+    }
+
+    try {
+      setReplySubmitting(true);
+      setReplyError("");
+
+      const res = await fetch(`${API_BASE}/reviews/${activeReview.id}/reply`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: replyMessage.trim() }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data?.success === false) {
+        throw new Error(data?.message || "Failed to submit reply");
+      }
+
+      const updated = data?.review ? normalizeReview(data.review, 0) : null;
+      if (updated) {
+        setReviews((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      }
+
+      closeReplyModal();
+    } catch (error) {
+      setReplyError(error?.message || "Failed to submit reply");
+    } finally {
+      setReplySubmitting(false);
+    }
+  };
 
   const filteredReviews = useMemo(() => {
     const text = query.trim().toLowerCase();
@@ -165,190 +237,276 @@ export default function Reviews() {
   }, [reviews]);
 
   return (
-    <div className="min-h-[calc(100vh-88px)] bg-[radial-gradient(circle_at_top_right,_#dbeafe,_transparent_45%),radial-gradient(circle_at_bottom_left,_#e2e8f0,_transparent_38%),linear-gradient(to_bottom,_#f8fafc,_#eff6ff)] p-4 sm:p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <section className="rounded-3xl border border-blue-100 bg-white/90 p-5 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
-                Reputation Insights
-              </p>
-              <h1 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">
-                Review & Ratings
-              </h1>
-              <p className="mt-2 text-sm text-slate-600">
-                Track intern feedback quality, identify trends, and improve the hiring experience.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Average rating</p>
-              <p className="mt-1 inline-flex items-center gap-2 text-xl font-bold text-slate-900">
-                {summary.avg.toFixed(1)}
-                <Stars rating={summary.avg} />
-              </p>
-              <p className="mt-1 text-xs text-slate-500">{summary.total} total feedback entries</p>
-            </div>
-          </div>
-
-          {loadError ? (
-            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              {loadError}
-            </div>
-          ) : null}
-        </section>
-
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Total Reviews</p>
-            <p className="mt-2 text-3xl font-extrabold text-slate-900">{summary.total}</p>
-            <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-blue-700">
-              <MessageSquareText size={14} />
-              Feedback captured from completed internships
-            </p>
-          </article>
-
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Avg. Rating</p>
-            <p className="mt-2 text-3xl font-extrabold text-slate-900">{summary.avg.toFixed(1)}</p>
-            <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-amber-700">
-              <Star size={14} />
-              Across all review submissions
-            </p>
-          </article>
-
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Satisfaction</p>
-            <p className="mt-2 text-3xl font-extrabold text-slate-900">{summary.satisfaction}%</p>
-            <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
-              <TrendingUp size={14} />
-              Reviews with 4 stars and above
-            </p>
-          </article>
-
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-sm font-medium text-slate-500">Filtered Results</p>
-            <p className="mt-2 text-3xl font-extrabold text-slate-900">{filteredReviews.length}</p>
-            <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-indigo-700">
-              <Filter size={14} />
-              Matching your current filter/search
-            </p>
-          </article>
-        </section>
-
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="relative w-full lg:max-w-sm">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search by student, internship, or comment..."
-                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-              />
-            </div>
-
-            <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end lg:w-auto">
-              <div className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2">
-                <SlidersHorizontal size={15} className="text-slate-500" />
-                <select
-                  value={ratingFilter}
-                  onChange={(event) => setRatingFilter(event.target.value)}
-                  className="bg-transparent text-sm text-slate-700 outline-none"
-                >
-                  <option value="all">All Ratings</option>
-                  <option value="4">4+ Stars</option>
-                  <option value="3">3+ Stars</option>
-                  <option value="2">2+ Stars</option>
-                </select>
+    <>
+      <div className="min-h-[calc(100vh-88px)] bg-[radial-gradient(circle_at_top_right,_#dbeafe,_transparent_45%),radial-gradient(circle_at_bottom_left,_#e2e8f0,_transparent_38%),linear-gradient(to_bottom,_#f8fafc,_#eff6ff)] p-4 sm:p-6">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <section className="rounded-3xl border border-blue-100 bg-white/90 p-5 shadow-sm sm:p-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">
+                  Reputation Insights
+                </p>
+                <h1 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">
+                  Review & Ratings
+                </h1>
+                <p className="mt-2 text-sm text-slate-600">
+                  Track intern feedback quality, identify trends, and improve the hiring experience.
+                </p>
               </div>
 
-              <div className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2">
-                <Filter size={15} className="text-slate-500" />
-                <select
-                  value={sortBy}
-                  onChange={(event) => setSortBy(event.target.value)}
-                  className="bg-transparent text-sm text-slate-700 outline-none"
-                >
-                  <option value="recent">Most Recent</option>
-                  <option value="highest">Highest Rated</option>
-                  <option value="lowest">Lowest Rated</option>
-                </select>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Average rating</p>
+                <p className="mt-1 inline-flex items-center gap-2 text-xl font-bold text-slate-900">
+                  {summary.avg.toFixed(1)}
+                  <Stars rating={summary.avg} />
+                </p>
+                <p className="mt-1 text-xs text-slate-500">{summary.total} total feedback entries</p>
               </div>
             </div>
-          </div>
-        </section>
 
-        <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-1">
-            <h2 className="text-lg font-semibold text-slate-900">Rating Distribution</h2>
-            <div className="mt-4 space-y-3">
-              {[5, 4, 3, 2, 1].map((star) => {
-                const count = summary.buckets[star];
-                const width = summary.total ? Math.round((count / summary.total) * 100) : 0;
-                return (
-                  <div key={star} className="grid grid-cols-[42px_1fr_42px] items-center gap-2 text-sm">
-                    <span className="inline-flex items-center gap-1 font-medium text-slate-700">
-                      {star} <Star size={13} className="text-amber-500" fill="currentColor" />
-                    </span>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
-                        style={{ width: `${width}%` }}
-                      />
-                    </div>
-                    <span className="text-right font-medium text-slate-600">{count}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </article>
+            {loadError ? (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                {loadError}
+              </div>
+            ) : null}
+          </section>
 
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
-            <h2 className="text-lg font-semibold text-slate-900">Feedback Timeline</h2>
-            <div className="mt-4 space-y-3">
-              {loading ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-                  Loading reviews...
-                </div>
-              ) : filteredReviews.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-sm text-slate-500">
-                  No reviews match the current search/filter.
-                </div>
-              ) : (
-                filteredReviews.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-xl border border-slate-200 bg-slate-50/70 p-4"
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-medium text-slate-500">Total Reviews</p>
+              <p className="mt-2 text-3xl font-extrabold text-slate-900">{summary.total}</p>
+              <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-blue-700">
+                <MessageSquareText size={14} />
+                Feedback captured from completed internships
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-medium text-slate-500">Avg. Rating</p>
+              <p className="mt-2 text-3xl font-extrabold text-slate-900">{summary.avg.toFixed(1)}</p>
+              <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-amber-700">
+                <Star size={14} />
+                Across all review submissions
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-medium text-slate-500">Satisfaction</p>
+              <p className="mt-2 text-3xl font-extrabold text-slate-900">{summary.satisfaction}%</p>
+              <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
+                <TrendingUp size={14} />
+                Reviews with 4 stars and above
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <p className="text-sm font-medium text-slate-500">Filtered Results</p>
+              <p className="mt-2 text-3xl font-extrabold text-slate-900">{filteredReviews.length}</p>
+              <p className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-indigo-700">
+                <Filter size={14} />
+                Matching your current filter/search
+              </p>
+            </article>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="relative w-full lg:max-w-sm">
+                <Search
+                  size={16}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search by student, internship, or comment..."
+                  className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end lg:w-auto">
+                <div className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2">
+                  <SlidersHorizontal size={15} className="text-slate-500" />
+                  <select
+                    value={ratingFilter}
+                    onChange={(event) => setRatingFilter(event.target.value)}
+                    className="bg-transparent text-sm text-slate-700 outline-none"
                   >
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{item.studentName}</p>
-                        <p className="mt-0.5 text-xs text-slate-600">{item.internshipTitle}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
-                          <Stars rating={item.rating} />
-                          {item.rating.toFixed(1)}
-                        </div>
-                        <p className="mt-1 text-[11px] text-slate-500">{formatDate(item.createdAt)}</p>
-                      </div>
-                    </div>
+                    <option value="all">All Ratings</option>
+                    <option value="4">4+ Stars</option>
+                    <option value="3">3+ Stars</option>
+                    <option value="2">2+ Stars</option>
+                  </select>
+                </div>
 
-                    <p className="mt-3 text-sm leading-6 text-slate-700">
-                      {item.comment || "No written feedback submitted."}
-                    </p>
-                  </div>
-                ))
-              )}
+                <div className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2">
+                  <Filter size={15} className="text-slate-500" />
+                  <select
+                    value={sortBy}
+                    onChange={(event) => setSortBy(event.target.value)}
+                    className="bg-transparent text-sm text-slate-700 outline-none"
+                  >
+                    <option value="recent">Most Recent</option>
+                    <option value="highest">Highest Rated</option>
+                    <option value="lowest">Lowest Rated</option>
+                  </select>
+                </div>
+              </div>
             </div>
-          </article>
-        </section>
+          </section>
+
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-1">
+              <h2 className="text-lg font-semibold text-slate-900">Rating Distribution</h2>
+              <div className="mt-4 space-y-3">
+                {[5, 4, 3, 2, 1].map((star) => {
+                  const count = summary.buckets[star];
+                  const width = summary.total ? Math.round((count / summary.total) * 100) : 0;
+                  return (
+                    <div key={star} className="grid grid-cols-[42px_1fr_42px] items-center gap-2 text-sm">
+                      <span className="inline-flex items-center gap-1 font-medium text-slate-700">
+                        {star} <Star size={13} className="text-amber-500" fill="currentColor" />
+                      </span>
+                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500"
+                          style={{ width: `${width}%` }}
+                        />
+                      </div>
+                      <span className="text-right font-medium text-slate-600">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </article>
+
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+              <h2 className="text-lg font-semibold text-slate-900">Feedback Timeline</h2>
+              <div className="mt-4 space-y-3">
+                {loading ? (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
+                    Loading reviews...
+                  </div>
+                ) : filteredReviews.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-sm text-slate-500">
+                    No reviews match the current search/filter.
+                  </div>
+                ) : (
+                  filteredReviews.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-slate-200 bg-slate-50/70 p-4"
+                    >
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{item.studentName}</p>
+                          <p className="mt-0.5 text-xs text-slate-600">{item.internshipTitle}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                            <Stars rating={item.rating} />
+                            {item.rating.toFixed(1)}
+                          </div>
+                          <p className="mt-1 text-[11px] text-slate-500">{formatDate(item.createdAt)}</p>
+                        </div>
+                      </div>
+
+                      <p className="mt-3 text-sm leading-6 text-slate-700">
+                        {item.comment || "No written feedback submitted."}
+                      </p>
+
+                      {item.companyReply ? (
+                        <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                            Official Company Reply
+                          </p>
+                          <p className="mt-1 text-sm text-emerald-900">{item.companyReply.message}</p>
+                          <p className="mt-1 text-[11px] text-emerald-700">
+                            Replied on {formatDate(item.companyReply.repliedAt)}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="mt-3 flex items-center justify-end">
+                          <button
+                            type="button"
+                            onClick={() => openReplyModal(item)}
+                            className="rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                          >
+                            Reply
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </article>
+          </section>
+        </div>
       </div>
-    </div>
+
+      {replyOpen && activeReview ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Reply to Feedback</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  {activeReview.studentName} - {activeReview.internshipTitle}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeReplyModal}
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+              {activeReview.comment || "No student comment provided."}
+            </div>
+
+            <div className="mt-4">
+              <label className="mb-2 block text-sm font-medium text-slate-700">
+                Your Official Reply
+              </label>
+              <textarea
+                value={replyMessage}
+                onChange={(event) => setReplyMessage(event.target.value)}
+                rows={5}
+                placeholder="Write your reply for the student feedback..."
+                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+
+            {replyError ? (
+              <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {replyError}
+              </p>
+            ) : null}
+
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeReplyModal}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={replySubmitting}
+                onClick={submitReply}
+                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+              >
+                {replySubmitting ? "Submitting..." : "Submit Reply"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
-

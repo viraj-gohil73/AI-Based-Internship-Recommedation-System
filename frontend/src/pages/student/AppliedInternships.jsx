@@ -54,6 +54,19 @@ const formatDate = (value) => {
   });
 };
 
+const formatDateTime = (value) => {
+  if (!value) return "Not available";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not available";
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const normalizeInternship = (item) => ({
   id: String(item?._id || item?.id || ""),
   title: item?.title || "Untitled Internship",
@@ -73,6 +86,13 @@ const normalizeInternship = (item) => ({
   canGiveFeedback: Boolean(item?.canGiveFeedback),
   hasFeedback: Boolean(item?.hasFeedback),
   feedbackRating: Number(item?.feedbackRating || 0),
+  interviewScheduledAt: item?.interviewScheduledAt || "",
+  interviewDurationMinutes: Number(item?.interviewDurationMinutes || 0),
+  interviewMode: item?.interviewMode || "",
+  interviewMeetingLink: item?.interviewMeetingLink || "",
+  interviewLocation: item?.interviewLocation || "",
+  interviewNotes: item?.interviewNotes || "",
+  interviewStatus: item?.interviewStatus || "",
 });
 
 export default function AppliedInternships() {
@@ -376,6 +396,34 @@ export default function AppliedInternships() {
                         </div>
                       </div>
                     </div>
+
+                    {(item.status === "INTERVIEW" || item.interviewScheduledAt) ? (
+                      <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-sm text-amber-900">
+                        <p className="font-semibold">Interview Scheduled</p>
+                        <p className="mt-1">Date: {formatDateTime(item.interviewScheduledAt || item.appliedAt)}</p>
+                        <p className="mt-1">Mode: {item.interviewMode || "Not available"}</p>
+                        <p className="mt-1">Status: {item.interviewStatus || "SCHEDULED"}</p>
+                        {item.interviewDurationMinutes > 0 ? (
+                          <p className="mt-1">Duration: {item.interviewDurationMinutes} minutes</p>
+                        ) : null}
+                        {item.interviewLocation ? (
+                          <p className="mt-1">Location: {item.interviewLocation}</p>
+                        ) : null}
+                        {item.interviewMeetingLink ? (
+                          <a
+                            href={item.interviewMeetingLink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 inline-flex rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+                          >
+                            Join Interview Link
+                          </a>
+                        ) : null}
+                        {item.interviewNotes ? (
+                          <p className="mt-2 text-xs text-amber-800">Note: {item.interviewNotes}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
 
                     <div className="mt-3">
                       <div className="flex flex-wrap items-center gap-2">

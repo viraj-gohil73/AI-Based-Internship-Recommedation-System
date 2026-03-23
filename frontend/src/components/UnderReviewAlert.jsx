@@ -1,11 +1,6 @@
-import {
-  Lock,
-  XCircle,
-  CheckCircle,
-  RefreshCcw,
-  X,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+import { Lock, XCircle, CheckCircle, RefreshCcw, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { normalizeCompanyVerificationStatus } from "../utils/companyVerificationStatus";
 
 const STATUS_UI = {
   SUBMITTED: {
@@ -38,24 +33,17 @@ const STATUS_UI = {
   },
 };
 
-export default function UnderReviewAlert({
-  status = "SUBMITTED",
-  message,
-  subMessage,
-}) {
-  const storageKey = `company_alert_${status}_closed`;
+export default function UnderReviewAlert({ status = "SUBMITTED", message, subMessage }) {
+  const normalizedStatus = useMemo(() => normalizeCompanyVerificationStatus(status), [status]);
+  const storageKey = `company_alert_${normalizedStatus}_closed`;
 
   const [visible, setVisible] = useState(true);
 
-  /* 🔁 CHECK LOCALSTORAGE ON LOAD */
   useEffect(() => {
     const closed = localStorage.getItem(storageKey);
-    if (closed === "true") {
-      setVisible(false);
-    }
-  }, [status, storageKey]);
+    setVisible(closed !== "true");
+  }, [storageKey]);
 
-  /* ❌ CLOSE HANDLER */
   const handleClose = () => {
     setVisible(false);
     localStorage.setItem(storageKey, "true");
@@ -63,47 +51,29 @@ export default function UnderReviewAlert({
 
   if (!visible) return null;
 
-  const config = STATUS_UI[status];
+  const config = STATUS_UI[normalizedStatus];
   if (!config) return null;
 
   const Icon = config.icon;
 
   return (
     <div
-      className={`relative flex items-start gap-3 rounded-xl border
-        ${config.border}
-        bg-gradient-to-r ${config.bg}
-        p-4 shadow-sm transition-all duration-200`}
+      className={`relative flex items-start gap-3 rounded-xl border ${config.border} bg-gradient-to-r ${config.bg} p-4 shadow-sm transition-all duration-200`}
     >
-      {/* Accent bar */}
-      <span
-        className={`absolute left-0 top-0 h-full w-1 rounded-l-xl ${config.bar}`}
-      />
+      <span className={`absolute left-0 top-0 h-full w-1 rounded-l-xl ${config.bar}`} />
 
-      {/* Icon */}
-      <div
-        className={`flex h-9 w-9 items-center justify-center rounded-full
-          ${config.iconBg}`}
-      >
+      <div className={`flex h-9 w-9 items-center justify-center rounded-full ${config.iconBg}`}>
         <Icon size={18} />
       </div>
 
-      {/* Text */}
       <div className="flex-1">
-        <p className="text-sm font-semibold text-slate-800">
-          {message}
-        </p>
-        {subMessage && (
-          <p className="mt-1 text-xs leading-relaxed text-slate-700">
-            {subMessage}
-          </p>
-        )}
+        <p className="text-sm font-semibold text-slate-800">{message}</p>
+        {subMessage ? <p className="mt-1 text-xs leading-relaxed text-slate-700">{subMessage}</p> : null}
       </div>
 
-      {/* ❌ CLOSE BUTTON (ALL STATUSES) */}
       <button
         onClick={handleClose}
-        className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition"
+        className="absolute right-3 top-3 text-slate-400 transition hover:text-slate-600"
         aria-label="Close"
       >
         <X size={16} />

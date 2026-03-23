@@ -2,6 +2,7 @@ import express from "express";
 import {
   getSubmittedCompanies,
   respondToCompany,
+  adminCompanyDecision,
   getCompanyDetails,
   getApprovedCompanies,
   toggleCompanyActive,
@@ -21,9 +22,9 @@ import {
   getAdminMe,
   updateAdminMe,
   getReportsSummary,
-  getAuditLogs
+  getAuditLogs,
 } from "../controllers/admincontrol.js";
-import {adminLogin} from  "../controllers/adminAuthController.js"
+import { adminLogin } from "../controllers/adminAuthController.js";
 import adminAuth from "../middlewares/adminAuth.js";
 import {
   createAdminPlan,
@@ -40,35 +41,26 @@ router.patch("/me", updateAdminMe);
 
 /* =========================================
    GET approval companies
-   (SUBMITTED + RESUBMISSION)
 ========================================= */
 router.get("/companies/approvals", getSubmittedCompanies);
 
+/* =========================================
+   ADMIN RESPONSE (legacy)
+========================================= */
+router.patch("/company/:id/respond", respondToCompany);
 
 /* =========================================
-   ADMIN RESPONSE
-   APPROVED | REJECTED | RESUBMISSION
+   ADMIN DECISION (new)
 ========================================= */
-router.patch(
-  "/company/:id/respond",
-  respondToCompany
-);
-router.get(
-  "/companies",
-  getApprovedCompanies
-);
+router.post("/company/:id/decision", adminCompanyDecision);
 
-router.patch(
-  "/company/:id/block",
-  toggleCompanyActive
-);
+router.get("/companies", getApprovedCompanies);
+
+router.patch("/company/:id/block", toggleCompanyActive);
 /* =========================================
    VIEW SINGLE COMPANY DETAILS
 ========================================= */
-router.get(
-  "/company/:id",
-  getCompanyDetails
-);
+router.get("/company/:id", getCompanyDetails);
 
 /* =========================================
    RECRUITERS (ADMIN)

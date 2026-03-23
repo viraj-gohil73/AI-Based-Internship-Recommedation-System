@@ -29,6 +29,18 @@ const isInternshipCompleted = (internshipDoc) => {
   return false;
 };
 
+const toReplyBlock = (row = {}) => {
+  const reply = row?.companyReply || {};
+  const message = `${reply?.message || ""}`.trim();
+  if (!message) return null;
+
+  return {
+    message,
+    repliedAt: reply?.repliedAt || null,
+    repliedByCompanyId: reply?.repliedByCompanyId || null,
+  };
+};
+
 const toCompanyReview = (row) => {
   const student = row.studentId || {};
   const internship = row.internshipId || {};
@@ -47,6 +59,28 @@ const toCompanyReview = (row) => {
     comment: row.comment || "",
     createdAt: row.createdAt || null,
     updatedAt: row.updatedAt || null,
+    companyReply: toReplyBlock(row),
+  };
+};
+
+const toStudentFeedbackHistoryItem = (row) => {
+  const internship = row.internshipId || {};
+  const company = row.companyId || {};
+
+  return {
+    _id: row._id,
+    id: row._id,
+    internshipId: internship._id || null,
+    internshipTitle: internship.title || "Internship",
+    companyId: company._id || null,
+    companyName: company.companyName || "Company",
+    companyLogo: company.logo || "",
+    rating: Number(row.rating || 0),
+    comment: row.comment || "",
+    submittedAt: row.createdAt || null,
+    createdAt: row.createdAt || null,
+    updatedAt: row.updatedAt || null,
+    companyReply: toReplyBlock(row),
   };
 };
 
@@ -181,4 +215,106 @@ export const listCompanyReviews = async (req, res) => {
   }
 };
 
+export const replyToCompanyReview = async (req, res) => {
+  try {
+    if (!req.user || !req.companyId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const { feedbackId } = req.params;
+    const message = `${req.body?.message || ""}`.trim();
+
+    if (!mongoose.Types.ObjectId.isValid(feedbackId)) {
+      return res.status(400).json({ success: false, message: "Invalid feedback id" });
+    }
+
+    if (!message) {
+      return res.status(400).json({ success: false, message: "Reply message is required" });
+    }
+
+    const feedback = await InternshipFeedback.findById(feedbackId)
+      .populate("studentId", "fname lname email")
+      .populate("internshipId", "title")
+      .lean(false);
+
+    if (!feedback) {
+      return res.status(404).json({ success: false, message: "Feedback not found" });
+    }
+
+    if (String(feedback.companyId) !== String(req.companyId)) {
+      return res.status(403).json({ success: false, message: "You can only reply to your company reviews" });
+    }
+
+    if (`${feedback?.companyReply?.message || ""}`.trim()) {
+      return res.status(409).json({
+        success: false,
+        message: "Reply already submitted and locked",
+      });
+    }
+
+    feedback.companyReply = {
+      message,
+      repliedAt: new Date(),
+      repliedByCompanyId: req.companyId,
+    };
+
+    await feedback.save();
+
+    await runNotificationTask("company-reply-feedback", async () => {
+      if (feedback.studentId?._id) {
+        await createNotification({
+          recipientModel: "Student",
+          recipientId: feedback.studentId._id,
+          type: "FEEDBACK_REPLY",
+          title: "Company replied to your feedback",
+          message: `A company has replied to your feedback for ${feedback.internshipId?.title || "an internship"}.`,
+          entityType: "InternshipFeedback",
+          entityId: feedback._id,
+          metadata: {
+            feedbackId: feedback._id,
+            internshipId: feedback.internshipId?._id || null,
+            companyId: feedback.companyId || null,
+          },
+        });
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Reply submitted successfully",
+      review: toCompanyReview(feedback),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to submit reply",
+    });
+  }
+};
+
+export const getStudentFeedbackHistory = async (req, res) => {
+  try {
+    if (!req.studentId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const feedbackRows = await InternshipFeedback.find({ studentId: req.studentId })
+      .sort({ createdAt: -1 })
+      .populate("internshipId", "title")
+      .populate("companyId", "companyName logo")
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      feedbackHistory: feedbackRows.map(toStudentFeedbackHistoryItem),
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch feedback history",
+    });
+  }
+};
+
 export { isInternshipCompleted };
+

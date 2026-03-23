@@ -19,6 +19,7 @@ import AIRecommend from "./pages/student/AIRecommend";
 import ExploreInternships from "./pages/student/ExploreInternships";
 import InternshipDetails from "./pages/student/InternshipDetails";
 import AppliedInternships from "./pages/student/AppliedInternships";
+import FeedbackHistory from "./pages/student/FeedbackHistory";
 import MyResume from "./pages/student/MyResume";
 import StudentSettings from "./pages/student/Settings";
 
@@ -110,6 +111,7 @@ const getRouteMeta = (pathname = "") => {
     if (pathname === "/student/explore") return { role: "student", page: "Explore Internships" };
     if (/^\/student\/explore\/[^/]+$/.test(pathname)) return { role: "student", page: "Internship Details" };
     if (pathname === "/student/applied") return { role: "student", page: "Applied Internships" };
+    if (pathname === "/student/feedback-history") return { role: "student", page: "Feedback History" };
     if (pathname === "/student/resume") return { role: "student", page: "My Resume" };
     if (pathname === "/student/profile") return { role: "student", page: "Edit Profile" };
     if (pathname === "/student/settings") return { role: "student", page: "Settings" };
@@ -229,6 +231,7 @@ function App() {
           <Route path="/student/explore" element={<StudentProfileRequiredRoute><ExploreInternships /></StudentProfileRequiredRoute>} />
           <Route path="/student/explore/:id" element={<StudentProfileRequiredRoute><InternshipDetails /></StudentProfileRequiredRoute>} />
           <Route path="/student/applied" element={<StudentProfileRequiredRoute><AppliedInternships /></StudentProfileRequiredRoute>} />
+          <Route path="/student/feedback-history" element={<StudentProfileRequiredRoute><FeedbackHistory /></StudentProfileRequiredRoute>} />
           <Route path="/student/resume" element={<StudentProfileRequiredRoute><MyResume /></StudentProfileRequiredRoute>} />
           <Route path="/student/watchlist" element={<StudentProfileRequiredRoute><SavedInternshipsPro /></StudentProfileRequiredRoute>} />
           <Route path="/student/profile" element={<StudentProfileRequiredRoute requireCompletion={false}><StudentProfile /></StudentProfileRequiredRoute>} />
@@ -291,5 +294,6 @@ function App() {
 }
 
 export default App;
+
 
 

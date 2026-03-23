@@ -9,6 +9,8 @@ import {
   createNotification,
   runNotificationTask,
 } from "../services/notificationService.js";
+import { normalizeSkillArray } from "../utils/skillNormalization.js";
+import { scoreStudentForInternship } from "../services/recommendationService.js";
 
 const APPLICATION_STATUSES = [
   "APPLIED",
@@ -19,6 +21,46 @@ const APPLICATION_STATUSES = [
 ];
 const INTERVIEW_STATUSES = ["SCHEDULED", "COMPLETED", "CANCELLED", "NO_SHOW"];
 const INTERVIEW_MODES = ["ONLINE", "OFFLINE", "PHONE"];
+
+const normalizeInternshipForScoring = (internship = {}, applicationsCount = 0) => ({
+  id: String(internship?._id || internship?.id || ""),
+  _id: internship?._id || internship?.id || "",
+  title: internship?.title || "",
+  skills: normalizeSkillArray(
+    Array.isArray(internship?.skill_req)
+      ? internship.skill_req
+      : Array.isArray(internship?.skills)
+        ? internship.skills
+        : []
+  ),
+  skill_req: normalizeSkillArray(
+    Array.isArray(internship?.skill_req)
+      ? internship.skill_req
+      : Array.isArray(internship?.skills)
+        ? internship.skills
+        : []
+  ),
+  about_work: internship?.about_work || "",
+  who_can_apply: internship?.who_can_apply || "",
+  other_req: internship?.other_req || "",
+  location: internship?.location || "",
+  workmode: internship?.workmode || internship?.mode || "",
+  mode: internship?.mode || internship?.workmode || "",
+  createdAt: internship?.createdAt || null,
+  applicationsCount: Number(applicationsCount || 0),
+});
+
+const rankComparator = (a, b) => {
+  const scoreDiff = Number(b?.aiScore || 0) - Number(a?.aiScore || 0);
+  if (scoreDiff !== 0) return scoreDiff;
+
+  const eligibilityWeight = (value) => (value === true ? 1 : value === false ? 0 : 0.5);
+  const eligibilityDiff =
+    eligibilityWeight(b?.scoreMeta?.eligibilityMatch) - eligibilityWeight(a?.scoreMeta?.eligibilityMatch);
+  if (eligibilityDiff !== 0) return eligibilityDiff;
+
+  return new Date(b?.appliedAt || 0).getTime() - new Date(a?.appliedAt || 0).getTime();
+};
 
 const resolveRecruiterApplicationContext = async (recruiterId, internshipId, studentId) => {
   if (
@@ -163,20 +205,30 @@ export const getRecruiterApplicants = async (req, res) => {
   try {
     const internships = await Internship.find(
       { recruiter_id: req.recruiter?._id },
-      { _id: 1, title: 1 }
+      {
+        _id: 1,
+        title: 1,
+        skill_req: 1,
+        about_work: 1,
+        who_can_apply: 1,
+        other_req: 1,
+        location: 1,
+        workmode: 1,
+        mode: 1,
+        createdAt: 1,
+      }
     ).lean();
 
     if (!internships.length) {
       return res.status(200).json({ applicants: [] });
     }
 
-    const internshipTitleMap = new Map(
-      internships.map((item) => [String(item._id), item.title])
-    );
+    const internshipIds = internships.map((item) => item._id);
+    const internshipTitleMap = new Map(internships.map((item) => [String(item._id), item.title || "Internship"]));
 
     const students = await Student.find(
       {
-        "appliedInternships.internship": { $in: internships.map((item) => item._id) },
+        "appliedInternships.internship": { $in: internshipIds },
       },
       {
         fname: 1,
@@ -190,6 +242,10 @@ export const getRecruiterApplicants = async (req, res) => {
         currentCourse: 1,
         cgpa: 1,
         skills: 1,
+        preferredLocation: 1,
+        projects: 1,
+        certificates: 1,
+        educations: 1,
         profilePic: 1,
         resume: 1,
         resumes: 1,
@@ -197,14 +253,53 @@ export const getRecruiterApplicants = async (req, res) => {
       }
     ).lean();
 
-    const applicants = [];
-
+    const applicationsCountMap = new Map();
     students.forEach((student) => {
-      const studentName = `${student.fname || ""} ${student.lname || ""}`.trim();
-
       (student.appliedInternships || []).forEach((entry) => {
         const internshipId = String(entry?.internship || "");
         if (!internshipTitleMap.has(internshipId)) return;
+        applicationsCountMap.set(internshipId, Number(applicationsCountMap.get(internshipId) || 0) + 1);
+      });
+    });
+
+    const internshipScoreMap = new Map(
+      internships.map((internship) => {
+        const internshipId = String(internship._id);
+        return [
+          internshipId,
+          normalizeInternshipForScoring(internship, applicationsCountMap.get(internshipId) || 0),
+        ];
+      })
+    );
+
+    const applicants = [];
+
+    for (const student of students) {
+      const studentName = `${student.fname || ""} ${student.lname || ""}`.trim();
+
+      for (const entry of student.appliedInternships || []) {
+        const internshipId = String(entry?.internship || "");
+        if (!internshipTitleMap.has(internshipId)) continue;
+
+        const internshipForScore = internshipScoreMap.get(internshipId);
+        let aiScore = 0;
+        let scoreBreakdown = {};
+        let scoreMeta = { eligibilityMatch: null };
+
+        if (internshipForScore) {
+          try {
+            const ranked = await scoreStudentForInternship(student, internshipForScore);
+            aiScore = Number(ranked?.score || 0);
+            scoreBreakdown = ranked?.scoreBreakdown || {};
+            scoreMeta = {
+              eligibilityMatch: ranked?.eligibilityMatch ?? null,
+            };
+          } catch {
+            aiScore = 0;
+            scoreBreakdown = {};
+            scoreMeta = { eligibilityMatch: null };
+          }
+        }
 
         applicants.push({
           applicationId: `${student._id}:${internshipId}`,
@@ -219,6 +314,10 @@ export const getRecruiterApplicants = async (req, res) => {
           selectedAt: entry?.selectedAt || null,
           rejectedAt: entry?.rejectedAt || null,
           statusHistory: Array.isArray(entry?.statusHistory) ? entry.statusHistory : [],
+          aiScore: Number.isFinite(aiScore) ? Number(aiScore.toFixed(2)) : 0,
+          rank: null,
+          scoreBreakdown,
+          scoreMeta,
           student: {
             name: studentName || "Unnamed Student",
             email: student.email || "",
@@ -235,18 +334,41 @@ export const getRecruiterApplicants = async (req, res) => {
             resumeName: entry?.resumeName || "",
           },
         });
+      }
+    }
+
+    const grouped = new Map();
+    applicants.forEach((applicant) => {
+      const internshipId = String(applicant.internshipId || "");
+      if (!grouped.has(internshipId)) grouped.set(internshipId, []);
+      grouped.get(internshipId).push(applicant);
+    });
+
+    grouped.forEach((group) => {
+      group.sort(rankComparator);
+      group.forEach((item, index) => {
+        item.rank = index + 1;
       });
     });
 
-    applicants.sort((a, b) => new Date(b.appliedAt) - new Date(a.appliedAt));
+    applicants.sort((a, b) => {
+      if (String(a.internshipId) === String(b.internshipId)) {
+        return Number(a?.rank || Number.MAX_SAFE_INTEGER) - Number(b?.rank || Number.MAX_SAFE_INTEGER);
+      }
+      return new Date(b.appliedAt || 0).getTime() - new Date(a.appliedAt || 0).getTime();
+    });
 
-    return res.status(200).json({ applicants });
+    const sanitizedApplicants = applicants.map((item) => {
+      const { scoreMeta: _scoreMeta, ...rest } = item;
+      return rest;
+    });
+
+    return res.status(200).json({ applicants: sanitizedApplicants });
   } catch (error) {
     console.error("Recruiter applicants error:", error);
     return res.status(500).json({ message: "Server error" });
   }
 };
-
 export const updateApplicationStatus = async (req, res) => {
   try {
     const { internshipId, studentId } = req.params;
@@ -667,6 +789,10 @@ export const updateRecruiterInterview = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+
+
+
 
 
 

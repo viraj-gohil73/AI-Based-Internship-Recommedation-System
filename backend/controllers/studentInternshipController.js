@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Internship from "../models/Internship.js";
 import Student from "../models/Student.js";
 import InternshipFeedback from "../models/InternshipFeedback.js";
+import Interview from "../models/Interview.js";
 import {
   createNotification,
   runNotificationTask,
@@ -208,6 +209,53 @@ export const getAppliedInternships = async (req, res) => {
       ])
     );
 
+    const interviewRows = internshipIds.length
+      ? await Interview.find({
+          studentId: req.studentId,
+          internshipId: { $in: internshipIds },
+          status: { $ne: "CANCELLED" },
+        })
+          .select("internshipId scheduledAt durationMinutes mode meetingLink location notes status")
+          .lean()
+      : [];
+
+    const nowTs = Date.now();
+    const getInterviewPriority = (row) => {
+      const scheduledTs = new Date(row?.scheduledAt || 0).getTime();
+      const isUpcomingScheduled =
+        row?.status === "SCHEDULED" && Number.isFinite(scheduledTs) && scheduledTs >= nowTs;
+      if (isUpcomingScheduled) return 3;
+      if (row?.status === "SCHEDULED") return 2;
+      return 1;
+    };
+
+    const interviewMap = new Map();
+    for (const row of interviewRows) {
+      const internshipId = String(row?.internshipId || "");
+      if (!internshipId) continue;
+
+      const existing = interviewMap.get(internshipId);
+      if (!existing) {
+        interviewMap.set(internshipId, row);
+        continue;
+      }
+
+      const currentPriority = getInterviewPriority(row);
+      const existingPriority = getInterviewPriority(existing);
+      if (currentPriority > existingPriority) {
+        interviewMap.set(internshipId, row);
+        continue;
+      }
+
+      if (currentPriority === existingPriority) {
+        const currentTs = new Date(row?.scheduledAt || 0).getTime();
+        const existingTs = new Date(existing?.scheduledAt || 0).getTime();
+        if (currentTs > existingTs) {
+          interviewMap.set(internshipId, row);
+        }
+      }
+    }
+
     const appliedInternships = (student.appliedInternships || [])
       .filter((entry) => entry?.internship)
       .map((entry) => {
@@ -217,6 +265,7 @@ export const getAppliedInternships = async (req, res) => {
           hasFeedback: false,
           rating: 0,
         };
+        const interviewInfo = interviewMap.get(internshipId) || null;
         const internshipCompleted = isInternshipCompleted(entry.internship);
         const canGiveFeedback =
           (entry.status || "APPLIED") === "SELECTED" && internshipCompleted;
@@ -231,6 +280,13 @@ export const getAppliedInternships = async (req, res) => {
           canGiveFeedback,
           hasFeedback: feedbackInfo.hasFeedback,
           feedbackRating: feedbackInfo.rating,
+          interviewScheduledAt: interviewInfo?.scheduledAt || null,
+          interviewDurationMinutes: Number(interviewInfo?.durationMinutes || 0),
+          interviewMode: interviewInfo?.mode || "",
+          interviewMeetingLink: interviewInfo?.meetingLink || "",
+          interviewLocation: interviewInfo?.location || "",
+          interviewNotes: interviewInfo?.notes || "",
+          interviewStatus: interviewInfo?.status || "",
         };
       });
 

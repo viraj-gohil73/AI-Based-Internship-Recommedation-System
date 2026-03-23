@@ -13,7 +13,7 @@ import {
   saveInternship,
   unsaveInternship,
 } from "../controllers/studentInternshipController.js";
-import { submitInternshipFeedback } from "../controllers/feedbackController.js";
+import { submitInternshipFeedback, getStudentFeedbackHistory } from "../controllers/feedbackController.js";
 import { getStudentRecommendations } from "../controllers/studentRecommendationController.js";
 
 const router = express.Router();
@@ -29,5 +29,7 @@ router.post("/internships/:internshipId/save", studentAuth, saveInternship);
 router.delete("/internships/:internshipId/save", studentAuth, unsaveInternship);
 router.post("/internships/:internshipId/apply", studentAuth, applyInternship);
 router.post("/internships/:internshipId/feedback", studentAuth, submitInternshipFeedback);
+router.get("/feedback/history", studentAuth, getStudentFeedbackHistory);
 
 export default router;
+

@@ -45,7 +45,9 @@ const logAdminAction = async ({
 export const getSubmittedCompanies = async (req, res) => {
   try {
     const companies = await Company.find({
-      verificationStatus: { $in: ["SUBMITTED"] },
+      verificationStatus: {
+        $in: ["MANUAL_APPROVAL", "SUBMITTED", "RESUBMISSION", "PENDING_VERIFICATION"],
+      },
     }).sort({ createdAt: -1 });
 
     return res.status(200).json({
@@ -65,18 +67,86 @@ export const getSubmittedCompanies = async (req, res) => {
    ADMIN RESPONSE: APPROVE / REJECT / RESUBMIT
 ===================================================== */
 
+const ADMIN_ACTION_TO_STATUS = {
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+  RESUBMISSION: "RESUBMISSION",
+  MANUAL_APPROVAL: "MANUAL_APPROVAL",
+};
+
+const ADMIN_DECISION_TO_STATUS = {
+  APPROVE: "APPROVED",
+  REJECT: "REJECTED",
+  HOLD: "MANUAL_APPROVAL",
+  RESUBMIT: "AUTO_RESUBMIT",
+};
+
+const updateCompanyDecision = async ({ company, status, actor, reason, source }) => {
+  company.verificationStatus = status;
+  company.verification = {
+    ...(company.verification || {}),
+    decision:
+      status === "APPROVED"
+        ? "AUTO_APPROVED"
+        : status === "MANUAL_APPROVAL"
+          ? "MANUAL_APPROVAL"
+          : status === "AUTO_RESUBMIT"
+            ? "AUTO_RESUBMIT"
+            : "AUTO_REJECT",
+    adminDecisionReason: reason || null,
+    adminDecidedAt: new Date(),
+  };
+  await company.save();
+
+  await runNotificationTask(`admin-company-decision-${source}`, async () => {
+    await createNotification({
+      recipientModel: "Company",
+      recipientId: company._id,
+      type: "COMPANY_VERIFICATION_UPDATED",
+      title: "Verification status updated",
+      message: `Your company verification status is now ${status}.`,
+      entityType: "Company",
+      entityId: company._id,
+      metadata: {
+        status,
+        actor,
+        source,
+        reason: reason || null,
+      },
+    });
+
+    await notifyAdmins({
+      type: "COMPANY_VERIFICATION_UPDATED",
+      title: "Company verification updated",
+      message: `${company.companyName || company.email} marked as ${status}.`,
+      entityType: "Company",
+      entityId: company._id,
+      metadata: { status, actor, source, reason: reason || null },
+    });
+  });
+
+  await logAdminAction({
+    action: `Company ${status.toLowerCase()} (${source})`,
+    actor,
+    target: company.companyName || company.email,
+    type: "COMPANY",
+    severity: status === "REJECTED" ? "HIGH" : "MEDIUM",
+    meta: {
+      companyId: company._id,
+      status,
+      source,
+      reason: reason || null,
+    },
+  });
+};
+
 export const respondToCompany = async (req, res) => {
   try {
     const { id } = req.params;
-    const { action } = req.body;
+    const { action, reason } = req.body;
+    const actor = getActor(req);
 
-    // allowed admin actions
-    const allowedActions = [
-      "APPROVED",
-      "REJECTED",
-      "RESUBMISSION",
-    ];
-
+    const allowedActions = Object.keys(ADMIN_ACTION_TO_STATUS);
     if (!allowedActions.includes(action)) {
       return res.status(400).json({
         success: false,
@@ -85,7 +155,6 @@ export const respondToCompany = async (req, res) => {
     }
 
     const company = await Company.findById(id);
-
     if (!company) {
       return res.status(404).json({
         success: false,
@@ -93,53 +162,18 @@ export const respondToCompany = async (req, res) => {
       });
     }
 
-    // Only allow response if company is submitted or resubmitted
-    if (
-      !["SUBMITTED", "RESUBMISSION"].includes(
-        company.verificationStatus
-      )
-    ) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Company is not in approval state",
-      });
-    }
-
-    company.verificationStatus = action;
-    await company.save();
-    await runNotificationTask("admin-respond-company", async () => {
-      await createNotification({
-        recipientModel: "Company",
-        recipientId: company._id,
-        type: "COMPANY_VERIFICATION_UPDATED",
-        title: "Verification status updated",
-        message: `Your company verification status is now ${action}.`,
-        entityType: "Company",
-        entityId: company._id,
-      });
-
-      await notifyAdmins({
-        type: "COMPANY_VERIFICATION_UPDATED",
-        title: "Company verification updated",
-        message: `${company.companyName || company.email} marked as ${action}.`,
-        entityType: "Company",
-        entityId: company._id,
-        metadata: { action, actor: getActor(req) },
-      });
-    });
-    await logAdminAction({
-      action: `Company ${action.toLowerCase()}`,
-      actor: getActor(req),
-      target: company.companyName || company.email,
-      type: "COMPANY",
-      severity: action === "REJECTED" ? "HIGH" : "MEDIUM",
-      meta: { companyId: company._id, status: action },
+    const targetStatus = ADMIN_ACTION_TO_STATUS[action];
+    await updateCompanyDecision({
+      company,
+      status: targetStatus,
+      actor,
+      reason,
+      source: "legacy-respond",
     });
 
     return res.status(200).json({
       success: true,
-      message: `Company ${action.toLowerCase()} successfully`,
+      message: `Company ${targetStatus.toLowerCase()} successfully`,
       data: {
         companyId: company._id,
         verificationStatus: company.verificationStatus,
@@ -149,6 +183,54 @@ export const respondToCompany = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to update company status",
+    });
+  }
+};
+
+export const adminCompanyDecision = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { decision, reason } = req.body;
+    const actor = getActor(req);
+
+    const allowedDecisions = Object.keys(ADMIN_DECISION_TO_STATUS);
+    if (!allowedDecisions.includes(decision)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid decision. Allowed: APPROVE, REJECT, HOLD, RESUBMIT",
+      });
+    }
+
+    const company = await Company.findById(id);
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found",
+      });
+    }
+
+    const targetStatus = ADMIN_DECISION_TO_STATUS[decision];
+    await updateCompanyDecision({
+      company,
+      status: targetStatus,
+      actor,
+      reason,
+      source: "admin-decision",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Decision applied: ${decision}`,
+      data: {
+        companyId: company._id,
+        decision,
+        verificationStatus: company.verificationStatus,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to apply admin decision",
     });
   }
 };
@@ -193,7 +275,7 @@ export const getCompanyDetails = async (req, res) => {
 export const getApprovedCompanies = async (req, res) => {
   try {
     const companies = await Company.find({
-      verificationStatus: "APPROVED",
+      verificationStatus: { $in: ["APPROVED", "AUTO_APPROVED"] },
     }).sort({ createdAt: -1 });
 
     res.status(200).json(companies);
@@ -885,4 +967,10 @@ export const getAuditLogs = async (req, res) => {
     });
   }
 };
+
+
+
+
+
+
 

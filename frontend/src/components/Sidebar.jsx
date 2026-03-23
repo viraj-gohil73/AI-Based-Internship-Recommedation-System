@@ -1,6 +1,6 @@
 import {
   Brain, Search, GraduationCap,
-  FileText, Bookmark, User,
+  FileText, Bookmark, User, MessageSquare,
   Settings, LogOut, X
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -108,6 +108,7 @@ export default function Sidebar({ open, onClose }) {
     { name: "Smart Recommendations", icon: Brain, path: "/student/ai-recommend" },
     { name: "Browse Internships", icon: Search, path: "/student/explore" },
     { name: "My  Applications", icon: GraduationCap, path: "/student/applied" },
+    { name: "Feedback History", icon: MessageSquare, path: "/student/feedback-history" },
     { name: "My Resume", icon: FileText, path: "/student/resume" },
     { name: "Saved Intenship", icon: Bookmark, path: "/student/watchlist" },
     { name: "My Profile", icon: User, path: "/student/profile" },
@@ -191,3 +192,4 @@ export default function Sidebar({ open, onClose }) {
     </>
   );
 }
+

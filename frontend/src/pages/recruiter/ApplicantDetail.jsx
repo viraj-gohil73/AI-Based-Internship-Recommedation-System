@@ -10,6 +10,9 @@ import {
   MapPin,
   Phone,
   UserCircle2,
+  Award,
+  FolderKanban,
+  ExternalLink,
 } from "lucide-react";
 
 const STATUS_ACTIONS = [
@@ -154,6 +157,8 @@ export default function ApplicantDetail() {
   const student = payload.student || {};
   const interviews = Array.isArray(payload.interviews) ? payload.interviews : [];
   const skills = Array.isArray(student.skills) ? student.skills : [];
+  const projects = Array.isArray(student.projects) ? student.projects : [];
+  const certificates = Array.isArray(student.certificates) ? student.certificates : [];
   const currentStatus = payload.application?.status || "APPLIED";
 
   return (
@@ -249,6 +254,74 @@ export default function ApplicantDetail() {
                   )}
                 </div>
               </div>
+
+              <div className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50/60 p-3">
+                <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-cyan-700">
+                  <FolderKanban size={14} /> Projects
+                </p>
+                <div className="mt-2 space-y-2">
+                  {projects.length ? (
+                    projects.map((project, index) => (
+                      <div key={`${project?.title || "project"}-${index}`} className="rounded-lg border border-cyan-200 bg-white p-3">
+                        <p className="text-sm font-semibold text-slate-900">{project?.title || "Untitled Project"}</p>
+                        {project?.projectType ? (
+                          <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-cyan-700">{project.projectType}</p>
+                        ) : null}
+                        {project?.description ? <p className="mt-1 text-xs text-slate-600">{project.description}</p> : null}
+                        {project?.liveUrl ? (
+                          <a
+                            href={project.liveUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-cyan-700 hover:underline"
+                          >
+                            <ExternalLink size={12} />
+                            View project
+                          </a>
+                        ) : null}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-500">No projects added.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/60 p-3">
+                <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-violet-700">
+                  <Award size={14} /> Certificates
+                </p>
+                <div className="mt-2 space-y-2">
+                  {certificates.length ? (
+                    certificates.map((certificate, index) => (
+                      <div
+                        key={`${certificate?.name || certificate?.certificateType || "certificate"}-${index}`}
+                        className="rounded-lg border border-violet-200 bg-white p-3"
+                      >
+                        <p className="text-sm font-semibold text-slate-900">
+                          {certificate?.name || certificate?.certificateType || "Certificate"}
+                        </p>
+                        {certificate?.issuingOrganization || certificate?.issuedBy ? (
+                          <p className="mt-1 text-xs text-slate-600">{certificate.issuingOrganization || certificate.issuedBy}</p>
+                        ) : null}
+                        {certificate?.certificateFile ? (
+                          <a
+                            href={certificate.certificateFile}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-violet-700 hover:underline"
+                          >
+                            <ExternalLink size={12} />
+                            View certificate
+                          </a>
+                        ) : null}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-500">No certificates added.</p>
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -328,3 +401,4 @@ export default function ApplicantDetail() {
     </div>
   );
 }
+

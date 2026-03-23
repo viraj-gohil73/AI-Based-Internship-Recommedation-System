@@ -136,7 +136,7 @@ export const getCompanyUsage = async (companyId) => {
 
 export const computeEntitlements = ({ company, subscription }) => {
   const now = new Date();
-  const approved = company?.verificationStatus === "APPROVED";
+  const approved = ["APPROVED", "AUTO_APPROVED"].includes(company?.verificationStatus);
   const hasPayStatus = [
     SUBSCRIPTION_STATUSES.TRIAL,
     SUBSCRIPTION_STATUSES.ACTIVE,
@@ -290,3 +290,4 @@ export const applyPaidCycleToSubscription = async ({
 
   return subscription;
 };
+

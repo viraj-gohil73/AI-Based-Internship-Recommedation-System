@@ -15,6 +15,8 @@ import {
   ExternalLink,
   X,
   BriefcaseBusiness,
+  Award,
+  FolderKanban,
 } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -45,6 +47,17 @@ const formatDate = (value) => {
   if (!value) return "-";
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString("en-IN");
+};
+
+const formatAiScore = (value) => {
+  const score = Number(value);
+  if (!Number.isFinite(score)) return "0.00";
+  return score.toFixed(2);
+};
+
+const formatRank = (value) => {
+  const rank = Number(value);
+  return Number.isFinite(rank) && rank > 0 ? `#${rank}` : "-";
 };
 
 const actionTimelineRows = (applicant = {}) => {
@@ -101,6 +114,9 @@ const normalizeStudentProfile = (rawStudent = {}, fallback = {}) => {
   const latestEducation = getLatestEducation(source.educations ?? fallback.educations);
   const derivedCurrentCourse = getCurrentCourseFromEducation(latestEducation);
   const derivedCgpa = getCgpaFromEducation(latestEducation);
+  const derivedCurrentLocation = [source.city || fallback.city || "", source.state || fallback.state || ""]
+    .filter(Boolean)
+    .join(", ");
 
   return {
     ...source,
@@ -113,6 +129,8 @@ const normalizeStudentProfile = (rawStudent = {}, fallback = {}) => {
     phone_no: source.phone_no || source.phone || fallback.phone || "",
     city: source.city || fallback.city || "",
     state: source.state || fallback.state || "",
+    currentLocation:
+      source.currentLocation || fallback.currentLocation || derivedCurrentLocation || "",
     preferredLocation:
       source.preferredLocation || source.currentLocation || fallback.preferredLocation || "",
     dob: source.dob || "",
@@ -122,6 +140,8 @@ const normalizeStudentProfile = (rawStudent = {}, fallback = {}) => {
     resume: source.resume || fallback.resume || "",
     skills,
     educations: toArray(source.educations),
+    projects: toArray(source.projects),
+    certificates: toArray(source.certificates),
     socialLinks: normalizeSocialLinks(source.socialLinks),
   };
 };
@@ -143,6 +163,8 @@ export default function Applicants() {
 
   const studentSkills = Array.isArray(selectedStudent?.skills) ? selectedStudent.skills : [];
   const studentEducations = Array.isArray(selectedStudent?.educations) ? selectedStudent.educations : [];
+  const studentProjects = Array.isArray(selectedStudent?.projects) ? selectedStudent.projects : [];
+  const studentCertificates = Array.isArray(selectedStudent?.certificates) ? selectedStudent.certificates : [];
   const studentSocialLinks = Array.isArray(selectedStudent?.socialLinks) ? selectedStudent.socialLinks : [];
 
   const fetchData = async () => {
@@ -220,13 +242,30 @@ export default function Applicants() {
   );
 
   const filteredApplicants = useMemo(() => {
-    return applicantsBySelectedInternship.filter((item) => {
-      const searchTerm = search.trim().toLowerCase();
-      const fullText = `${item?.student?.name || ""} ${item?.student?.email || ""}`.toLowerCase();
-      const matchesSearch = !searchTerm || fullText.includes(searchTerm);
-      const matchesStatus = statusFilter === "ALL" || item.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
+    return applicantsBySelectedInternship
+      .filter((item) => {
+        const searchTerm = search.trim().toLowerCase();
+        const fullText = `${item?.student?.name || ""} ${item?.student?.email || ""}`.toLowerCase();
+        const matchesSearch = !searchTerm || fullText.includes(searchTerm);
+        const matchesStatus = statusFilter === "ALL" || item.status === statusFilter;
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => {
+        const rankA = Number(a?.rank);
+        const rankB = Number(b?.rank);
+
+        if (Number.isFinite(rankA) && Number.isFinite(rankB) && rankA !== rankB) {
+          return rankA - rankB;
+        }
+
+        if (Number.isFinite(rankA) && !Number.isFinite(rankB)) return -1;
+        if (!Number.isFinite(rankA) && Number.isFinite(rankB)) return 1;
+
+        const scoreDiff = Number(b?.aiScore || 0) - Number(a?.aiScore || 0);
+        if (scoreDiff !== 0) return scoreDiff;
+
+        return new Date(b?.appliedAt || 0).getTime() - new Date(a?.appliedAt || 0).getTime();
+      });
   }, [applicantsBySelectedInternship, search, statusFilter]);
 
   const internshipCards = useMemo(() => {
@@ -433,32 +472,34 @@ export default function Applicants() {
 
         <section className="overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="min-w-[960px] w-full text-sm">
+            <table className="min-w-[1120px] w-full text-sm">
               <thead className="bg-gradient-to-r from-blue-700 to-indigo-600 text-white">
                 <tr>
                   <th className="px-4 py-3 text-left">Student</th>
                   <th className="px-4 py-3 text-left">Applied On</th>
+                  <th className="px-4 py-3 text-left">Rank</th>
+                  <th className="px-4 py-3 text-left">AI Score</th>
                   <th className="px-4 py-3 text-left">Status</th>
-                  <th className="px-4 py-3 text-left w-[240px]">Action Track</th>
+                  <th className="px-4 py-3 text-left w-[20px]">Action Track</th>
                   <th className="px-6 py-3 text-left w-[380px]">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                       Loading applicants...
                     </td>
                   </tr>
                 ) : !selectedInternshipId ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                       Select an internship to view applicants.
                     </td>
                   </tr>
                 ) : filteredApplicants.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                       No applicants found for this internship.
                     </td>
                   </tr>
@@ -485,6 +526,16 @@ export default function Applicants() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-slate-700">{formatDate(applicant.appliedAt)}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                          {formatRank(applicant.rank)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                          {formatAiScore(applicant.aiScore)}
+                        </span>
+                      </td>
                       <td className="px-6 py-3">
                         <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusClasses(applicant.status)}`}>
                           {applicant.status}
@@ -634,8 +685,9 @@ export default function Applicants() {
                 <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Preferences</h3>
                   <div className="mt-2 text-sm text-slate-700">
-                    <p>
-                      <span className="text-slate-500">Preferred Location:</span> {selectedStudent.preferredLocation || "-"}
+                    
+                    <p className="mt-2">
+                      <span className="text-slate-500">Current Location:</span> {selectedStudent.preferredLocation || "-"}
                     </p>
                     <p className="mt-2">
                       <span className="text-slate-500">Date of Birth:</span> {formatDate(selectedStudent.dob)}
@@ -748,6 +800,95 @@ export default function Applicants() {
                     <p className="mt-2 text-sm text-slate-500">No education details found.</p>
                   )}
                 </div>
+
+                <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <FolderKanban size={16} className="text-slate-600" /> Projects
+                  </h3>
+                  {studentProjects.length ? (
+                    <div className="mt-3 space-y-3">
+                      {studentProjects.map((project, idx) => (
+                        <div key={`${project?.title || "project"}-${idx}`} className="rounded-xl border border-cyan-200 bg-white p-3">
+                          <p className="font-medium text-slate-900">{project?.title || "Untitled Project"}</p>
+                          {project?.projectType ? (
+                            <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-cyan-700">{project.projectType}</p>
+                          ) : null}
+                          {project?.description ? (
+                            <p className="mt-2 text-sm text-slate-600">{project.description}</p>
+                          ) : null}
+                          {Array.isArray(project?.techStack) && project.techStack.length ? (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {project.techStack.map((tech) => (
+                                <span
+                                  key={`${project?.title || "project"}-${tech}`}
+                                  className="rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700"
+                                >
+                                  {tech}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                          {project?.liveUrl ? (
+                            <a
+                              href={project.liveUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-700 hover:underline"
+                            >
+                              <ExternalLink size={12} />
+                              View Project
+                            </a>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm text-slate-500">No projects added.</p>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+                  <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <Award size={16} className="text-slate-600" /> Certificates
+                  </h3>
+                  {studentCertificates.length ? (
+                    <div className="mt-3 space-y-3">
+                      {studentCertificates.map((certificate, idx) => (
+                        <div
+                          key={`${certificate?.name || certificate?.certificateType || "certificate"}-${idx}`}
+                          className="rounded-xl border border-violet-200 bg-white p-3"
+                        >
+                          <p className="font-medium text-slate-900">
+                            {certificate?.name || certificate?.certificateType || "Certificate"}
+                          </p>
+                          {certificate?.issuingOrganization || certificate?.issuedBy ? (
+                            <p className="mt-1 text-sm text-slate-600">
+                              {certificate.issuingOrganization || certificate.issuedBy}
+                            </p>
+                          ) : null}
+                          {certificate?.issueDate || certificate?.completionDate ? (
+                            <p className="mt-1 text-xs text-slate-500">
+                              Issued: {formatDate(certificate.issueDate || certificate.completionDate)}
+                            </p>
+                          ) : null}
+                          {certificate?.certificateFile ? (
+                            <a
+                              href={certificate.certificateFile}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-violet-700 hover:underline"
+                            >
+                              <ExternalLink size={12} />
+                              View Certificate
+                            </a>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-sm text-slate-500">No certificates added.</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -762,12 +903,6 @@ export default function Applicants() {
     </div>
   );
 }
-
-
-
-
-
-
 
 
 

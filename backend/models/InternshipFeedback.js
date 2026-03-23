@@ -37,6 +37,22 @@ const internshipFeedbackSchema = new mongoose.Schema(
       trim: true,
       maxlength: 1500,
     },
+    companyReply: {
+      message: {
+        type: String,
+        trim: true,
+        maxlength: 1500,
+      },
+      repliedAt: {
+        type: Date,
+        default: null,
+      },
+      repliedByCompanyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Company",
+        default: null,
+      },
+    },
   },
   { timestamps: true }
 );
@@ -48,3 +64,4 @@ internshipFeedbackSchema.index(
 internshipFeedbackSchema.index({ companyId: 1, createdAt: -1 });
 
 export default mongoose.model("InternshipFeedback", internshipFeedbackSchema);
+

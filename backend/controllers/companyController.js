@@ -155,7 +155,7 @@ export const getApprovalCompanies = async (req, res) => {
   try {
     const companies = await Company.find({
       verificationStatus: {
-        $in: ["SUBMITTED", "RESUBMISSION"],
+        $in: ["SUBMITTED", "RESUBMISSION", "MANUAL_APPROVAL", "PENDING_VERIFICATION"],
       },
     }).sort({ createdAt: -1 });
     console.log("hit req")
@@ -165,3 +165,4 @@ export const getApprovalCompanies = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+

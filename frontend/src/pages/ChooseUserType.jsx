@@ -27,7 +27,7 @@ export default function ChooseUserType() {
   const handleContinue = () => {
     const routes = {
       student: "/register-student",
-      recruiter: "/register-company",
+      recruiter: "/auth/company/register",
     };
 
     if (!selectedRole) return;

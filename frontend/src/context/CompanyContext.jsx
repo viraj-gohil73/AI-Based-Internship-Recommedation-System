@@ -7,7 +7,6 @@ export function CompanyProvider({ children }) {
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ---------------- FETCH COMPANY ---------------- */
   useEffect(() => {
     if (company) {
       setLoading(false);
@@ -18,14 +17,11 @@ export function CompanyProvider({ children }) {
       try {
         const token = localStorage.getItem("token");
 
-        const res = await fetch(
-          `${API_BASE_URL}/api/company/me`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const res = await fetch(`${API_BASE_URL}/api/company/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
         const data = await res.json();
 
@@ -53,39 +49,36 @@ export function CompanyProvider({ children }) {
           mobile: data.data.mobile || "",
           reg_doc: data.data.reg_doc || "",
           verificationStatus: data.data.verificationStatus || "DRAFT",
+          verification: data.data.verification || {},
         });
-    } catch (err) {
-      console.error("Company fetch error", err);
-      if (err instanceof TypeError) {
-        console.error(
-          "Network error while fetching company profile. Check backend server, API URL, and CORS."
-        );
+      } catch (err) {
+        console.error("Company fetch error", err);
+        if (err instanceof TypeError) {
+          console.error(
+            "Network error while fetching company profile. Check backend server, API URL, and CORS."
+          );
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
     };
 
     fetchCompany();
   }, [company]);
 
-  /* ---------------- UPDATE COMPANY ---------------- */
   const updateCompany = async (updatedData) => {
     try {
       const token = localStorage.getItem("token");
       setLoading(true);
 
-      const res = await fetch(
-        `${API_BASE_URL}/api/company/update`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(updatedData),
-        }
-      );
+      const res = await fetch(`${API_BASE_URL}/api/company/update`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedData),
+      });
 
       const data = await res.json();
 
@@ -93,7 +86,6 @@ export function CompanyProvider({ children }) {
         throw new Error(data.message || "Update failed");
       }
 
-      // ✅ merge instead of overwrite
       setCompany((prev) => ({
         ...prev,
         ...data.company,
@@ -120,7 +112,6 @@ export function CompanyProvider({ children }) {
   );
 }
 
-/* ---------------- SAFE HOOK ---------------- */
 export const useCompany = () => {
   const ctx = useContext(CompanyContext);
   if (!ctx) {

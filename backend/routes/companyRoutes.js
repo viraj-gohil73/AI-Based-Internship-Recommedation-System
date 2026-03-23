@@ -1,10 +1,16 @@
 import express from "express";
 import passport from "passport";
 import { companyAuth } from "../middlewares/companyAuth.js";
-import { getMyCompany, submitVerification } from "../controllers/company.js";
+import {
+  getMyCompany,
+  submitVerification,
+  submitCompanyProfile,
+  getCompanyVerificationStatus,
+  resubmitCompanyProfile,
+} from "../controllers/company.js";
 import { sendOtp } from "../api/auth/sendotpCompany.js";
 import { verifyOtp } from "../api/auth/verify-otp.js";
-import { updateCompany, updateCompanyLogo, getApprovalCompanies } from "../controllers/companyController.js";
+import { updateCompany, updateCompanyLogo } from "../controllers/companyController.js";
 import { createRecruiter } from "../controllers/recruitercontroller.js";
 import { getRecruiters } from "../controllers/recruitercontroller.js";
 import { updateRecruiter, getRecruiterById, updateRecruiterstatus } from "../controllers/recruitercontroller.js";
@@ -19,7 +25,7 @@ import {
   updateCompanyInternship,
   updateCompanyInternshipStatus,
 } from "../controllers/companyInternshipController.js";
-import { listCompanyReviews } from "../controllers/feedbackController.js";
+import { listCompanyReviews, replyToCompanyReview } from "../controllers/feedbackController.js";
 const router = express.Router();
 
 /* ================= OTP ================= */
@@ -39,14 +45,15 @@ router.get(
   })
 );
 
-router.patch("/update",companyAuth, updateCompany);
+router.patch("/update", companyAuth, updateCompany);
 router.put("/update-logo", companyAuth, updateCompanyLogo);
 
-router.post(
-  "/submit-verification",
-  companyAuth,
-  submitVerification
-);
+router.post("/profile", companyAuth, submitCompanyProfile);
+router.get("/:id/verification-status", companyAuth, getCompanyVerificationStatus);
+router.post("/:id/resubmit", companyAuth, resubmitCompanyProfile);
+
+// Backward compatible endpoint
+router.post("/submit-verification", companyAuth, submitVerification);
 
 router.post(
   "/recruiter/add",
@@ -54,7 +61,7 @@ router.post(
   requireSubscriptionFeature("RECRUITER_CREATE"),
   createRecruiter
 );
-router.get("/recruiters",companyAuth, getRecruiters);
+router.get("/recruiters", companyAuth, getRecruiters);
 router.put("/recruiter/:id", companyAuth, updateRecruiter);
 router.patch("/recruiter/:id/status", companyAuth, updateRecruiterstatus);
 router.get("/recruiter/:id", companyAuth, getRecruiterById);
@@ -64,6 +71,7 @@ router.get("/internships/:id", companyAuth, getCompanyInternshipById);
 router.patch("/internships/:id", companyAuth, updateCompanyInternship);
 router.patch("/internships/:id/status", companyAuth, updateCompanyInternshipStatus);
 router.get("/reviews", companyAuth, listCompanyReviews);
+router.post("/reviews/:feedbackId/reply", companyAuth, replyToCompanyReview);
 
 router.get("/subscription/plans", companyAuth, listSubscriptionPlans);
 router.get("/subscription/current", companyAuth, getCurrentCompanySubscription);
@@ -73,12 +81,12 @@ router.get(
   passport.authenticate("google-company", { session: false }),
   (req, res) => {
     const { token } = req.user;
-    console.log("token",req.user);
+    console.log("token", req.user);
     //res.redirect(`http://localhost:5173/company/dashboard/profile?token=${token}&role=company`);
-    res.redirect(
-  `http://localhost:5173/company/google-success?token=${token}&role=company`
-);
+    res.redirect(`http://localhost:5173/company/google-success?token=${token}&role=company`);
   }
 );
 
 export default router;
+
+

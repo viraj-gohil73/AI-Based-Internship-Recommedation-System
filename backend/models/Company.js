@@ -1,84 +1,196 @@
 import mongoose from "mongoose";
 
-const Company = new mongoose.Schema({
-    email:{
-        type: String,
-        required: true,
-        unique: true,
+const checkResultSchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: ["PENDING", "PASS", "FAIL", "NEEDS_REVIEW"],
+      default: "PENDING",
     },
-    password:{
-        type: String,
+    score: {
+      type: Number,
+      default: 0,
     },
-    googleId:{
-        type: String,
+    reasons: {
+      type: [String],
+      default: [],
     },
-    linkedInId:{
-        type: String,
+    details: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    critical: {
+      type: Boolean,
+      default: false,
+    },
+    lastRunAt: {
+      type: Date,
+      default: null,
+    },
+  },
+  { _id: false }
+);
+
+const verificationSchema = new mongoose.Schema(
+  {
+    attemptCount: {
+      type: Number,
+      default: 0,
+    },
+    trustScore: {
+      type: Number,
+      default: 0,
+    },
+    decision: {
+      type: String,
+      enum: ["AUTO_APPROVED", "MANUAL_APPROVAL", "AUTO_RESUBMIT", "AUTO_REJECT", null],
+      default: null,
+    },
+    submittedAt: {
+      type: Date,
+      default: null,
+    },
+    lastEvaluatedAt: {
+      type: Date,
+      default: null,
+    },
+    resubmitBy: {
+      type: Date,
+      default: null,
+    },
+    criticalFlags: {
+      type: [String],
+      default: [],
+    },
+    checklist: {
+      type: [String],
+      default: [],
+    },
+    source: {
+      type: String,
+      default: null,
+    },
+    lastFailedChecks: {
+      type: [String],
+      default: [],
+    },
+    emailOtpVerified: {
+      type: Boolean,
+      default: false,
+    },
+    checks: {
+      companyInfo: { type: checkResultSchema, default: () => ({}) },
+      email: { type: checkResultSchema, default: () => ({}) },
+      domain: { type: checkResultSchema, default: () => ({}) },
+      gst: { type: checkResultSchema, default: () => ({}) },
+      fraud: { type: checkResultSchema, default: () => ({}) },
+    },
+    history: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
+  },
+  { _id: false }
+);
+
+const Company = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    password: {
+      type: String,
+    },
+    googleId: {
+      type: String,
+    },
+    linkedInId: {
+      type: String,
     },
     loginType: {
-        type: String,
-        enum: ["email", "google", "linkedin"],
-        default: "email"
+      type: String,
+      enum: ["email", "google", "linkedin"],
+      default: "email",
     },
-    companyName:{
-        type: String,
+    companyName: {
+      type: String,
     },
-    logo:{
-        type:String,
+    logo: {
+      type: String,
     },
-    tagline:{
-        type: String,
+    tagline: {
+      type: String,
     },
-    industry:{
-        type:String
+    industry: {
+      type: String,
     },
-    companySize:{
-        type:Number
+    companySize: {
+      type: Number,
     },
-    foundedYear:{
-        type:Number
+    foundedYear: {
+      type: Number,
     },
-    website:{
-        type:String
+    website: {
+      type: String,
     },
-    about:{
-        type:String
+    about: {
+      type: String,
     },
-    address1:{
-        type:String
+    address1: {
+      type: String,
     },
-    address2:{
-        type:String
+    address2: {
+      type: String,
     },
-    city:{
-        type:String
+    city: {
+      type: String,
     },
-    state:{
-        type:String
+    state: {
+      type: String,
     },
-    pincode:{
-        type:Number
+    pincode: {
+      type: Number,
     },
-    gst_no:{
-        type:String
+    gst_no: {
+      type: String,
     },
-    secondaryEmail:{
-        type:String
+    secondaryEmail: {
+      type: String,
     },
-    mobile:{
-        type:String,
+    mobile: {
+      type: String,
     },
-    reg_doc:{
-        type:String
-    }, 
+    reg_doc: {
+      type: String,
+    },
     verificationStatus: {
-        type: String,
-        enum: ["DRAFT", "RESUBMISSION", "SUBMITTED", "APPROVED", "REJECTED"],
-        default: "DRAFT",
+      type: String,
+      enum: [
+        "DRAFT",
+        "RESUBMISSION",
+        "SUBMITTED",
+        "APPROVED",
+        "REJECTED",
+        "PENDING_VERIFICATION",
+        "AUTO_APPROVED",
+        "MANUAL_APPROVAL",
+        "AUTO_RESUBMIT",
+        "AUTO_REJECT",
+      ],
+      default: "DRAFT",
     },
-    isactive:{
-        type:Boolean,
-        default:true
-    }
-},{timestamps: true});
+    verification: {
+      type: verificationSchema,
+      default: () => ({}),
+    },
+    isactive: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  { timestamps: true }
+);
+
 export default mongoose.model("Company", Company);

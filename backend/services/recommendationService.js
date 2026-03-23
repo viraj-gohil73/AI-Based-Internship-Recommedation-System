@@ -1,4 +1,4 @@
-﻿import crypto from "node:crypto";
+import crypto from "node:crypto";
 import { normalizeSkillArray } from "../utils/skillNormalization.js";
 
 const DEFAULT_LIMIT = 10;
@@ -821,6 +821,14 @@ const rankByRules = async (student = {}, internships = [], limit = DEFAULT_LIMIT
     return {
       internshipId: internship._id || internship.id,
       score: finalScore,
+      scoreBreakdown: {
+        skills: Number(skillScore.toFixed(2)),
+        project: Number(projectScore.toFixed(2)),
+        certificate: Number(certificateScore.toFixed(2)),
+        education: Number(educationScore.toFixed(2)),
+        location: Number(locationScore.toFixed(2)),
+        eligibility: Number(eligibilityScore.toFixed(2)),
+      },
       reasons,
       matchedSkills: matchedSkills.slice(0, 8),
       missingSkills: missingSkills.slice(0, 8),
@@ -875,6 +883,22 @@ const rankByRules = async (student = {}, internships = [], limit = DEFAULT_LIMIT
   return withExplanations;
 };
 
+export const scoreStudentForInternship = async (student = {}, internship = {}) => {
+  const normalized = {
+    ...internship,
+    id: internship?.id || internship?._id,
+    _id: internship?._id || internship?.id,
+    skills: Array.isArray(internship?.skills)
+      ? internship.skills
+      : Array.isArray(internship?.skill_req)
+        ? internship.skill_req
+        : [],
+    applicationsCount: Number(internship?.applicationsCount || 0),
+  };
+
+  const ranked = await rankByRules(student, [normalized], 1);
+  return ranked[0] || null;
+};
 export const fallbackRank = async (student = {}, internships = [], limit = DEFAULT_LIMIT) => {
   const items = await rankByRules(student, internships, limit);
   return {
@@ -954,5 +978,7 @@ export const getCachedOrFreshRecommendations = async ({
     rankingError,
   };
 };
+
+
 
 
