@@ -21,6 +21,7 @@ const APPLICATION_STATUSES = [
 ];
 const INTERVIEW_STATUSES = ["SCHEDULED", "COMPLETED", "CANCELLED", "NO_SHOW"];
 const INTERVIEW_MODES = ["ONLINE", "OFFLINE", "PHONE"];
+const SCORE_REASON_FALLBACK = "Score details unavailable for this candidate.";
 
 const normalizeInternshipForScoring = (internship = {}, applicationsCount = 0) => ({
   id: String(internship?._id || internship?.id || ""),
@@ -285,6 +286,8 @@ export const getRecruiterApplicants = async (req, res) => {
         let aiScore = 0;
         let scoreBreakdown = {};
         let scoreMeta = { eligibilityMatch: null };
+        let scoreExplanation = SCORE_REASON_FALLBACK;
+        let scoreReasons = [];
 
         if (internshipForScore) {
           try {
@@ -294,10 +297,19 @@ export const getRecruiterApplicants = async (req, res) => {
             scoreMeta = {
               eligibilityMatch: ranked?.eligibilityMatch ?? null,
             };
+            scoreExplanation =
+              typeof ranked?.explanation === "string" && ranked.explanation.trim()
+                ? ranked.explanation.trim()
+                : SCORE_REASON_FALLBACK;
+            scoreReasons = Array.isArray(ranked?.reasons)
+              ? ranked.reasons.filter((item) => typeof item === "string" && item.trim())
+              : [];
           } catch {
             aiScore = 0;
             scoreBreakdown = {};
             scoreMeta = { eligibilityMatch: null };
+            scoreExplanation = SCORE_REASON_FALLBACK;
+            scoreReasons = [];
           }
         }
 
@@ -317,6 +329,8 @@ export const getRecruiterApplicants = async (req, res) => {
           aiScore: Number.isFinite(aiScore) ? Number(aiScore.toFixed(2)) : 0,
           rank: null,
           scoreBreakdown,
+          scoreExplanation,
+          scoreReasons,
           scoreMeta,
           student: {
             name: studentName || "Unnamed Student",
@@ -789,12 +803,4 @@ export const updateRecruiterInterview = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
-
-
-
-
-
-
-
-
 

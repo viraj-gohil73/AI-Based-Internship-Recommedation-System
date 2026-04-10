@@ -15,7 +15,6 @@ import {
   Award,
   FolderKanban,
   Link as LinkIcon,
-  FileText,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import NotAvailable from "../../components/NotAvailable.jsx";
@@ -401,14 +400,14 @@ export default function Students() {
 
       {selectedStudent && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
           onClick={() => setSelectedStudent(null)}
         >
           <div
-            className="w-full max-w-5xl max-h-[92vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative border-b border-indigo-700 bg-indigo-600 px-6 py-5 text-white">
+            <div className="z-10 border-b border-indigo-200 bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 px-6 py-5 text-white">
               <div className="relative flex items-start justify-between gap-4">
                 <div className="flex items-center gap-4">
                   {selectedStudent.profilePic ? (
@@ -453,7 +452,26 @@ export default function Students() {
               </div>
             </div>
 
-            <div className="max-h-[72vh] overflow-y-auto px-6 py-5 space-y-5 bg-white">
+            <div className="max-h-[72vh] space-y-5 overflow-y-auto bg-slate-50 px-6 py-5 [scrollbar-gutter:stable]">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-medium text-slate-500">Saved Internships</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">{asArray(selectedStudent.savedInternships).length}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-medium text-slate-500">Applied Internships</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">{asArray(selectedStudent.appliedInternships).length}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-medium text-slate-500">Certificates</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">{asArray(selectedStudent.certificates).length}</p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-xs font-medium text-slate-500">Projects</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">{asArray(selectedStudent.projects).length}</p>
+                </div>
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -535,48 +553,15 @@ export default function Students() {
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-2">
-                    <FileText size={14} />
-                    Resumes
-                  </p>
-                  <div className="mt-3 space-y-2 text-sm">
-                    {asArray(selectedStudent.resumes).length ? asArray(selectedStudent.resumes).map((resume, idx) => (
-                      <a
-                        key={`${resume?.url || "resume"}-${idx}`}
-                        href={resume?.url || "#"}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-700 hover:bg-slate-100"
-                      >
-                        <span className="truncate">{resume?.name || `Resume ${idx + 1}`}</span>
-                        <span className="text-xs text-slate-500">{formatDate(resume?.uploadedAt)}</span>
-                      </a>
-                    )) : selectedStudent.resume ? (
-                      <a
-                        href={selectedStudent.resume}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-slate-700 hover:bg-slate-50"
-                      >
-                        View Resume
-                      </a>
-                    ) : (
-                      <span className="text-slate-500">No resume uploaded</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Activity
-                  </p>
-                  <div className="mt-3 space-y-2 text-sm text-slate-700">
-                    <p>Saved internships: <span className="font-semibold">{asArray(selectedStudent.savedInternships).length}</span></p>
-                    <p>Applied internships: <span className="font-semibold">{asArray(selectedStudent.appliedInternships).length}</span></p>
-                    <p>Profile last updated: <span className="font-semibold">{formatDate(selectedStudent.updatedAt)}</span></p>
-                  </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Activity
+                </p>
+                <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
+                  <p>Saved internships: <span className="font-semibold">{asArray(selectedStudent.savedInternships).length}</span></p>
+                  <p>Applied internships: <span className="font-semibold">{asArray(selectedStudent.appliedInternships).length}</span></p>
+                  <p>Profile updated: <span className="font-semibold">{formatDate(selectedStudent.updatedAt)}</span></p>
+                  <p>Joined on: <span className="font-semibold">{formatDate(selectedStudent.createdAt)}</span></p>
                 </div>
               </div>
 

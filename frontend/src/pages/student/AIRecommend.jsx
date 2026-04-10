@@ -24,7 +24,7 @@ import { useResumePickerModal } from "../../hooks/useResumePickerModal";
 import StudentLoadingCard from "../../components/common/StudentLoadingCard";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-const MIN_RECOMMENDATION_SCORE = 55;
+const MIN_RECOMMENDATION_SCORE = 50;
 const TOP_RECOMMENDATION_LIMIT = 5;
 
 const REASON_LABELS = {

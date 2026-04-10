@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { API_BASE_URL } from "../../utils/apiBaseUrl";
 
 export default function Login() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: "", password: "", role: "" });
   const [showPassword, setShowPassword] = useState(false);
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:5000/api/auth/google/student";
+    window.location.href = `${API_BASE_URL}/api/auth/google/student`;
   };
 
   const handleChange = (e) => {
@@ -167,3 +168,5 @@ export default function Login() {
     </div>
   );
 }
+
+

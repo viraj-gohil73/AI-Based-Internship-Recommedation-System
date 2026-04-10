@@ -17,12 +17,14 @@ import toast from "react-hot-toast";
 import NotAvailable from "../../components/NotAvailable.jsx";
 
 export default function Internships() {
+  const ITEMS_PER_PAGE = 8;
   const [internships, setInternships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedInternship, setSelectedInternship] = useState(null);
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const token = localStorage.getItem("adminToken");
 
@@ -60,6 +62,25 @@ export default function Internships() {
       return matchesSearch && matchesStatus;
     });
   }, [internships, search, statusFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, statusFilter]);
+
+  const totalFiltered = filteredInternships.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / ITEMS_PER_PAGE));
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
+  const paginatedInternships = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredInternships.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredInternships, currentPage, ITEMS_PER_PAGE]);
+
+  const pageStart = totalFiltered === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const pageEnd = Math.min(currentPage * ITEMS_PER_PAGE, totalFiltered);
 
   const summary = useMemo(() => {
     const total = internships.length;
@@ -229,7 +250,7 @@ export default function Internships() {
               </tr>
             )}
             {!loading &&
-              filteredInternships.map((item) => (
+              paginatedInternships.map((item) => (
                 <tr key={item._id || item.id} className="border-t border-slate-200 hover:bg-slate-50">
                   <td className="p-4">
                     <p className="font-medium text-slate-900">{item.title || "Untitled internship"}</p>
@@ -275,6 +296,34 @@ export default function Internships() {
               ))}
           </tbody>
         </table>
+        {!loading && totalFiltered > 0 && (
+          <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+            <p>
+              Showing {pageStart}-{pageEnd} of {totalFiltered}
+            </p>
+            <div className="inline-flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="text-xs font-medium text-slate-500">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4 md:hidden">
@@ -288,7 +337,7 @@ export default function Internships() {
           </div>
         )}
         {!loading &&
-          filteredInternships.map((item) => (
+          paginatedInternships.map((item) => (
             <div key={item._id || item.id} className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div>
                 <p className="font-semibold text-slate-900">{item.title || "Untitled internship"}</p>
@@ -321,6 +370,36 @@ export default function Internships() {
               </div>
             </div>
           ))}
+        {!loading && totalFiltered > 0 && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between text-xs text-slate-600">
+              <p>
+                {pageStart}-{pageEnd} of {totalFiltered}
+              </p>
+              <p>
+                Page {currentPage}/{totalPages}
+              </p>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {selectedInternship && (

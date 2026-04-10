@@ -14,11 +14,18 @@ const ROLE_CATALOG = [
     stipend: [12000, 28000],
   },
   {
-    key: "backend-engineer",
-    title: "Backend Engineer Intern",
+    key: "backend-python",
+    title: "Backend Developer (Python) Intern",
+    skills: ["Python", "FastAPI", "Django", "PostgreSQL", "REST API"],
+    eligible: "Students from CS/IT background with strong backend fundamentals in Python, API design, and relational database modeling.",
+    stipend: [15000, 34000],
+  },
+  {
+    key: "backend-nodejs",
+    title: "Backend Developer (Node.js) Intern",
     skills: ["Node.js", "Express", "MongoDB", "REST API", "JWT"],
-    eligible: "Students from CS/IT background with strong backend fundamentals, API design understanding, and DB modeling basics.",
-    stipend: [14000, 32000],
+    eligible: "Students from CS/IT background with strong backend fundamentals in JavaScript/Node.js, API design understanding, and DB modeling basics.",
+    stipend: [14000, 33000],
   },
   {
     key: "fullstack-engineer",
@@ -340,3 +347,4 @@ const run = async () => {
 };
 
 run();
+

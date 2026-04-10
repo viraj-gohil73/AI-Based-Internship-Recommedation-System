@@ -28,7 +28,7 @@ import RegisterCompany from "./pages/company/Login/Register_company";
 import LoginComapny from "./pages/company/Login/Login_Company";
 
 /* ================= COMPANY DASHBOARD ================= */
-import Overview from "./pages/company/Dashboard/overview";
+import Overview from "./pages/company/Dashboard/Overview";
 import Profile from "./pages/company/Dashboard/Profile";
 import Settings from "./pages/company/Dashboard/Settings";
 import Subscription from "./pages/company/Dashboard/Subscription";
@@ -294,6 +294,7 @@ function App() {
 }
 
 export default App;
+
 
 
 

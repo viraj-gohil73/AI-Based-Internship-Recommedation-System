@@ -5,7 +5,48 @@ import Internship from "../models/Internship.js";
 
 dotenv.config();
 
-const cleanTitle = (title = "") => String(title || "").replace(/\s*#\d+\s*$/i, "").trim();
+const TITLE_NORMALIZERS = [
+  {
+    match: /\bpython\s+dev(?:eloper|loper)?\b/i,
+    value: "Python Developer Intern",
+  },
+  {
+    match: /\breact(?:\.?js)?\s+dev(?:eloper|loper)?\b/i,
+    value: "React.js Developer Intern",
+  },
+  {
+    match: /\bnode(?:\.?js)?\s+dev(?:eloper|loper)?\b/i,
+    value: "Node.js Developer Intern",
+  },
+  {
+    match: /\bfront\s*end\s+dev(?:eloper|loper)?\b/i,
+    value: "Frontend Developer Intern",
+  },
+  {
+    match: /\bback\s*end\s+dev(?:eloper|loper)?\b/i,
+    value: "Backend Developer Intern",
+  },
+  {
+    match: /\bfull\s*stack\s+dev(?:eloper|loper)?\b/i,
+    value: "Full Stack Developer Intern",
+  },
+];
+
+const cleanTitle = (title = "") => {
+  const cleaned = String(title || "").replace(/\s*#\d+\s*$/i, "").trim();
+  if (!cleaned) return cleaned;
+
+  for (const normalizer of TITLE_NORMALIZERS) {
+    if (normalizer.match.test(cleaned)) {
+      return normalizer.value;
+    }
+  }
+
+  return cleaned
+    .replace(/\bdevloper\b/gi, "Developer")
+    .replace(/\breactjs\b/gi, "React.js")
+    .replace(/\bnodejs\b/gi, "Node.js");
+};
 
 const run = async () => {
   try {

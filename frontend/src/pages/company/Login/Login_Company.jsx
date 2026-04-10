@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../../../utils/apiBaseUrl";
 
 
 
@@ -33,7 +34,7 @@ const navigate = useNavigate();
 
 
    const googleLogin = () => {
-    window.location.href = "http://localhost:5000/api/company/google/company";
+    window.location.href = `${API_BASE_URL}/api/company/google/company`;
   };
 
 const handleSubmit = async (e) => {
@@ -240,3 +241,5 @@ const handleSubmit = async (e) => {
     </div>
   );
 }
+
+

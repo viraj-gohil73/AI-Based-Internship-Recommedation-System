@@ -7,6 +7,10 @@ const SKILL_ALIAS_ENTRIES = [
   ["reactjs", "React"], ["react js", "React"], ["react.js", "React"],
   ["react framework", "React"], ["reactjs developer", "React"],
 
+  // Angular
+  ["angularjs", "Angular"], ["angular js", "Angular"], ["angular.js", "Angular"],
+  ["angular framework", "Angular"], ["angular developer", "Angular"],
+
   // Next.js
   ["nextjs", "Next.js"], ["next js", "Next.js"], ["next.js", "Next.js"],
   ["next framework", "Next.js"],
@@ -171,3 +175,4 @@ export function normalizeSkillArray(input = []) {
 
   return result;
 }
+

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast  from 'react-hot-toast';
+import { API_BASE_URL } from "../../../utils/apiBaseUrl";
 
 export default function RegisterCompany() {
     const [showPassword, setShowPassword] = useState(false);
@@ -94,7 +95,7 @@ export default function RegisterCompany() {
 
 
   const googleLogin = () => {
-    window.location.href = "http://localhost:5000/api/company/google/company";
+    window.location.href = `${API_BASE_URL}/api/company/google/company`;
   };
 
   return (
@@ -239,3 +240,5 @@ export default function RegisterCompany() {
     </div>
   );
 }
+
+

@@ -3,6 +3,15 @@ import { normalizeSkillArray } from "../utils/skillNormalization.js";
 
 const DEFAULT_LIMIT = 10;
 const MAX_TOP_K = 20;
+const DEFAULT_CONTEXTUAL_SKILL_WEIGHT = 0.3;
+
+const SKILL_CONTEXT_GROUPS = Object.freeze([
+  ["React", "Angular", "Vue"],
+  ["Node.js", "Express"],
+  ["Python", "Django", "FastAPI", "Flask"],
+  ["MySQL", "PostgreSQL", "SQL"],
+  ["JavaScript", "TypeScript"],
+]);
 const DEFAULT_ML_TIMEOUT_MS = 1200;
 const DEFAULT_CACHE_TTL_MIN = 30;
 const DEFAULT_CGPA_NEUTRAL_SCORE = 0.5;
@@ -10,26 +19,26 @@ const DEFAULT_CGPA_UNKNOWN_SCORE = 0.3;
 const DEFAULT_EDUCATION_NEUTRAL_SCORE = 0.5;
 const DEFAULT_LOCATION_UNKNOWN_SCORE = 0.4;
 const DEFAULT_ELIGIBILITY_NEUTRAL_SCORE = 0.6;
-const MODEL_VERSION = "rule-hybrid-v2";
+const MODEL_VERSION = "rule-hybrid-v3";
 
 const SCORE_WEIGHTS = Object.freeze({
-  skills: 43,
+  skills: 45,
   project: 10,
   certificate: 3,
-  education: 14,
+  education: 12,
   location: 10,
-  eligibility: 10,
-  popularityRecency: 13,
+  eligibility: 15,
+  popularityRecency: 5,
 });
 
 const COLD_START_WEIGHTS = Object.freeze({
-  skills: 20,
+  skills: 40,
   project: 8,
   certificate: 5,
   education: 5,
   location: 7,
-  eligibility: 20,
-  popularityRecency: 35,
+  eligibility: 10,
+  popularityRecency: 25,
 });
 
 const toLower = (value = "") => String(value || "").trim().toLowerCase();
@@ -46,6 +55,15 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const toFiniteOr = (value, fallback) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const isOnsiteWorkMode = (workMode = "") => {
+  const normalized = toLower(workMode);
+  return (
+    normalized.includes("onsite") ||
+    normalized.includes("on site") ||
+    normalized.includes("on-site")
+  );
 };
 
 const getTimeoutMs = () => {
@@ -94,6 +112,26 @@ const shouldUseMlProbe = () => {
   return enabled && Boolean(mlUrl);
 };
 
+const getContextualSkillWeight = () =>
+  clamp(toFiniteOr(process.env.RECOMMENDATION_CONTEXTUAL_SKILL_WEIGHT, DEFAULT_CONTEXTUAL_SKILL_WEIGHT), 0, 1);
+
+const SKILL_CONTEXT_MAP = (() => {
+  const map = new Map();
+
+  for (const group of SKILL_CONTEXT_GROUPS) {
+    const normalizedGroup = normalizeSkillArray(group).map((item) => toLower(item));
+    const uniqueGroup = [...new Set(normalizedGroup.filter(Boolean))];
+
+    for (const skill of uniqueGroup) {
+      const peers = uniqueGroup.filter((peer) => peer !== skill);
+      if (!peers.length) continue;
+      map.set(skill, new Set(peers));
+    }
+  }
+
+  return map;
+})();
+
 const getStudentSkills = (student = {}) => {
   const directSkills = Array.isArray(student.skills) ? student.skills : [];
   const projectSkills = Array.isArray(student.projects)
@@ -117,8 +155,48 @@ const getInternshipSkills = (internship = {}) => {
 
 const calculateSkillOverlap = (studentSkills, internshipSkills) => {
   const studentSet = new Set(studentSkills.map(toLower));
-  const overlap = internshipSkills.filter((skill) => studentSet.has(toLower(skill)));
-  return uniq(overlap);
+  const contextualWeight = getContextualSkillWeight();
+
+  const exactMatches = [];
+  const contextualMatches = [];
+
+  for (const skill of internshipSkills) {
+    const normalizedSkill = toLower(skill);
+    if (!normalizedSkill) continue;
+
+    if (studentSet.has(normalizedSkill)) {
+      exactMatches.push(skill);
+      continue;
+    }
+
+    const related = SKILL_CONTEXT_MAP.get(normalizedSkill);
+    if (!related || !related.size) continue;
+
+    const matchedRelated = [...related].find((candidate) => studentSet.has(candidate));
+    if (!matchedRelated) continue;
+
+    contextualMatches.push({
+      requiredSkill: skill,
+      matchedWith: matchedRelated,
+      credit: contextualWeight,
+    });
+  }
+
+  const exactSet = new Set(exactMatches.map(toLower));
+  const contextualSet = new Set(contextualMatches.map((item) => toLower(item.requiredSkill)));
+  const missingSkills = internshipSkills.filter((skill) => {
+    const key = toLower(skill);
+    return !exactSet.has(key) && !contextualSet.has(key);
+  });
+
+  const weightedMatchedCount = exactMatches.length + contextualMatches.length * contextualWeight;
+
+  return {
+    exactMatches: uniq(exactMatches),
+    contextualMatches,
+    missingSkills: uniq(missingSkills),
+    weightedMatchedCount,
+  };
 };
 
 const normalizeCgpaValue = (raw) => {
@@ -485,7 +563,9 @@ const isColdStartStudent = (student = {}) => {
 
 const buildReasonTags = ({
   matchedSkills = [],
+  contextualMatches = [],
   locationMatch = null,
+  workMode = "",
   educationMatch = null,
   projectRelevance = 0,
   certificateRelevance = 0,
@@ -496,7 +576,8 @@ const buildReasonTags = ({
 }) => {
   const tags = [];
   if (matchedSkills.length > 0) tags.push("SKILL_MATCH");
-  if (locationMatch === true) tags.push("LOCATION_MATCH");
+  if (contextualMatches.length > 0) tags.push("SKILL_CONTEXT_MATCH");
+  if (locationMatch === true && isOnsiteWorkMode(workMode)) tags.push("LOCATION_MATCH");
   if (educationMatch === true) tags.push("EDUCATION_MATCH");
   if (projectRelevance >= 0.2) tags.push("PROJECT_RELEVANCE");
   if (certificateRelevance >= 0.2) tags.push("CERTIFICATE_RELEVANCE");
@@ -510,13 +591,17 @@ const buildReasonTags = ({
 const buildFallbackExplanation = ({
   score,
   matchedSkills,
+  contextualMatches = [],
   missingSkills,
   locationMatch,
   eligibilityMatch,
 }) => {
+  const contextualText = contextualMatches.length
+    ? `related skills ${contextualMatches.slice(0, 2).map((item) => `${item.requiredSkill}~${item.matchedWith}`).join(", ")}`
+    : "";
   const skillText = matchedSkills.length
-    ? `matched skills ${matchedSkills.slice(0, 3).join(", ")}`
-    : "limited skill overlap";
+    ? `matched skills ${matchedSkills.slice(0, 3).join(", ")}${contextualText ? ` + ${contextualText}` : ""}`
+    : contextualText || "limited skill overlap";
   const locationText =
     locationMatch === true ? "location aligned" : locationMatch === false ? "location mismatch" : "location neutral";
   const eligibilityText =
@@ -536,7 +621,7 @@ const isLlmExplanationEnabled = () =>
     String(process.env.RECOMMENDATION_ENABLE_LLM_EXPLANATION || "false").trim().toLowerCase()
   );
 
-const buildExplanationPrompt = ({ student, internship, matchedSkills, missingSkills, score }) => {
+const buildExplanationPrompt = ({ student, internship, matchedSkills, contextualMatches = [], missingSkills, score }) => {
   const education = Array.isArray(student.educations)
     ? student.educations
         .map((item) => `${item?.degreeType || ""} ${item?.fieldOfStudy || ""}`.trim())
@@ -591,6 +676,7 @@ Task:
 Current computed details:
 - score: ${score.toFixed(1)}
 - matchedSkills: ${matchedSkills.join(", ") || "none"}
+- contextualMatches: ${contextualMatches.map((item) => `${item.requiredSkill}~${item.matchedWith}`).join(", ") || "none"}
 - missingSkills: ${missingSkills.join(", ") || "none"}
 
 Return one concise explanation sentence only.`;
@@ -600,6 +686,7 @@ const generateLlmExplanation = async ({
   student,
   internship,
   matchedSkills,
+  contextualMatches = [],
   missingSkills,
   score,
   fallback,
@@ -627,6 +714,7 @@ const generateLlmExplanation = async ({
           student,
           internship,
           matchedSkills,
+          contextualMatches,
           missingSkills,
           score,
         }),
@@ -761,11 +849,12 @@ const rankByRules = async (student = {}, internships = [], limit = DEFAULT_LIMIT
 
   const scored = internships.map((internship) => {
     const internshipSkills = getInternshipSkills(internship);
-    const matchedSkills = calculateSkillOverlap(studentSkills, internshipSkills);
-    const matchedSet = new Set(matchedSkills.map(toLower));
-    const missingSkills = internshipSkills.filter((skill) => !matchedSet.has(toLower(skill)));
+    const skillOverlap = calculateSkillOverlap(studentSkills, internshipSkills);
+    const matchedSkills = skillOverlap.exactMatches;
+    const contextualMatches = skillOverlap.contextualMatches;
+    const missingSkills = skillOverlap.missingSkills;
 
-    const skillFactor = internshipSkills.length ? matchedSkills.length / internshipSkills.length : 0.5;
+    const skillFactor = internshipSkills.length ? skillOverlap.weightedMatchedCount / internshipSkills.length : 0.5;
     const skillScore = clamp(skillFactor, 0, 1) * weights.skills;
 
     const projectRelevance = computeProjectRelevance(student, internship);
@@ -808,7 +897,9 @@ const rankByRules = async (student = {}, internships = [], limit = DEFAULT_LIMIT
     );
     const reasons = buildReasonTags({
       matchedSkills,
+      contextualMatches,
       locationMatch,
+      workMode: internship.workmode || internship.mode || internship.internshipType || "",
       educationMatch,
       projectRelevance,
       certificateRelevance,
@@ -831,6 +922,7 @@ const rankByRules = async (student = {}, internships = [], limit = DEFAULT_LIMIT
       },
       reasons,
       matchedSkills: matchedSkills.slice(0, 8),
+      contextualMatches: contextualMatches.slice(0, 8),
       missingSkills: missingSkills.slice(0, 8),
       locationMatch,
       locationEligible,
@@ -870,6 +962,7 @@ const rankByRules = async (student = {}, internships = [], limit = DEFAULT_LIMIT
       student,
       internship: item.internship,
       matchedSkills: item.matchedSkills,
+      contextualMatches: item.contextualMatches,
       missingSkills: item.missingSkills,
       score: item.score,
       fallback,
@@ -978,6 +1071,7 @@ export const getCachedOrFreshRecommendations = async ({
     rankingError,
   };
 };
+
 
 
 

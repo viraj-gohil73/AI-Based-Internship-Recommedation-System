@@ -35,15 +35,6 @@ configurePassport(app);
 app.use(passport.initialize());
 googleCallbackHandler();
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(async () => {
-    console.log("MongoDB Connected");
-    await seedAdmin();
-    await seedSubscriptionSystem();
-  })
-  .catch((err) => console.log(err));
-
 // app.use("/api/auth", authRoutes);
 app.use("/api/company", companyroutes);
 app.use("/api/auth", authvg);
@@ -53,6 +44,26 @@ app.use("/api/internships", internshipRoutes);
 app.use("/api/student", studentRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-app.listen(process.env.PORT, () =>
-  console.log(`Server running on port ${process.env.PORT}`)
-);
+const startServer = async () => {
+  try {
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI is missing in environment variables");
+    }
+
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("MongoDB Connected");
+
+    await seedAdmin();
+    await seedSubscriptionSystem();
+
+    app.listen(process.env.PORT, () =>
+      console.log(`Server running on port ${process.env.PORT}`)
+    );
+  } catch (err) {
+    console.error("Failed to start server:", err?.message || err);
+    process.exit(1);
+  }
+};
+
+startServer();
+

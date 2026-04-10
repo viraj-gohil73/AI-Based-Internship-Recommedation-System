@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast  from 'react-hot-toast';
+import { API_BASE_URL } from "../../utils/apiBaseUrl";
 
 export default function RegisterStudent() {
     const [showPassword, setShowPassword] = useState(false);
@@ -61,11 +62,11 @@ export default function RegisterStudent() {
 };
 
  const handleGoogleLogin = async () => {
- window.location.href = "http://localhost:5000/api/auth/google/student";
+ window.location.href = `${API_BASE_URL}/api/auth/google/student`;
 };
 
   const linkedinLogin = () => {
-    window.location.href = "http://localhost:5000/api/auth/linkedin";
+    window.location.href = `${API_BASE_URL}/api/auth/linkedin`;
   };
 
 
@@ -232,3 +233,5 @@ export default function RegisterStudent() {
     </div>
   );
 }
+
+

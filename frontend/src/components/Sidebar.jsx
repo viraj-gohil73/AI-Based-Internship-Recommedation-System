@@ -109,7 +109,7 @@ export default function Sidebar({ open, onClose }) {
     { name: "Browse Internships", icon: Search, path: "/student/explore" },
     { name: "My  Applications", icon: GraduationCap, path: "/student/applied" },
     { name: "Feedback History", icon: MessageSquare, path: "/student/feedback-history" },
-    { name: "My Resume", icon: FileText, path: "/student/resume" },
+    // { name: "My Resume", icon: FileText, path: "/student/resume" },
     { name: "Saved Intenship", icon: Bookmark, path: "/student/watchlist" },
     { name: "My Profile", icon: User, path: "/student/profile" },
     { name: "Settings", icon: Settings, path: "/student/settings" },

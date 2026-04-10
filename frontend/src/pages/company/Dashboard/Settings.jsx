@@ -174,7 +174,7 @@ export default function CompanySettings() {
                 />
               </div>
 
-              <div className="flex items-center justify-between border border-slate-200 rounded-xl p-4">
+              {/* <div className="flex items-center justify-between border border-slate-200 rounded-xl p-4">
                 <div>
                   <p className="font-medium text-slate-800">SMS Alerts</p>
                   <p className="text-xs text-slate-500">
@@ -191,7 +191,7 @@ export default function CompanySettings() {
                   }
                   disabled={isLocked}
                 />
-              </div>
+              </div> */}
 
               <div className="flex items-center justify-between border border-slate-200 rounded-xl p-4">
                 <div>

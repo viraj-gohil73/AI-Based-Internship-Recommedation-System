@@ -28,6 +28,8 @@ const STATUS_UPDATE_OPTIONS = ["APPLIED", "SHORTLISTED", "INTERVIEW", "SELECTED"
 const PROFILE_BUTTON_CLASS =
   "group inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-gradient-to-r from-indigo-50 to-blue-50 px-2.5 py-1.5 text-xs font-semibold text-indigo-700 transition hover:from-indigo-100 hover:to-blue-100";
 
+const SCORE_REASON_FALLBACK = "Score details unavailable for this candidate.";
+
 const getStatusClasses = (status) => {
   switch (status) {
     case "SHORTLISTED":
@@ -55,9 +57,31 @@ const formatAiScore = (value) => {
   return score.toFixed(2);
 };
 
+const formatAiScoreOrDash = (value) => {
+  const score = Number(value);
+  if (!Number.isFinite(score)) return "-";
+  return score.toFixed(2);
+};
+
 const formatRank = (value) => {
   const rank = Number(value);
   return Number.isFinite(rank) && rank > 0 ? `#${rank}` : "-";
+};
+
+const getScoreExplanation = (value) => {
+  const text = typeof value === "string" ? value.trim() : "";
+  return text || SCORE_REASON_FALLBACK;
+};
+
+const formatReasonLabel = (value) => {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  return text
+    .toLowerCase()
+    .split("_")
+    .filter(Boolean)
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(" ");
 };
 
 const actionTimelineRows = (applicant = {}) => {
@@ -166,6 +190,14 @@ export default function Applicants() {
   const studentProjects = Array.isArray(selectedStudent?.projects) ? selectedStudent.projects : [];
   const studentCertificates = Array.isArray(selectedStudent?.certificates) ? selectedStudent.certificates : [];
   const studentSocialLinks = Array.isArray(selectedStudent?.socialLinks) ? selectedStudent.socialLinks : [];
+  const selectedStudentScoreExplanation = getScoreExplanation(selectedStudent?.scoreExplanation);
+  const selectedStudentScoreReasons = Array.from(
+    new Set(
+      (Array.isArray(selectedStudent?.scoreReasons) ? selectedStudent.scoreReasons : [])
+        .map((item) => formatReasonLabel(item))
+        .filter(Boolean)
+    )
+  );
 
   const fetchData = async () => {
     try {
@@ -339,9 +371,17 @@ export default function Applicants() {
   const openStudentProfile = async (applicant) => {
     try {
       const fallback = normalizeStudentProfile({}, applicant?.student || {});
+      const candidateScoreContext = {
+        aiScore: applicant?.aiScore,
+        rank: applicant?.rank,
+        scoreExplanation: getScoreExplanation(applicant?.scoreExplanation),
+        scoreReasons: Array.isArray(applicant?.scoreReasons) ? applicant.scoreReasons : [],
+      };
+
       setSelectedStudent({
         ...fallback,
         _id: applicant?.studentId || fallback?._id,
+        ...candidateScoreContext,
       });
       setLoadingStudentProfile(true);
 
@@ -353,9 +393,10 @@ export default function Applicants() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch student profile");
 
-      setSelectedStudent(
-        normalizeStudentProfile(data.student || data.profile || data, applicant?.student || {})
-      );
+      setSelectedStudent({
+        ...normalizeStudentProfile(data.student || data.profile || data, applicant?.student || {}),
+        ...candidateScoreContext,
+      });
     } catch (error) {
       toast.error(error.message || "Unable to load student profile");
     } finally {
@@ -472,7 +513,7 @@ export default function Applicants() {
 
         <section className="overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
           <div className="overflow-x-auto">
-            <table className="min-w-[1120px] w-full text-sm">
+            <table className="min-w-[1220px] w-full text-sm">
               <thead className="bg-gradient-to-r from-blue-700 to-indigo-600 text-white">
                 <tr>
                   <th className="px-4 py-3 text-left">Student</th>
@@ -532,9 +573,17 @@ export default function Applicants() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                          {formatAiScore(applicant.aiScore)}
-                        </span>
+                        <div className="max-w-[260px]">
+                          <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                            {formatAiScore(applicant.aiScore)}
+                          </span>
+                          <p
+                            className="mt-1 truncate text-xs text-slate-500"
+                            title={getScoreExplanation(applicant.scoreExplanation)}
+                          >
+                            {getScoreExplanation(applicant.scoreExplanation)}
+                          </p>
+                        </div>
                       </td>
                       <td className="px-6 py-3">
                         <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${getStatusClasses(applicant.status)}`}>
@@ -728,6 +777,33 @@ export default function Applicants() {
               </div>
 
               <div className="space-y-4 lg:col-span-8">
+                <div className="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+                  <h3 className="text-sm font-semibold text-slate-900">AI Match Reason</h3>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl border border-violet-200 bg-white p-3">
+                      <p className="text-xs text-slate-500">AI Score</p>
+                      <p className="text-sm font-medium text-slate-900">{formatAiScoreOrDash(selectedStudent?.aiScore)}</p>
+                    </div>
+                    <div className="rounded-xl border border-violet-200 bg-white p-3">
+                      <p className="text-xs text-slate-500">Rank</p>
+                      <p className="text-sm font-medium text-slate-900">{formatRank(selectedStudent?.rank)}</p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-slate-700">{selectedStudentScoreExplanation}</p>
+                  {selectedStudentScoreReasons.length ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {selectedStudentScoreReasons.map((reason) => (
+                        <span
+                          key={reason}
+                          className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-semibold text-violet-700"
+                        >
+                          {reason}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
                 <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Profile Overview</h3>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -903,6 +979,4 @@ export default function Applicants() {
     </div>
   );
 }
-
-
 
