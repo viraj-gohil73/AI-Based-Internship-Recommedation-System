@@ -11,7 +11,7 @@ import {
 import { useCompany } from "../../../context/CompanyContext";
 import { useSubscription } from "../../../context/SubscriptionContext";
 
-const API_BASE = "http://localhost:5000/api/company";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/company";
 
 const formatDate = (value) => {
   if (!value) return "-";
