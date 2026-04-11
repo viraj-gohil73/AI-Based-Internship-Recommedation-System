@@ -24,27 +24,43 @@ const app = express();
 
 app.use(cookieParser());
 app.use(express.json());
-const allowedOrigins = (
-  process.env.CORS_ORIGIN ||
-  process.env.FRONTEND_URL ||
-  "http://localhost:5173"
-)
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
 
-app.use(
-  cors({
-    origin(origin, callback) {
-      // Allow non-browser tools (no Origin header) and configured frontend origins.
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-  })
+const normalizeOrigin = (origin = "") => origin.trim().replace(/\/+$/, "");
+
+const allowedOrigins = new Set(
+  (process.env.CORS_ORIGIN ||
+    process.env.FRONTEND_URL ||
+    "http://localhost:5173")
+    .split(",")
+    .map((origin) => normalizeOrigin(origin))
+    .filter(Boolean)
 );
+
+const vercelPreviewOriginPattern = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i;
+
+const corsOptions = {
+  origin(origin, callback) {
+    // Allow non-browser tools (no Origin header).
+    if (!origin) return callback(null, true);
+
+    const normalizedOrigin = normalizeOrigin(origin);
+    if (allowedOrigins.has(normalizedOrigin)) {
+      return callback(null, true);
+    }
+
+    // Support Vercel preview deployments for this frontend.
+    if (vercelPreviewOriginPattern.test(normalizedOrigin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`Not allowed by CORS: ${normalizedOrigin}`));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+};
+
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 configurePassport(app);
 app.use(passport.initialize());
@@ -81,4 +97,3 @@ const startServer = async () => {
 };
 
 startServer();
-
